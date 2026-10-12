@@ -7,6 +7,7 @@ import MatchEventsSection from '@/components/MatchEventsSection';
 import LiveScoreboard from '@/components/LiveScoreboard';
 import { RefreshCw } from 'lucide-react';
 import { getScoreForMatch } from '@/lib/providers/scoreProvider';
+import WatchBackButton from '@/components/WatchBackButton';
 
 export const revalidate = 10;
 
@@ -106,6 +107,9 @@ export default async function WatchPage({ params, searchParams }) {
   return (
     <div className="watch-page w-full min-h-screen text-slate-900 pb-20">
       <main className="watch-content">
+        <div className="flex items-center">
+          <WatchBackButton />
+        </div>
         <section className="watch-hero">
           <div className="watch-score-panel">
             {isLive || isFinal ? (

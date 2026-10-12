@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useHydraSports } from './HydraContext';
 import { Radio, Layers, Database, Trophy, Calendar, Star, Compass, History, X } from 'lucide-react';
@@ -26,6 +26,19 @@ export default function FootySidebar() {
     { id: 'favourites', label: 'Favourite Teams', icon: Star, badgeCount: favouriteTeams.length },
   ];
 
+  useEffect(() => {
+    if (!sidebarOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setSidebarOpen(false);
+    };
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [sidebarOpen, setSidebarOpen]);
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -40,8 +53,9 @@ export default function FootySidebar() {
         className={`sidebar-rail fixed top-0 bottom-0 left-0 z-50 w-[220px] shrink-0 bg-white p-6 lg:p-7 border-r border-slate-200/80 flex flex-col justify-between transition-[width,transform] duration-300 h-screen max-h-screen ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
+        aria-label="Sports navigation"
       >
-        <div className="overflow-y-auto pr-1">
+        <div className="sidebar-scroll-area min-h-0 overflow-y-auto pr-1">
           {/* Brand Logo lockup */}
           <Link
             href="/"
@@ -93,7 +107,7 @@ export default function FootySidebar() {
                       selectMenu(item.id);
                       setSidebarOpen(false);
                     }}
-                    className={`relative text-left text-[12.5px] font-bold py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-between group cursor-pointer ${
+                    className={`relative min-h-11 text-left text-[12.5px] font-bold py-2.5 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-between group cursor-pointer ${
                       isActive
                         ? 'text-emerald-700 bg-emerald-50 shadow-xs ring-1 ring-emerald-200/60'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
@@ -152,7 +166,7 @@ export default function FootySidebar() {
                     key={league.id}
                     type="button"
                     onClick={() => selectLeague(league.id)}
-                    className={`text-left text-[12px] font-semibold py-1.5 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-between group cursor-pointer ${
+                    className={`min-h-10 text-left text-[12px] font-semibold py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-between group cursor-pointer ${
                       isSelected
                         ? 'text-emerald-800 bg-emerald-50/90 font-bold ring-1 ring-emerald-300/80 shadow-xs'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'

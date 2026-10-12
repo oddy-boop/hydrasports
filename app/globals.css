@@ -788,9 +788,10 @@ body {
   .sidebar-rail {
     top: 12px;
     bottom: 12px;
-    width: 220px !important;
+    width: min(320px, calc(100vw - 32px)) !important;
     padding: 24px !important;
     transform: translateX(-100%);
+    overscroll-behavior: contain;
   }
   .sidebar-rail.translate-x-0 {
     transform: translateX(0);
@@ -801,8 +802,34 @@ body {
     opacity: 1;
     max-width: 180px;
   }
+  .sidebar-scroll-area {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
   .dashboard-content {
     padding: 20px 20px 120px;
+  }
+  @media (max-width: 640px) {
+    .sidebar-rail {
+      top: 8px;
+      bottom: 8px;
+      width: min(320px, calc(100vw - 20px)) !important;
+      padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom)) !important;
+      border-radius: 0 22px 22px 0;
+      box-shadow: 18px 0 45px rgba(15, 23, 42, .18);
+    }
+    .sidebar-rail .sidebar-brand-copy,
+    .sidebar-rail .sidebar-copy,
+    .sidebar-rail .sidebar-rail-label {
+      max-width: 220px;
+    }
+    .sidebar-rail nav {
+      gap: .35rem;
+    }
+    .sidebar-rail nav a,
+    .sidebar-rail nav button {
+      min-height: 2.75rem;
+    }
   }
 }
 @media (max-width: 768px) {
