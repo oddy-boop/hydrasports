@@ -799,6 +799,7 @@ body {
   .sidebar-rail .sidebar-brand-copy,
   .sidebar-rail .sidebar-copy,
   .sidebar-rail .sidebar-rail-label {
+    display: block;
     opacity: 1;
     max-width: 180px;
   }
@@ -821,6 +822,7 @@ body {
     .sidebar-rail .sidebar-brand-copy,
     .sidebar-rail .sidebar-copy,
     .sidebar-rail .sidebar-rail-label {
+      display: block;
       max-width: 220px;
     }
     .sidebar-rail nav {
