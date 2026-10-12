@@ -25,6 +25,7 @@ export function MiniPlayerProvider({ children }) {
 
   const startDrag = useCallback((event) => {
     if (event.button !== 0) return;
+    if (event.target.closest('a, button')) return;
     event.preventDefault();
     dragRef.current = {
       startX: event.clientX,

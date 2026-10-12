@@ -20,13 +20,13 @@ export default function FootyHeroBanner({ featuredMatch }) {
   const isLive = match.status === 'live';
 
   return (
-    <div className="relative rounded-[28px] overflow-hidden p-6 md:p-8 lg:p-9 bg-gradient-to-br from-[#064e3b] via-[#047857] to-[#0d9488] shadow-[0_20px_50px_rgba(4,120,87,0.22)] text-white select-none transition-all duration-300">
+    <div className="hydra-hero-banner relative rounded-[28px] overflow-hidden p-6 md:p-8 lg:p-9 bg-gradient-to-br from-[#064e3b] via-[#047857] to-[#0d9488] shadow-[0_20px_50px_rgba(4,120,87,0.22)] text-white select-none transition-all duration-300">
       {/* Stadium pitch lines and spotlight lighting effects */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(52,211,153,0.25),transparent_50%)] pointer-events-none" />
       <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-teal-400/20 blur-3xl pointer-events-none" />
 
       {/* Featured team badges */}
-      <div className="absolute right-4 top-0 bottom-0 w-[38%] max-w-[280px] pointer-events-none flex items-center justify-center">
+      <div className="hydra-hero-teams absolute right-4 top-0 bottom-0 w-[38%] max-w-[280px] pointer-events-none flex items-center justify-center">
         <div className="flex items-center gap-2.5 sm:gap-4">
           {match.homeTeam?.badge && !homeBadgeError ? (
             <img
@@ -57,7 +57,7 @@ export default function FootyHeroBanner({ featuredMatch }) {
       </div>
 
       {/* Left content details */}
-      <div className="relative z-10 max-w-[65%] sm:max-w-[60%]">
+      <div className="hydra-hero-content relative z-10 max-w-[65%] sm:max-w-[60%]">
         {/* Live Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-[10px] font-black tracking-wider uppercase mb-3 text-emerald-200">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
