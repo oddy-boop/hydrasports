@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMatchDetails } from '@/lib/streamEngine';
+import { getLiveMatchDetails } from '@/lib/streamEngine';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +10,7 @@ export async function GET(
 ) {
   const { matchId } = await params;
   try {
-    const match = await getMatchDetails(matchId);
+    const match = await getLiveMatchDetails(matchId);
     if (!match) {
       return NextResponse.json({ match: null }, { status: 404 });
     }
@@ -35,6 +38,10 @@ export async function GET(
         venue: match.venue,
         dateStr,
         timeStr,
+      },
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
       },
     });
   } catch (err) {

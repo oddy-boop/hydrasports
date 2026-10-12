@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "share": "./scripts/share.sh",
     "lint": "next lint",
     "build:cloudflare": "opennextjs-cloudflare build",
     "test": "vitest run"

@@ -15,7 +15,7 @@ function TeamBadge({ team, size = 'h-9 w-9' }) {
       <img
         src={team.badge}
         alt={team.name}
-        className={`${size} rounded-full object-contain bg-white dark:bg-zinc-950 p-0.5 ring-1 ring-zinc-200 dark:ring-zinc-800 group-hover:ring-violet-500/50 group-hover:scale-110 transition-all duration-300 shadow-sm`}
+        className={`${size} rounded-xl object-contain bg-white dark:bg-zinc-950 p-1 ring-1 ring-zinc-200 dark:ring-zinc-800 group-hover:ring-violet-500/50 group-hover:scale-110 transition-all duration-300 shadow-sm`}
         loading="lazy"
         onError={() => setImgError(true)}
       />
@@ -26,14 +26,14 @@ function TeamBadge({ team, size = 'h-9 w-9' }) {
     <img
       src={fallbackUrl}
       alt={team.name}
-      className={`${size} rounded-full object-contain group-hover:scale-110 transition-all duration-300`}
+      className={`${size} rounded-xl object-contain bg-slate-100 p-1 group-hover:scale-110 transition-all duration-300`}
       loading="lazy"
     />
   );
 }
 
 export default function MatchCard({ match, tab }) {
-  const { id, status, timestamp, homeTeam, awayTeam, sources, tournament, homeScore, awayScore, leagueLogo, currentMinuteNumber } = match;
+  const { id, status, timestamp, homeTeam, awayTeam, sources, tournament, sport, homeScore, awayScore, leagueLogo, currentMinuteNumber } = match;
 
   const [liveData, setLiveData] = useState(null);
   const [homeFav, setHomeFav] = useState(false);
@@ -75,7 +75,12 @@ export default function MatchCard({ match, tab }) {
   const currentMinute = liveMinute || (liveMinuteNumber ? `${liveMinuteNumber}'` : '');
   const timeStr = status === 'live'
     ? (currentMinute ? `${currentMinute}` : 'LIVE')
-    : new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    : new Date(timestamp).toLocaleString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
 
   const timeLeft = status === 'upcoming' ? getTimeLeft(timestamp) : '';
   const isMatchFavorited = homeFav || awayFav;
@@ -113,6 +118,11 @@ export default function MatchCard({ match, tab }) {
               Starred
             </span>
           )}
+          {sport && sport !== 'football' && (
+            <span className="rounded-full border border-sky-200/50 bg-sky-50/70 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-sky-600 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300">
+              {sport}
+            </span>
+          )}
         </div>
         {tournament && (
           <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 truncate max-w-[130px] flex items-center gap-1.5 bg-zinc-200/50 border border-zinc-300/40 dark:bg-zinc-950/60 dark:border-zinc-900 px-2.5 py-0.5 rounded-full shadow-sm" title={tournament}>
@@ -145,8 +155,8 @@ export default function MatchCard({ match, tab }) {
               <Star className={`h-3.5 w-3.5 transition-all ${homeFav ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.6)]' : 'text-zinc-400 dark:text-zinc-500'}`} />
             </button>
           </div>
-          {status === 'live' && displayHomeScore !== undefined && (
-            <span className="text-[18px] font-black text-zinc-800 dark:text-white tabular-nums shrink-0 bg-zinc-100/85 dark:bg-zinc-950 px-2.5 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-800/80 shadow-sm">{displayHomeScore}</span>
+          {status === 'live' && (
+            <span className="text-[18px] font-black text-zinc-800 dark:text-white tabular-nums shrink-0 bg-zinc-100/85 dark:bg-zinc-950 px-2.5 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-800/80 shadow-sm">{displayHomeScore ?? '—'}</span>
           )}
         </div>
 
@@ -167,8 +177,8 @@ export default function MatchCard({ match, tab }) {
               <Star className={`h-3.5 w-3.5 transition-all ${awayFav ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.6)]' : 'text-zinc-400 dark:text-zinc-500'}`} />
             </button>
           </div>
-          {status === 'live' && displayAwayScore !== undefined && (
-            <span className="text-[18px] font-black text-zinc-800 dark:text-white tabular-nums shrink-0 bg-zinc-100/85 dark:bg-zinc-950 px-2.5 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-800/80 shadow-sm">{displayAwayScore}</span>
+          {status === 'live' && (
+            <span className="text-[18px] font-black text-zinc-800 dark:text-white tabular-nums shrink-0 bg-zinc-100/85 dark:bg-zinc-950 px-2.5 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-800/80 shadow-sm">{displayAwayScore ?? '—'}</span>
           )}
         </div>
       </div>

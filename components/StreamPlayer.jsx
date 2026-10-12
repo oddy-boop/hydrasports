@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Maximize, RefreshCw, AlertCircle, ShieldAlert, Shield, ShieldOff, Cpu, Play, Pause, Volume2, Volume1, VolumeX } from 'lucide-react';
 
-export default function StreamPlayer({ streamUrl, channels, matchTitle, matchStatus }) {
+export default function StreamPlayer({ streamUrl, channels, matchTitle, matchStatus, videoOnly = false }) {
   const isUpcoming = matchStatus === 'upcoming';
   const [activeChannel, setActiveChannel] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -12,9 +12,9 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
   
   // Custom video state hooks
   const [hlsLoaded, setHlsLoaded] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.8);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [sandboxShield, setSandboxShield] = useState(false);
   const [isTheaterMode, setIsTheaterMode] = useState(false);
 
@@ -70,6 +70,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
     if (!isDirectHls || !hlsLoaded || !videoRef.current) return;
 
     const video = videoRef.current;
+    video.muted = true;
     
     if (hlsInstanceRef.current) {
       hlsInstanceRef.current.destroy();
@@ -78,15 +79,18 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
 
     setIsLoading(true);
     setStreamStatus('loading');
-    setIsPlaying(true);
+    setIsPlaying(false);
 
     // Safari / iOS Native HLS support
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = currentUrl;
+      video.muted = true;
       const onLoadedMetadata = () => {
         setIsLoading(false);
         setStreamStatus('active');
-        video.play().catch(() => {});
+        video.play()
+          .then(() => setIsPlaying(true))
+          .catch(() => setIsPlaying(false));
       };
       const onNativeError = () => {
         setStreamStatus('error');
@@ -114,7 +118,9 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
       hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
         setIsLoading(false);
         setStreamStatus('active');
-        video.play().catch(() => {});
+        video.play()
+          .then(() => setIsPlaying(true))
+          .catch(() => setIsPlaying(false));
       });
 
       hls.on(window.Hls.Events.ERROR, (event, data) => {
@@ -144,6 +150,51 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
       };
     }
   }, [currentUrl, isDirectHls, hlsLoaded]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isDirectHls) return;
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+
+    return () => {
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+    };
+  }, [isDirectHls, hlsLoaded]);
+
+  useEffect(() => {
+    if (!isDirectHls) return;
+
+    const toggleFromDock = () => {
+      const video = videoRef.current;
+      if (!video) return;
+      if (video.paused) {
+        video.play().catch(() => setIsPlaying(false));
+      } else {
+        video.pause();
+      }
+    };
+    const muteFromDock = (event) => {
+      const video = videoRef.current;
+      if (!video) return;
+      const muted = Boolean(event.detail?.muted);
+      video.muted = muted;
+      if (!muted && video.volume === 0) video.volume = 0.8;
+      setIsMuted(muted);
+      if (!muted && volume === 0) setVolume(0.8);
+    };
+
+    window.addEventListener('hydra-stream-toggle', toggleFromDock);
+    window.addEventListener('hydra-stream-mute', muteFromDock);
+    return () => {
+      window.removeEventListener('hydra-stream-toggle', toggleFromDock);
+      window.removeEventListener('hydra-stream-mute', muteFromDock);
+    };
+  }, [isDirectHls, volume]);
 
   // General connection timeouts
   useEffect(() => {
@@ -201,12 +252,12 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
   const handlePlayPause = () => {
     const video = videoRef.current;
     if (!video) return;
-    if (isPlaying) {
+    if (!video.paused) {
       video.pause();
-      setIsPlaying(false);
     } else {
-      video.play().catch(() => {});
-      setIsPlaying(true);
+      video.play()
+        .then(() => setIsPlaying(true))
+        .catch(() => setIsPlaying(false));
     }
   };
 
@@ -312,6 +363,8 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
             ref={videoRef}
             className="absolute inset-0 h-full w-full object-contain bg-black cursor-pointer"
             playsInline
+            autoPlay
+            muted
             onClick={handlePlayPause}
           />
         ) : sandboxShield ? (
@@ -319,9 +372,11 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
             key={`${currentUrl}-secured`}
             ref={iframeRef}
             src={currentUrl}
-            className="absolute inset-0 h-full w-full"
+            className="absolute inset-0 block h-full w-full min-h-0 border-0 bg-black"
             allowFullScreen
-            allow="autoplay; fullscreen"
+            allow="autoplay; fullscreen; encrypted-media; picture-in-picture; cross-origin-isolated"
+            loading="eager"
+            referrerPolicy="no-referrer-when-downgrade"
             onLoad={handleLoad}
             onError={handleError}
             sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
@@ -331,9 +386,11 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
             key={`${currentUrl}-compat`}
             ref={iframeRef}
             src={currentUrl}
-            className="absolute inset-0 h-full w-full"
+            className="absolute inset-0 block h-full w-full min-h-0 border-0 bg-black"
             allowFullScreen
-            allow="autoplay; fullscreen"
+            allow="autoplay; fullscreen; encrypted-media; picture-in-picture; cross-origin-isolated"
+            loading="eager"
+            referrerPolicy="no-referrer-when-downgrade"
             onLoad={handleLoad}
             onError={handleError}
           />
@@ -345,25 +402,25 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
             onClick={handlePlayPause}
             className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-[1.5px] cursor-pointer animate-fade-in"
           >
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-violet-600/90 text-white shadow-[0_0_30px_rgba(124,58,237,0.6)] border border-violet-400/20 transform scale-100 hover:scale-110 active:scale-95 transition-all duration-300">
-              <Play className="h-7 w-7 fill-white ml-1" />
+            <div className={`flex items-center justify-center rounded-full bg-emerald-600/90 text-white shadow-[0_0_30px_rgba(16,185,129,0.6)] border border-emerald-400/20 transform scale-100 hover:scale-110 active:scale-95 transition-all duration-300 ${videoOnly ? 'h-12 w-12' : 'h-16 w-16'}`}>
+              <Play className={`${videoOnly ? 'h-5 w-5' : 'h-7 w-7'} fill-white ml-1`} />
             </div>
           </div>
         )}
 
-        {/* Upcoming Status Banner overlay */}
-        {isUpcoming && (
+        {/* Upcoming Status Banner overlay (only if no active stream URL is found) */}
+        {isUpcoming && !currentUrl && (
           <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 px-6 text-center">
-            <ShieldAlert className="h-10 w-10 text-violet-400 mb-3" />
+            <ShieldAlert className="h-10 w-10 text-emerald-400 mb-3" />
             <p className="text-sm font-bold text-white">Fixture Has Not Started Yet</p>
-            <p className="mt-1 text-xs text-zinc-500 max-w-xs">
+            <p className="mt-1 text-xs text-zinc-400 max-w-xs">
               Live streams will be generated by our provider strategy registry close to kickoff.
             </p>
           </div>
         )}
 
         {/* Floating details overlay (Top left) */}
-        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 pointer-events-none">
+        {!videoOnly && <div className="absolute top-3 left-3 z-20 flex items-center gap-2 pointer-events-none">
           <span className="rounded-full bg-black/75 backdrop-blur-md border border-zinc-800/80 px-3 py-1 text-xs font-bold text-white">
             {matchTitle}
           </span>
@@ -373,10 +430,10 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
               Live Stream
             </span>
           )}
-        </div>
+        </div>}
 
         {/* CUSTOM VIDEO CONTROLS OVERLAY (Only for Direct HLS Video) */}
-        {isDirectHls && streamStatus === 'active' && (
+        {!videoOnly && isDirectHls && streamStatus === 'active' && (
           <div className="absolute bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-black/95 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col gap-2.5">
             
             {/* Live timeline indicator */}
@@ -452,7 +509,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
       </div>
 
       {/* Dynamic Security/Compatibility Hint Alert Ribbon */}
-      {!isDirectHls && sandboxShield && (
+      {!videoOnly && !isDirectHls && sandboxShield && (
         <div className="bg-violet-50 dark:bg-violet-950/15 border border-violet-200 dark:border-violet-500/20 rounded-xl p-4 text-xs text-zinc-650 dark:text-zinc-400 leading-relaxed animate-fade-in space-y-2.5 shadow-sm">
           <div className="flex items-center gap-2 text-violet-700 dark:text-violet-400 font-bold">
             <Shield className="h-4 w-4 text-violet-600 dark:text-violet-500" />
@@ -470,124 +527,132 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
         </div>
       )}
 
-      {/* Dynamic Action Toolbar (Refresh, Theater, Fullscreen, Ad-Shield Toggle) */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 glass-panel p-4 rounded-xl shadow-md">
-        
-        {/* Left Side: Security Warning or Ad-Shield Toggle */}
-        {!isDirectHls ? (
-          <div className="flex items-center gap-3 bg-zinc-200/60 dark:bg-zinc-950/60 p-2.5 rounded-lg border border-zinc-300/40 dark:border-zinc-900/60 w-full lg:w-auto shadow-inner">
-            <div className="flex flex-col text-left">
-              <div className="flex items-center gap-1.5">
-                <span className={`h-1.5 w-1.5 rounded-full ${sandboxShield ? 'bg-green-500' : 'bg-red-400 animate-pulse'}`} />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
-                  Ad-Shield {sandboxShield ? 'ON' : 'OFF'}
-                </span>
-              </div>
-              <span className="text-[9px] text-zinc-500 dark:text-zinc-500 mt-0.5 leading-none block">
-                {sandboxShield ? "Blocking redirects & popups" : "⚠ Protection disabled"}
-              </span>
-            </div>
-            <button
-              onClick={() => setSandboxShield(!sandboxShield)}
-              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ml-auto lg:ml-2 ${
-                sandboxShield ? 'bg-green-600' : 'bg-zinc-300 dark:bg-zinc-800'
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  sandboxShield ? 'translate-x-4' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2.5 text-left bg-zinc-200/40 dark:bg-zinc-950/40 p-2.5 rounded-lg border border-zinc-300/40 dark:border-zinc-900/60 w-full lg:w-auto shadow-inner">
-            <div className="flex flex-col text-left">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
-                Native Player Active
-              </span>
-              <span className="text-[10px] text-zinc-500 dark:text-zinc-500 mt-0.5 leading-none block">
-                Direct HLS decoder runs inside native media sandbox.
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Right Side: Viewport Controls Group */}
-        <div className="flex items-center gap-2 bg-zinc-200/60 dark:bg-zinc-950/60 p-1.5 rounded-lg border border-zinc-300/40 dark:border-zinc-900/60 w-full lg:w-auto justify-end shadow-inner">
-          {/* Refresh button */}
-          <button
-            onClick={reloadStream}
-            className="rounded-md bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 px-3 py-1.5 text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold border border-zinc-300 dark:border-zinc-950 shadow-sm cursor-pointer"
-            title="Reload Stream Connection"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
-
-          {/* Theater Mode Toggle button */}
-          <button
-            onClick={() => setIsTheaterMode(!isTheaterMode)}
-            className={`rounded-md px-3 py-1.5 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold border cursor-pointer ${
-              isTheaterMode 
-                ? 'border-violet-500/45 bg-violet-600/10 text-violet-600 dark:text-violet-400 hover:bg-violet-600/20 shadow-sm' 
-                : 'border-zinc-300 dark:border-zinc-950 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white shadow-sm'
-            }`}
-            title={isTheaterMode ? "Exit Theater Mode" : "Enter Theater Mode"}
-          >
-            <Cpu className={`h-3.5 w-3.5 ${isTheaterMode ? 'animate-pulse' : ''}`} />
-            <span>{isTheaterMode ? "Normal Mode" : "Theater"}</span>
-          </button>
-
-          {/* Fullscreen button */}
-          <button
-            onClick={toggleFullscreen}
-            className="rounded-md bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 px-3 py-1.5 text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold border border-zinc-300 dark:border-zinc-950 shadow-sm cursor-pointer"
-            title="Toggle Fullscreen"
-          >
-            <Maximize className="h-3.5 w-3.5" />
-            <span>Fullscreen</span>
-          </button>
-        </div>
-
-      </div>
-
-      {/* Dedicated Servers Selection Panel */}
-      <div className="glass-panel p-4 rounded-xl shadow-md">
-        {allChannels.length > 0 ? (
-          <div className="flex flex-col gap-2.5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 flex-wrap">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-400">
-                Available Stream Channels ({allChannels.length})
-              </span>
-              <span className="text-[9px] text-zinc-500 dark:text-zinc-500 font-semibold leading-none normal-case">
-                Quality Range: <span className="text-zinc-700 dark:text-zinc-400 font-bold">SD (480p/576p Standard Definition)</span> &middot; <span className="text-green-600 dark:text-green-400 font-bold">HD (720p/1080p High Definition)</span>
-              </span>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {allChannels.map((ch, idx) => (
+      {!videoOnly && (
+        <div className="flex flex-col xl:flex-row items-stretch gap-4 w-full mt-4">
+          {/* Dynamic Action Toolbar (Refresh, Theater, Fullscreen, Ad-Shield Toggle) */}
+          <div className="flex-1 bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            {/* Left Side: Ad-Shield Toggle */}
+            {!isDirectHls ? (
+              <div className="flex items-center gap-3 bg-slate-100/90 p-2.5 rounded-xl border border-slate-200 shadow-2xs">
+                <div className="flex flex-col text-left">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`h-2 w-2 rounded-full ${sandboxShield ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-800">
+                      Ad-Shield {sandboxShield ? 'ON' : 'OFF'}
+                    </span>
+                  </div>
+                  <span className="text-[9.5px] text-slate-500 mt-0.5 leading-none block font-bold">
+                    {sandboxShield ? "Blocking redirects & popups" : "⚠ Protection disabled"}
+                  </span>
+                </div>
                 <button
-                  key={idx}
-                  onClick={() => { setActiveChannel(idx); }}
-                  className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition-all cursor-pointer ${
-                    activeChannel === idx
-                      ? 'border-violet-500/40 bg-violet-600/10 text-violet-600 dark:text-violet-400 shadow-sm dark:shadow-[0_0_15px_rgba(124,58,237,0.1)]'
-                      : 'border-zinc-300 bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-300'
+                  type="button"
+                  onClick={() => setSandboxShield(!sandboxShield)}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ml-2 ${
+                    sandboxShield ? 'bg-emerald-600' : 'bg-slate-300'
                   }`}
                 >
-                  <span className={`h-1.5 w-1.5 rounded-full ${activeChannel === idx ? 'bg-violet-500 dark:bg-violet-400' : 'bg-zinc-400 dark:bg-zinc-700'}`} />
-                  <span>Server {idx + 1}</span>
-                  <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-900 ${ch.quality === 'HD' || ch.quality === 'FHD' || ch.quality === '1080p' ? 'text-green-600 border-green-200 dark:text-green-400 dark:border-green-950' : 'text-zinc-500 dark:text-zinc-500'}`}>
-                    {ch.quality === 'FHD' || ch.quality === '1080p' ? 'HD' : (ch.quality || 'SD')}
-                  </span>
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      sandboxShield ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
                 </button>
-              ))}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2.5 text-left bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
+                <div className="flex flex-col text-left">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
+                    Native Player Active
+                  </span>
+                  <span className="text-[10px] text-emerald-700 mt-0.5 leading-none block font-medium">
+                    Direct HLS decoder runs inside native media sandbox.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Right Side: Viewport Controls Group */}
+            <div className="flex items-center gap-2 bg-slate-100/90 p-1.5 rounded-xl border border-slate-200 justify-end">
+              {/* Refresh button */}
+              <button
+                type="button"
+                onClick={reloadStream}
+                className="rounded-lg bg-white hover:bg-slate-50 px-3 py-1.5 text-slate-700 hover:text-slate-900 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold border border-slate-200 shadow-2xs cursor-pointer"
+                title="Reload Stream Connection"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 text-emerald-600 ${isLoading ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </button>
+
+              {/* Theater Mode Toggle button */}
+              <button
+                type="button"
+                onClick={() => setIsTheaterMode(!isTheaterMode)}
+                className={`rounded-lg px-3 py-1.5 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold border cursor-pointer ${
+                  isTheaterMode 
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-800 shadow-2xs' 
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 shadow-2xs'
+                }`}
+                title={isTheaterMode ? "Exit Theater Mode" : "Enter Theater Mode"}
+              >
+                <Cpu className={`h-3.5 w-3.5 ${isTheaterMode ? 'text-emerald-600 animate-pulse' : 'text-slate-400'}`} />
+                <span>{isTheaterMode ? "Normal Mode" : "Theater"}</span>
+              </button>
+
+              {/* Fullscreen button */}
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className="rounded-lg bg-white hover:bg-slate-50 px-3 py-1.5 text-slate-700 hover:text-slate-900 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold border border-slate-200 shadow-2xs cursor-pointer"
+                title="Toggle Fullscreen"
+              >
+                <Maximize className="h-3.5 w-3.5 text-slate-600" />
+                <span>Fullscreen</span>
+              </button>
             </div>
           </div>
-        ) : (
-          <span className="text-xs text-zinc-500 font-semibold">Resolving fallback stream feeds...</span>
-        )}
-      </div>
+
+          {/* Dedicated Servers Selection Panel */}
+          <div className="flex-[1.3] bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs">
+            {allChannels.length > 0 ? (
+              <div className="flex flex-col gap-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span>Available Stream Servers ({allChannels.length})</span>
+                  </span>
+                  <span className="text-[9.5px] text-slate-500 font-bold leading-none">
+                    Quality: <span className="text-emerald-700 font-black">HD 1080p / 720p 60FPS</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {allChannels.map((ch, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => { setActiveChannel(idx); }}
+                      className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition-all cursor-pointer ${
+                        activeChannel === idx
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-900 shadow-xs font-black'
+                          : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                      }`}
+                    >
+                      <span className={`h-2 w-2 rounded-full ${activeChannel === idx ? 'bg-emerald-600 animate-pulse' : 'bg-slate-400'}`} />
+                      <span>Server {idx + 1}</span>
+                      <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-white border border-slate-200 ${ch.quality === 'HD' || ch.quality === 'FHD' || ch.quality === '1080p' ? 'text-emerald-700 border-emerald-200' : 'text-slate-500'}`}>
+                        {ch.quality === 'FHD' || ch.quality === '1080p' ? 'HD' : (ch.quality || 'SD')}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <span className="text-xs text-zinc-500 font-semibold">Resolving fallback stream feeds...</span>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

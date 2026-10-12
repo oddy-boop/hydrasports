@@ -1,20 +1,73 @@
 import crypto from 'crypto';
 import logger from './logger';
 import { Match, Channel } from './types';
-import { WatchFootyProvider, getMatchDetails, getMatchStats, getLeagues, getTopTeams } from './providers/watchFooty';
+import {
+  WatchFootyProvider,
+  getMatchDetails as getWatchFootyMatchDetails,
+  getMatchStats,
+  getLeagues,
+  getTopTeams,
+} from './providers/watchFooty';
 import { CdnLiveProvider } from './providers/cdnLive';
 import { StreamedPkProvider } from './providers/streamedPk';
 import { getCacheManager } from './cache/cacheManager';
+import { getExternalMatchStats, getScoreForMatch } from './providers/scoreProvider';
 
 const SECRET_KEY = process.env.STREAM_SECRET || 'default_stream_hmac_secret_key_123_abc';
 
-export { getMatchDetails, getMatchStats, getLeagues, getTopTeams };
+export { getMatchStats, getLeagues, getTopTeams };
+
+export async function getMatchStatsForMatch(match: Match) {
+  if (match.sport === 'football') {
+    const watchFootyStats = await getMatchStats(match.id);
+    if (watchFootyStats) return watchFootyStats;
+  }
+
+  const externalStats = await getExternalMatchStats(
+    match.title,
+    match.timestamp,
+    match.tournament,
+    match.sport,
+  );
+  if (!externalStats) return null;
+
+  return {
+    venue: match.venue,
+    leagueLogo: match.leagueLogo,
+    poster: match.poster,
+    boxscore: externalStats.boxscore,
+    rosters: externalStats.rosters,
+    commentary: externalStats.commentary,
+  };
+}
+
+export async function getLiveMatchDetails(matchId: string): Promise<Match | null> {
+  const match = await getMatchDetails(matchId);
+  if (!match || match.status !== 'live') return match;
+
+  const eventId = match.id.match(/(\d+)$/)?.[1];
+  const score = await getScoreForMatch(match.title, match.timestamp, match.tournament, eventId, match.sport);
+  return score ? {
+    ...match,
+    homeScore: score.home,
+    awayScore: score.away,
+    currentMinute: score.currentMinute || match.currentMinute,
+  } : match;
+}
 
 const providers = [
   new WatchFootyProvider(),
   new CdnLiveProvider(),
   new StreamedPkProvider(),
 ];
+
+export async function getMatchDetails(matchId: string): Promise<Match | null> {
+  const matches = await getMatches();
+  const listedMatch = matches.find(match => match.id === matchId);
+  if (listedMatch) return listedMatch;
+
+  return getWatchFootyMatchDetails(matchId);
+}
 
 export function getStreamRedirectUrl(originalUrl: string): string {
   const encoded = Buffer.from(originalUrl).toString('base64url');
@@ -29,9 +82,40 @@ export function getStreamRedirectUrl(originalUrl: string): string {
 export async function getMatches(): Promise<Match[]> {
   const cache = getCacheManager();
   return cache.swr('all_matches', async () => {
+    let matches: Match[] = [];
     const watchFooty = providers.find(p => p.id === 'watchfooty') as WatchFootyProvider;
-    if (!watchFooty) return [];
-    return watchFooty.fetchMatches();
+    if (watchFooty) matches.push(...await watchFooty.fetchMatches());
+    const fallbackMatches = await Promise.all(
+      providers.filter(p => p.id !== 'watchfooty').map(provider => provider.fetchMatches()),
+    );
+    matches.push(...fallbackMatches.flat());
+
+    const uniqueMatches = Array.from(new Map(matches.map(match => [match.id, match])).values());
+
+    if (uniqueMatches.length > 0) {
+      const enriched = await Promise.all(uniqueMatches.map(async match => {
+        if (match.homeScore !== null && match.awayScore !== null) return match;
+        const eventId = match.id.match(/(\d+)$/)?.[1];
+        if (match.status !== 'live' && match.status !== 'finished') return match;
+        const score = await getScoreForMatch(
+          match.title,
+          match.timestamp,
+          match.tournament,
+          eventId,
+          match.sport,
+        );
+        if (!score) return match;
+        return {
+          ...match,
+          homeScore: score.home,
+          awayScore: score.away,
+          currentMinute: score.currentMinute || match.currentMinute,
+        };
+      }));
+      return enriched;
+    }
+
+    return [];
   }, 15);
 }
 

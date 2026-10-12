@@ -10,8 +10,9 @@ export default function LiveMinute({ apiMinute, apiMinuteNumber }) {
     ? (apiMinute || (apiMinuteNumber ? `${apiMinuteNumber}'` : ''))
     : `${adjusted}'`;
 
-  const isFT = adjusted >= 90;
-  const isHT = adjusted === 45;
+  const hasVerifiedMinute = Boolean(apiMinute || apiMinuteNumber);
+  const isFT = hasVerifiedMinute && adjusted >= 90;
+  const isHT = hasVerifiedMinute && adjusted === 45;
 
   return (
     <div className="flex flex-col items-center gap-1.5">
@@ -25,7 +26,7 @@ export default function LiveMinute({ apiMinute, apiMinuteNumber }) {
         </button>
         
         <span className="text-[13px] font-bold font-mono px-2.5 py-0.5 rounded-full bg-violet-950/60 border border-violet-850/80 text-violet-400 min-w-[5ch] text-center tabular-nums shadow-sm">
-          {display}
+          {display || 'LIVE'}
         </span>
         
         <button

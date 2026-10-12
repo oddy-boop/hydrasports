@@ -23,7 +23,7 @@ export class WatchFootyProvider implements StreamProvider {
         this.wfMatchesCache = Array.isArray(data) ? data : [];
         return this.wfMatchesCache;
       } catch (err: any) {
-        logger.error('WatchFooty API request failed', err, { api: WATCHFOOTY_API });
+        logger.warn('WatchFooty API unavailable; fallback providers will be used', { api: WATCHFOOTY_API });
         this.wfMatchesCache = [];
         return this.wfMatchesCache;
       } finally {
@@ -48,12 +48,14 @@ export class WatchFootyProvider implements StreamProvider {
     const match = preFetchedMatch || await getMatchDetails(matchId);
     if (!match || !match.sources) return [];
     
-    return match.sources.map((s, idx) => ({
-      name: `Server ${idx + 1}`,
-      url: s.url,
-      provider: this.id,
-      quality: s.quality ? String(s.quality).toUpperCase() : 'SD',
-    }));
+    return match.sources
+      .filter(source => Boolean(source.url))
+      .map((source, idx) => ({
+        name: `Server ${idx + 1}`,
+        url: source.url,
+        provider: this.id,
+        quality: source.quality ? String(source.quality).toUpperCase() : 'SD',
+      }));
   }
 }
 
@@ -138,6 +140,9 @@ export function normalizeWatchFootyMatch(match: any): Match {
     currentMinuteNumber,
     homeScore: Math.max(0, match.scores?.home ?? match.homeScore ?? 0),
     awayScore: Math.max(0, match.scores?.away ?? match.awayScore ?? 0),
+    provider: 'watchfooty',
+    upstreamCategory: 'football',
+    popular: false,
   };
 
 }

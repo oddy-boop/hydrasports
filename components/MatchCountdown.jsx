@@ -2,22 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 export default function MatchCountdown({ timestamp, status }) {
-  const router = useRouter();
   const [timeLeft, setTimeLeft] = useState(null);
 
   useEffect(() => {
-    let refreshed = false;
     function update() {
       const diff = timestamp - Date.now();
       if (diff <= 0) {
-        setTimeLeft({ label: 'Starting soon', isSoon: true });
-        if (!refreshed) {
-          refreshed = true;
-          router.refresh();
-        }
+        setTimeLeft({
+          label: status === 'upcoming' ? 'Streaming not started' : 'Ended',
+          isEnded: status !== 'upcoming',
+          isNotStarted: status === 'upcoming',
+          isSoon: false,
+        });
         return;
       }
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -25,64 +23,83 @@ export default function MatchCountdown({ timestamp, status }) {
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
       
-      setTimeLeft({ days, hours, minutes, seconds, isSoon: false });
+      setTimeLeft({ days, hours, minutes, seconds, isEnded: false, isNotStarted: false, isSoon: false });
     }
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [timestamp, router]);
+  }, [timestamp]);
 
   if (!timeLeft || status === 'live') return null;
 
   if (timeLeft.isSoon) {
     return (
-      <div className="rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 px-5 py-4 shadow-md dark:shadow-xl text-center">
-        <span className="text-sm font-bold text-violet-650 dark:text-violet-400 animate-pulse">📢 Match Kickoff: Starting Soon</span>
+      <div className="rounded-[22px] border border-emerald-300 bg-emerald-50 px-6 py-4 shadow-sm text-center">
+        <span className="text-sm font-black text-emerald-800 animate-pulse">📢 Match Kickoff: Starting Very Soon</span>
+      </div>
+    );
+  }
+
+  if (timeLeft.isEnded) {
+    return (
+      <div className="rounded-[22px] border border-slate-200 bg-slate-100 px-6 py-4 shadow-sm text-center">
+        <span className="text-sm font-black text-slate-600">Match ended</span>
+      </div>
+    );
+  }
+
+  if (timeLeft.isNotStarted) {
+    return (
+      <div className="rounded-[28px] border border-amber-200 bg-amber-50 px-6 py-8 text-center shadow-lg">
+        <span className="text-xl font-black uppercase tracking-wide text-amber-800 sm:text-2xl">
+          Streaming not started
+        </span>
+        <p className="mt-2 text-sm font-medium text-amber-700">
+          The scheduled kickoff time has arrived, but no stream is available yet.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-950/80 backdrop-blur-md px-5 py-4 shadow-md dark:shadow-xl">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        
-        <div className="flex items-center gap-2">
-          <Clock className="h-4.5 w-4.5 text-violet-600 dark:text-violet-400" />
-          <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Match Kickoff Countdown</span>
+    <div className="rounded-[28px] border border-emerald-200/90 bg-white/95 px-5 py-7 shadow-lg sm:px-8 sm:py-9">
+      <div className="flex flex-col items-center gap-7">
+        <div className="flex items-center gap-3">
+          <Clock className="h-7 w-7 text-emerald-600" />
+          <span className="text-lg font-black uppercase tracking-wide text-slate-800 sm:text-2xl">Match Kickoff Countdown</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center justify-center gap-1.5 sm:gap-4">
           {timeLeft.days > 0 && (
             <div className="flex items-center">
-              <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-lg text-sm font-bold text-zinc-800 dark:text-white font-mono tabular-nums shadow-inner">
+              <div className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-3xl font-black tabular-nums text-slate-900 shadow-sm sm:px-5 sm:py-4 sm:text-5xl">
                 {timeLeft.days}
               </div>
-              <span className="text-[10px] text-zinc-550 dark:text-zinc-500 font-extrabold uppercase ml-1 mr-2">d</span>
+              <span className="ml-1 mr-1 text-xs font-black uppercase text-slate-500 sm:ml-2 sm:mr-2 sm:text-sm">d</span>
             </div>
           )}
           
           <div className="flex items-center">
-            <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-lg text-sm font-bold text-zinc-800 dark:text-white font-mono tabular-nums shadow-inner">
+            <div className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-3xl font-black tabular-nums text-slate-900 shadow-sm sm:px-5 sm:py-4 sm:text-5xl">
               {String(timeLeft.hours).padStart(2, '0')}
             </div>
-            <span className="text-[10px] text-zinc-550 dark:text-zinc-500 font-extrabold uppercase ml-1 mr-2">h</span>
+            <span className="ml-1 mr-1 text-xs font-black uppercase text-slate-500 sm:ml-2 sm:mr-2 sm:text-sm">h</span>
           </div>
 
           <div className="flex items-center">
-            <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-lg text-sm font-bold text-zinc-800 dark:text-white font-mono tabular-nums shadow-inner">
+            <div className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-3xl font-black tabular-nums text-slate-900 shadow-sm sm:px-5 sm:py-4 sm:text-5xl">
               {String(timeLeft.minutes).padStart(2, '0')}
             </div>
-            <span className="text-[10px] text-zinc-550 dark:text-zinc-500 font-extrabold uppercase ml-1 mr-2">m</span>
+            <span className="ml-1 mr-1 text-xs font-black uppercase text-slate-500 sm:ml-2 sm:mr-2 sm:text-sm">m</span>
           </div>
 
           <div className="flex items-center">
-            <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-lg text-sm font-bold text-violet-650 dark:text-violet-400 font-mono tabular-nums shadow-inner ring-1 ring-violet-500/20">
+            <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2.5 text-3xl font-black tabular-nums text-emerald-800 shadow-sm sm:px-5 sm:py-4 sm:text-5xl">
               {String(timeLeft.seconds).padStart(2, '0')}
             </div>
-            <span className="text-[10px] text-zinc-550 dark:text-zinc-500 font-extrabold uppercase ml-1">s</span>
+            <span className="ml-1 text-xs font-black uppercase text-emerald-700 sm:text-sm">s</span>
           </div>
         </div>
-
       </div>
     </div>
   );

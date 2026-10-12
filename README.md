@@ -1,10 +1,10 @@
-# ⚽ FootyLive — Premium Live Sports Streaming Aggregator
+# ⚽ HydraSports — Premium Live Sports Streaming Aggregator
 
-FootyLive is a high-performance, ad-free live football streaming aggregator built on **Next.js 16** with **React 19** and **Tailwind CSS v4**. It aggregates live scoreboard metrics, team logistics, and dynamic multi-server stream networks into a premium, glassmorphic client interface.
+HydraSports is a high-performance, ad-free live football streaming aggregator built on **Next.js 16** with **React 19** and **Tailwind CSS v4**. It aggregates live scoreboard metrics, team logistics, and dynamic multi-server stream networks into a premium, glassmorphic client interface.
 
-Designed for low latency and high quality, FootyLive resolves streaming server links on the fly, provides direct `.m3u8` video player fallbacks with client-side HLS rendering, integrates ad-blocker sandboxes, and implements a dashboard to stream multiple matches simultaneously.
+Designed for low latency and high quality, HydraSports resolves streaming server links on the fly, provides direct `.m3u8` video player fallbacks with client-side HLS rendering, integrates ad-blocker sandboxes, and implements a dashboard to stream multiple matches simultaneously.
 
-**🌐 Live Demo: [https://footylive.vercel.app](https://footylive.vercel.app/)**
+**🌐 Live Demo: [https://HydraSports.vercel.app](https://HydraSports.vercel.app/)**
 
 <img width="1920" height="976" alt="Screenshot 2026-05-21 103906" src="https://github.com/user-attachments/assets/d304e7f0-2c1e-4520-8935-f281a5183ccf" />
 <img width="1920" height="985" alt="Screenshot 2026-05-21 095834" src="https://github.com/user-attachments/assets/9b15e3d3-f79e-46d5-aca9-57d31b84df9a" />
@@ -48,7 +48,7 @@ Designed for low latency and high quality, FootyLive resolves streaming server l
 
 ## 🏗️ Architecture Design & Directory Structure
 
-FootyLive is organized around Next.js App Router patterns, utilizing server-rendered layouts, dynamic client components, and lightweight local caching layers.
+HydraSports is organized around Next.js App Router patterns, utilizing server-rendered layouts, dynamic client components, and lightweight local caching layers.
 
 ```
 football-stream-app/
@@ -99,7 +99,7 @@ football-stream-app/
 ### 1. Installation
 Clone the repository and install all dependencies:
 ```bash
-git clone https://github.com/OgBek/footyLive.git
+git clone https://github.com/OgBek/HydraSports.git
 cd football-stream-app
 npm install
 ```
@@ -144,9 +144,59 @@ npx vitest run lib/utils/matching.test.ts
 
 ---
 
+## ☁️ Deploying to Vercel
+
+HydraSports uses the Next.js App Router and can be deployed directly to Vercel.
+
+### Deploy from GitHub
+
+1. Push the repository to GitHub, including `package-lock.json`.
+2. Open [Vercel](https://vercel.com/new) and import the repository.
+3. Keep the detected framework as **Next.js**.
+4. Add the environment variables below under **Settings → Environment Variables**:
+
+| Variable | Required | Scope | Description |
+|----------|----------|-------|-------------|
+| `STREAM_SECRET` | Yes | Production, Preview | Long random secret used to sign stream redirect URLs |
+| `UPSTASH_REDIS_REST_URL` | No | Production, Preview | Upstash REST endpoint for shared caching |
+| `UPSTASH_REDIS_REST_TOKEN` | No | Production, Preview | Upstash REST token |
+| `NEXT_PUBLIC_API_BASE` | No | Production, Preview | Custom WatchFooty-compatible API base |
+
+`STREAM_SECRET` must be different from the local development fallback. Generate one with:
+
+```bash
+openssl rand -hex 32
+```
+
+5. Click **Deploy**. Vercel runs `npm ci` and `npm run build` using the repository configuration.
+6. After deployment, verify:
+   - `/`
+   - `/api/matches`
+   - `/api-hub`
+   - `/watch/<matchId>`
+
+The application does not host or transcode video on Vercel. It resolves authorized upstream stream sources and embeds or plays them in the browser. Video delivery remains subject to the upstream provider’s availability, mobile restrictions, and usage terms.
+
+### Deploy with the Vercel CLI
+
+```bash
+npm install --global vercel
+vercel login
+vercel
+vercel --prod
+```
+
+Set production secrets through the Vercel dashboard or CLI; do not commit `.env` files:
+
+```bash
+vercel env add STREAM_SECRET production
+```
+
+---
+
 ## 🛠️ Developer REST API Directory
 
-FootyLive is equipped with public REST API endpoints. Full interactive documentation is available at [`/api-hub`](https://footylive.vercel.app/api-hub).
+HydraSports is equipped with public REST API endpoints. Full interactive documentation is available at [`/api-hub`](https://HydraSports.vercel.app/api-hub).
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -162,7 +212,7 @@ FootyLive is equipped with public REST API endpoints. Full interactive documenta
 
 ## 🤝 Open Source Community Guidelines
 
-We welcome contributions from developers, football enthusiasts, and UI/UX designers! Help us make FootyLive the best web sports hub.
+We welcome contributions from developers, football enthusiasts, and UI/UX designers! Help us make HydraSports the best web sports hub.
 
 ### How to Contribute
 1. **Fork** the repository and create your feature branch: `git checkout -b feature/amazing-feature`.
@@ -180,4 +230,5 @@ We welcome contributions from developers, football enthusiasts, and UI/UX design
 
 ## ⚖️ License & Disclaimer
 
-FootyLive is an open-source stream aggregator. It parses public third-party link networks for research and educational purposes. FootyLive does not host, upload, or own any media streams, video channels, or sports network content.
+HydraSports is an open-source stream aggregator. It parses public third-party link networks for research and educational purposes. HydraSports does not host, upload, or own any media streams, video channels, or sports network content.
+# hydrasports

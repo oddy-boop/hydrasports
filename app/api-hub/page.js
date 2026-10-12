@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   Database, 
   Terminal, 
@@ -20,7 +20,11 @@ import {
 export default function ApiHubPage() {
   const [copiedIndex, setCopiedIndex] = useState(null);
   const [expandedIndex, setExpandedIndex] = useState(null);
-  const origin = 'https://footylive.vercel.app';
+  const [origin, setOrigin] = useState('');
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   const copyToClipboard = (text, index) => {
     navigator.clipboard.writeText(text);
@@ -34,7 +38,7 @@ export default function ApiHubPage() {
       name: 'Fetch Aggregated Matches',
       path: '/api/matches',
       method: 'GET',
-      description: 'Retrieves all active and scheduled football matches aggregated from all scraping providers, sorted dynamically: active live matches first, followed by league priority and kickoff timestamps.',
+      description: 'Retrieves all active and scheduled sports matches aggregated from all streaming providers, including football, basketball, tennis, hockey, and baseball.',
       sampleResponse: `{
   "matches": [
     {
@@ -167,7 +171,7 @@ Cache-Control: public, max-age=86400, s-maxage=86400]`
               API Developer Hub
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-3xl leading-relaxed">
-              Welcome to the FootyLive developer dashboard. Here you can explore our system endpoints, copy code signatures, view data structures, and access upstream streaming metadata providers.
+              Welcome to the HydraSports developer dashboard. Here you can explore our system endpoints, copy code signatures, view data structures, and access upstream streaming metadata providers.
             </p>
           </div>
         </div>

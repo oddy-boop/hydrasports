@@ -36,6 +36,7 @@ export default function MatchGrid({ matches, defaultTab }) {
   const [search, setSearch] = useState('');
   const [selectedLeagues, setSelectedLeagues] = useState([]);
   const [favorites, setFavorites] = useState([]);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const scrollRef = useRef(null);
 
@@ -54,6 +55,10 @@ export default function MatchGrid({ matches, defaultTab }) {
   }, [router]);
 
   useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
     const updateFavs = () => {
       setFavorites(getFavoriteTeams());
     };
@@ -65,6 +70,8 @@ export default function MatchGrid({ matches, defaultTab }) {
   }, []);
 
   const enrichedMatches = useMemo(() => {
+    if (!isHydrated) return matches;
+
     return matches.map(m => {
       if (m.status === 'upcoming') {
         const now = Date.now();
@@ -72,34 +79,15 @@ export default function MatchGrid({ matches, defaultTab }) {
         const diffMinutes = kickoffTime ? Math.floor((now - kickoffTime) / 60000) : -1;
         // Promote to live if kickoff time has arrived/passed and less than 125 mins have passed
         if (kickoffTime && diffMinutes >= 0 && diffMinutes < 125) {
-          let currentMinuteNumber = m.currentMinuteNumber || 0;
-          let currentMinute = m.currentMinute || '';
-          
-          if (diffMinutes < 45) {
-            currentMinuteNumber = diffMinutes;
-            currentMinute = `${diffMinutes}'`;
-          } else if (diffMinutes >= 45 && diffMinutes < 60) {
-            currentMinuteNumber = 45;
-            currentMinute = 'HT';
-          } else if (diffMinutes >= 60 && diffMinutes < 105) {
-            currentMinuteNumber = diffMinutes - 15;
-            currentMinute = `${diffMinutes - 15}'`;
-          } else {
-            currentMinuteNumber = 90;
-            currentMinute = '90+';
-          }
-
           return {
             ...m,
             status: 'live',
-            currentMinute,
-            currentMinuteNumber,
           };
         }
       }
       return m;
     });
-  }, [matches]);
+  }, [isHydrated, matches]);
 
   const live = useMemo(() => enrichedMatches.filter(m => m.status === 'live'), [enrichedMatches]);
   const upcoming = useMemo(() => enrichedMatches.filter(m => m.status === 'upcoming'), [enrichedMatches]);

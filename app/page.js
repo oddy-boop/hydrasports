@@ -1,5 +1,5 @@
 import { getMatches, getLiveMatches } from '@/lib/streamEngine';
-import MatchGrid from '@/components/MatchGrid';
+import HydraHomePage from '@/components/HydraHomePage';
 
 export const revalidate = 10;
 
@@ -20,9 +20,8 @@ export default async function Home({ searchParams }) {
   const now = Date.now();
   const thirtyMin = 30 * 60 * 1000;
   mergedMatches = mergedMatches.filter(m => {
-    if (m.status === 'live') return true;
-    if (m.status === 'upcoming' && m.timestamp < now - thirtyMin) return false;
-    return true;
+    if (m.status === 'live' || m.status === 'finished') return true;
+    return m.timestamp >= now - thirtyMin;
   });
 
   mergedMatches.sort((a, b) => {
@@ -37,9 +36,5 @@ export default async function Home({ searchParams }) {
     return a.timestamp - b.timestamp;
   });
 
-  return (
-    <div className="space-y-5">
-      <MatchGrid matches={mergedMatches} defaultTab={tab} />
-    </div>
-  );
+  return <HydraHomePage initialMatches={mergedMatches} defaultTab={tab} />;
 }

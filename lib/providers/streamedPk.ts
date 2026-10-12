@@ -1,23 +1,45 @@
 import { Match, Channel } from '../types';
 import { StreamProvider } from './types';
 import { fetchWithTimeout } from './baseProvider';
-import { teamsMatch } from '../utils/matching';
+import { getCountryForLeague, getLeaguePriority, teamsMatch } from '../utils/matching';
 import { getCacheManager } from '../cache/cacheManager';
 import logger from '../logger';
 
-const STREAMED_API = 'https://streamed.pk/api/matches/football';
+const STREAMED_API = 'https://streamed.pk/api/matches';
+const STREAMED_SPORTS = ['football', 'basketball', 'tennis', 'hockey', 'baseball'];
 const STREAMED_STREAM = 'https://streamed.pk/api/stream';
 const TIMEOUT_MS = 4000;
 const SHORT_TIMEOUT = 2500;
+
+function getCompetition(match: StreamedRawMatch): string {
+  const sourceText = (match.sources || []).map(source => source.id).join(' ').toLowerCase();
+  const competitions: [string, string][] = [
+    ['premier-league', 'Premier League'],
+    ['la-liga', 'La Liga'],
+    ['laliga', 'La Liga'],
+    ['serie-a', 'Serie A'],
+    ['bundesliga', 'Bundesliga'],
+    ['ligue-1', 'Ligue 1'],
+    ['eredivisie', 'Eredivisie'],
+    ['champions-league', 'Champions League'],
+    ['europa-league', 'Europa League'],
+    ['mls', 'MLS'],
+  ];
+
+  return competitions.find(([needle]) => sourceText.includes(needle))?.[1] || match.category || 'Football';
+}
 
 interface StreamedRawMatch {
   id: string;
   title: string;
   category: string;
   date: number;
+  poster?: string;
+  popular?: boolean;
+  sport?: string;
   teams?: {
-    home?: { name: string };
-    away?: { name: string };
+    home?: { name: string; badge?: string };
+    away?: { name: string; badge?: string };
   };
   sources?: { source: string; id: string }[];
 }
@@ -26,23 +48,74 @@ export class StreamedPkProvider implements StreamProvider {
   id = 'streamed';
   name = 'Streamed.pk';
 
-  private async fetchRawMatches(): Promise<StreamedRawMatch[]> {
+  private async fetchRawMatches(sport?: string): Promise<StreamedRawMatch[]> {
     const cache = getCacheManager();
-    return cache.swr('streamed_raw', async () => {
+    const cacheKey = `streamed_raw_${sport || 'all'}`;
+    return cache.swr(cacheKey, async () => {
       try {
-        const data = await fetchWithTimeout(STREAMED_API, TIMEOUT_MS);
-        return Array.isArray(data) ? data : [];
+        const data = await fetchWithTimeout(
+          sport ? `${STREAMED_API}/${sport}` : `${STREAMED_API}/football`,
+          TIMEOUT_MS,
+        );
+        if (!Array.isArray(data)) return [];
+        return data
+          .filter((match): match is StreamedRawMatch => Boolean(match && typeof match === 'object'))
+          .map(match => ({ ...match, sport: match.sport || sport }));
       } catch (err) {
-        logger.error('Streamed.pk API request failed', err);
+        logger.error(`Streamed.pk ${sport || 'football'} API request failed`, err);
         return [];
       }
     }, 30);
   }
 
   async fetchMatches(): Promise<Match[]> {
-    // Streamed.pk matches are not listed top-level,
-    // they are resolved dynamically as fallback channels.
-    return [];
+    const matchResults = await Promise.all(STREAMED_SPORTS.map(sport => this.fetchRawMatches(sport)));
+    const matches = matchResults.flat();
+    const now = Date.now();
+
+    return matches.map((match): Match => {
+      const timestamp = Number(match.date) || now;
+      const status = timestamp <= now
+        ? timestamp > now - 125 * 60000 ? 'live' : 'finished'
+        : 'upcoming';
+      const homeTeam = match.teams?.home?.name || 'Home';
+      const awayTeam = match.teams?.away?.name || 'Away';
+      const sport = match.sport || match.category || 'football';
+      const tournament = sport === 'football' ? getCompetition(match) : match.category || sport;
+      const badgeUrl = (badge?: string) => badge ? `https://streamed.pk/api/images/proxy/${badge}.webp` : '';
+
+      return {
+        id: String(match.id),
+        title: match.title || `${homeTeam} vs ${awayTeam}`,
+        sport,
+        status,
+        timestamp,
+        tournament,
+        country: getCountryForLeague(tournament),
+        priority: getLeaguePriority(tournament),
+        homeTeam: { name: homeTeam, badge: badgeUrl(match.teams?.home?.badge) },
+        awayTeam: { name: awayTeam, badge: badgeUrl(match.teams?.away?.badge) },
+        leagueLogo: '',
+        poster: match.poster ? `https://streamed.pk${match.poster}` : '',
+        venue: '',
+        note: '',
+        sources: (match.sources || []).map((source, index) => ({
+          source: source.source,
+          id: String(source.id),
+          url: '',
+          label: `Server ${index + 1}`,
+          quality: 'HD',
+        })),
+        fallbackChannels: [],
+        currentMinute: '',
+        currentMinuteNumber: 0,
+        homeScore: null,
+        awayScore: null,
+        provider: this.id,
+        upstreamCategory: match.category || sport,
+        popular: Boolean(match.popular),
+      };
+    });
   }
 
   private async resolveStreamedStream(source: string, id: string): Promise<{ url: string; quality: string }[]> {
@@ -75,7 +148,7 @@ export class StreamedPkProvider implements StreamProvider {
     preFetchedMatch?: Match | null
   ): Promise<Channel[]> {
     try {
-      const matches = await this.fetchRawMatches();
+      const matches = await Promise.all(STREAMED_SPORTS.map(sport => this.fetchRawMatches(sport))).then(results => results.flat());
       const channels: Channel[] = [];
       const streamTasks: Promise<{ urls: { url: string; quality: string }[]; source: any }>[] = [];
       

@@ -23,7 +23,7 @@ export interface Match {
   id: string;
   title: string;
   sport: string;
-  status: 'live' | 'upcoming';
+  status: 'live' | 'upcoming' | 'finished';
   timestamp: number;
   tournament: string;
   country: string;
@@ -38,8 +38,11 @@ export interface Match {
   fallbackChannels: { name: string; url: string }[];
   currentMinute: string;
   currentMinuteNumber: number;
-  homeScore: number;
-  awayScore: number;
+  homeScore: number | null;
+  awayScore: number | null;
+  provider: string;
+  upstreamCategory: string;
+  popular: boolean;
 }
 
 export interface MatchStats {

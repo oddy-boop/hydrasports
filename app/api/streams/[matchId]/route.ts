@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMatchDetails, resolveAllStreams } from '@/lib/streamEngine';
 
-export const revalidate = 15; // stream links change less frequently, 15s is safe
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(
   request: NextRequest,
@@ -25,6 +26,10 @@ export async function GET(
       streams: resolved.channels || [],
       defaultUrl: resolved.proxiedUrl,
       isDirectHls: resolved.proxiedUrl.includes('.m3u8') || resolved.proxiedUrl.includes('.mpd') || resolved.proxiedUrl.includes('.mp4')
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      },
     });
   } catch (err: any) {
     return NextResponse.json(

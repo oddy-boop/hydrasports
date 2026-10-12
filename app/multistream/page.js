@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Play, Volume2, VolumeX, Maximize, X, Plus, Search, RefreshCw, Layers, ShieldAlert, Cpu } from 'lucide-react';
+import { Play, Volume2, VolumeX, Maximize, X, Plus, Search, RefreshCw, Layers, ShieldAlert, Cpu, LayoutGrid, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function MultiStreamPage() {
@@ -69,7 +69,7 @@ export default function MultiStreamPage() {
   // Poll available matches
   const fetchMatches = async () => {
     try {
-      const res = await fetch('/api/matches');
+      const res = await fetch('/api/matches', { cache: 'no-store' });
       const data = await res.json();
       if (data.matches) {
         setAvailableMatches(data.matches);
@@ -98,6 +98,7 @@ export default function MultiStreamPage() {
     nextSlots[activeSlot] = {
       id: match.id,
       title: match.title,
+      sport: match.sport,
       homeName: match.homeTeam?.name,
       awayName: match.awayTeam?.name,
       homeBadge: match.homeTeam?.badge,
@@ -126,56 +127,49 @@ export default function MultiStreamPage() {
   });
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="multistream-page w-full max-w-[1500px] mx-auto space-y-5 px-3 py-3 sm:px-5 sm:py-5 lg:px-6">
       {/* Header and Control Dash */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl glass-panel border border-zinc-200/40 dark:border-zinc-900 shadow-xl transition-all duration-300">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Layers className="h-5 w-5 text-violet-500 animate-pulse" />
-            <h1 className="text-xl font-extrabold tracking-tight dark:text-white text-zinc-900">Multi-View Broadcast Arena</h1>
-          </div>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Monitor and watch up to 4 dynamic football streams concurrently in real time. Combine matches, toggle sound feeds, and customize layouts.
-          </p>
-          {/* Quick Help for Gestures */}
-          <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium flex flex-wrap items-center gap-x-3 gap-y-1 pt-1.5 border-t border-zinc-100 dark:border-zinc-900/60 mt-2">
-            <span className="font-extrabold text-violet-500">🎮 Hover Shortcuts:</span>
-            <span>[A] Shield Toggle</span>
-            <span>[S] Cycle Server</span>
-            <span>[R] Refresh Feed</span>
-            <span>[M] Mute</span>
-            <span className="text-zinc-350 dark:text-zinc-700">|</span>
-            <span className="font-extrabold text-violet-500">🖱️ Mouse Gestures:</span>
-            <span>Double-Click Header to toggle Shield</span>
-            <span>Right-Click Header to cycle servers</span>
-            <span className="text-zinc-350 dark:text-zinc-700">|</span>
-            <span className="font-bold text-violet-500">🔌 Qualities Provided:</span>
-            <span>SD (480p/576p Std) & HD (720p/1080p High)</span>
+      <div className="arena-hero flex items-center justify-between gap-4 p-4 md:p-5 rounded-[22px] border border-emerald-100 shadow-[0_12px_34px_rgba(15,118,110,0.08)] transition-all duration-300">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 text-xs font-bold border border-slate-200 shadow-2xs hover:shadow-xs transition-all group shrink-0"
+          >
+            <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 text-emerald-600 transition-transform" />
+            <span>Dashboard</span>
+          </Link>
+          <div className="flex items-center gap-2 min-w-0">
+            <Layers className="h-5 w-5 shrink-0 text-emerald-600" />
+            <h1 className="text-xl md:text-2xl font-black tracking-tight text-slate-950 truncate">Multi-view Arena</h1>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => {
               setSlots([null, null, null, null]);
             }}
-            className="text-xs font-bold px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-all"
+            className="arena-button arena-button-muted"
           >
-            Clear Arena
+            Clear
           </button>
           <button
             onClick={fetchMatches}
-            className="text-xs font-bold px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-650 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:text-zinc-300 flex items-center gap-1.5 transition-all"
+            className="arena-button arena-button-primary flex items-center gap-1.5"
           >
             <RefreshCw className={`h-3 w-3 ${loadingMatches ? 'animate-spin' : ''}`} />
-            Refresh Scores
+            Refresh
           </button>
         </div>
       </div>
 
       {/* Dynamic Viewports Arena */}
+      <div className="arena-section-label">
+        <div><LayoutGrid className="h-4 w-4 text-emerald-600" /><span>Broadcast wall</span></div>
+        <span>{slots.filter(Boolean).length}/4 screens active</span>
+      </div>
       <div 
         ref={arenaRef}
-        className="flex flex-wrap gap-4 transition-all duration-500 ease-out select-none"
+        className="arena-grid flex flex-wrap gap-4 transition-all duration-500 ease-out select-none"
       >
         {slots.map((slot, idx) => {
           const currentSize = sizes[idx] || 50;
@@ -188,7 +182,7 @@ export default function MultiStreamPage() {
                 maxWidth: '100%',
                 minWidth: '290px',
               }}
-              className={`relative rounded-2xl overflow-hidden bg-white/70 dark:bg-black/40 border border-zinc-200/50 dark:border-zinc-900/60 shadow-lg aspect-video flex flex-col ${
+              className={`arena-slot relative rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-[0_14px_34px_rgba(15,23,42,0.08)] aspect-video flex flex-col ${
                 resizingSlotIdx === idx 
                   ? 'transition-none ring-2 ring-violet-500 shadow-violet-500/10 scale-[0.99]' 
                   : 'transition-all duration-500 ease-out'
@@ -210,12 +204,12 @@ export default function MultiStreamPage() {
                 />
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-3 cursor-pointer group hover:bg-zinc-100/50 dark:hover:bg-zinc-900/10 transition-all duration-300" onClick={() => openSelector(idx)}>
-                  <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 flex items-center justify-center text-zinc-400 group-hover:text-violet-500 group-hover:scale-110 transition-all shadow-inner">
+                  <div className="h-12 w-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-100 group-hover:scale-110 transition-all shadow-inner">
                     <Plus className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Slot {idx + 1}: Empty Screen</h3>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">Click to mount a live stream in this view.</p>
+                    <h3 className="text-sm font-bold text-slate-800">Screen {idx + 1} is ready</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Click to add a live fixture.</p>
                   </div>
                   <div className="pt-2 w-32" onClick={(e) => e.stopPropagation()}>
                     <label className="text-[9px] font-extrabold text-zinc-450 dark:text-zinc-550 block mb-1">Set Screen Width: {currentSize}%</label>
@@ -258,15 +252,15 @@ export default function MultiStreamPage() {
       {/* Match Selector Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-lg rounded-2xl glass-panel border border-zinc-200 dark:border-zinc-900 bg-white dark:bg-[#060609] p-5 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-zinc-200/60 dark:border-zinc-900 pb-3">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <h3 className="text-base font-extrabold text-zinc-900 dark:text-white">Mount Live Fixture</h3>
-                <p className="text-[11px] text-zinc-400">Mount a stream into Screen Slot {activeSlot + 1}</p>
+                <h3 className="text-base font-black text-slate-900">Mount Live Fixture</h3>
+                <p className="text-[11px] text-slate-500">Mount a stream into Screen Slot {activeSlot + 1}</p>
               </div>
               <button 
                 onClick={() => setModalOpen(false)}
-                className="p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+                className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -274,13 +268,13 @@ export default function MultiStreamPage() {
 
             {/* Quick Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-400" />
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search teams, tournament, or keywords..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-zinc-50 border border-zinc-200 dark:bg-zinc-950 dark:border-zinc-900 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all"
+                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
               />
             </div>
 
@@ -317,7 +311,7 @@ export default function MultiStreamPage() {
                             <span className="inline-flex h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
                             <span className="text-[10px] font-extrabold uppercase tracking-widest text-red-500">Live</span>
                             <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 ml-1">
-                              {m.homeScore} - {m.awayScore} ({m.currentMinute})
+                              {m.homeScore ?? '—'} - {m.awayScore ?? '—'} ({m.currentMinute})
                             </span>
                           </div>
                         )}
@@ -360,6 +354,7 @@ function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [sandboxShield, setSandboxShield] = useState(false);
   const [hlsLoaded, setHlsLoaded] = useState(false);
+  const [resolveAttempt, setResolveAttempt] = useState(0);
   
   // Custom Hover State & Gestures
   const [isHovered, setIsHovered] = useState(false);
@@ -450,11 +445,16 @@ function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
 
   // Resolve streams from custom stream API endpoint
   useEffect(() => {
+    const controller = new AbortController();
     const resolveStreams = async () => {
       setResolving(true);
       setError(null);
       try {
-        const res = await fetch(`/api/streams/${slotData.id}`);
+        const res = await fetch(`/api/streams/${slotData.id}`, {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`Stream API returned ${res.status}`);
         const data = await res.json();
         if (data.error) {
           setError(data.error);
@@ -465,13 +465,14 @@ function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
           setError('No active servers found.');
         }
       } catch (err) {
-        setError('Failed resolving video feeds.');
+        if (err.name !== 'AbortError') setError('Failed resolving video feeds.');
       } finally {
-        setResolving(false);
+        if (!controller.signal.aborted) setResolving(false);
       }
     };
     resolveStreams();
-  }, [slotData.id]);
+    return () => controller.abort();
+  }, [slotData.id, resolveAttempt]);
 
   // HLS Direct Playback setup
   useEffect(() => {
@@ -729,6 +730,7 @@ function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
           <span className={`h-1.5 w-1.5 rounded-full ${slotData.status === 'live' ? 'bg-red-500 animate-pulse' : 'bg-zinc-500'}`} />
           <span className="text-[10px] font-extrabold text-white truncate drop-shadow-md">
             Screen {slotIndex + 1}: {slotData.homeName} vs {slotData.awayName}
+          {slotData.sport && slotData.sport !== 'football' && ` · ${slotData.sport.toUpperCase()}`}
           </span>
         </div>
         
@@ -778,8 +780,14 @@ function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
         ) : error ? (
           <div className="flex flex-col items-center justify-center p-4 text-center space-y-2 max-w-xs">
             <ShieldAlert className="h-6 w-6 text-amber-500" />
-            <h4 className="text-xs font-bold text-zinc-300">Shield Restrained</h4>
+            <h4 className="text-xs font-bold text-zinc-300">Stream unavailable</h4>
             <p className="text-[10px] text-zinc-500">{error}</p>
+            <button
+              onClick={() => setResolveAttempt(attempt => attempt + 1)}
+              className="mt-1 rounded-lg border border-violet-500/40 bg-violet-600/20 px-3 py-1.5 text-[10px] font-bold text-violet-300 hover:bg-violet-600/40"
+            >
+              Retry stream resolution
+            </button>
           </div>
         ) : isDirectHls ? (
           <video
