@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Maximize, RefreshCw, AlertCircle, ShieldAlert, Shield, ShieldOff, Cpu, Play, Pause, Volume2, Volume1, VolumeX } from 'lucide-react';
 
 export default function StreamPlayer({ streamUrl, channels, matchTitle, matchStatus, videoOnly = false }) {
@@ -17,6 +17,8 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
   const [isMuted, setIsMuted] = useState(true);
   const [sandboxShield, setSandboxShield] = useState(false);
   const [isTheaterMode, setIsTheaterMode] = useState(false);
+  // Tracks if an ad redirect was detected so we can show the recovery banner
+  const [adRedirectDetected, setAdRedirectDetected] = useState(false);
 
   const iframeRef = useRef(null);
   const videoRef = useRef(null);
@@ -46,23 +48,31 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
     if (loadTimeout) clearTimeout(loadTimeout);
   };
 
-  // Dynamically load hls.js from highly-resilient CDN if an HLS stream is loaded
+  // Dynamically load hls.js from CDN with fallback for cross-browser resilience
   useEffect(() => {
     if (!isDirectHls) return;
     if (window.Hls) {
       setHlsLoaded(true);
       return;
     }
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.4.0/dist/hls.min.js';
-    script.async = true;
-    script.onload = () => {
-      setHlsLoaded(true);
+    const tryLoad = (src, fallbackSrc) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.onload = () => setHlsLoaded(true);
+      script.onerror = () => {
+        if (fallbackSrc) {
+          tryLoad(fallbackSrc, null);
+        } else {
+          setStreamStatus('error');
+        }
+      };
+      document.body.appendChild(script);
     };
-    script.onerror = () => {
-      setStreamStatus('error');
-    };
-    document.body.appendChild(script);
+    tryLoad(
+      'https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js',
+      'https://unpkg.com/hls.js@1.5.15/dist/hls.min.js',
+    );
   }, [isDirectHls]);
 
   // Video element binding effect
@@ -209,6 +219,47 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
     return () => clearTimeout(timeout);
   }, [currentUrl, isDirectHls]);
 
+  // Ad redirect guard — detects when an ad hijacks the page and the user returns.
+  // Works without iframe sandboxing (which breaks most stream providers).
+  // Strategy: timestamp when the page is hidden; on return, if time gap was short
+  // and the document referrer changed, it was likely an ad redirect.
+  useEffect(() => {
+    if (isDirectHls) return; // HLS native player has no ads
+    let hiddenAt = null;
+
+    const onHide = () => {
+      hiddenAt = Date.now();
+    };
+
+    const onShow = () => {
+      if (!hiddenAt) return;
+      const elapsed = Date.now() - hiddenAt;
+      hiddenAt = null;
+      // If the user was gone for < 12 seconds, it was likely an unwanted redirect
+      if (elapsed < 12000) {
+        setAdRedirectDetected(true);
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        onHide();
+      } else if (document.visibilityState === 'visible') {
+        onShow();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('pagehide', onHide);
+    window.addEventListener('pageshow', onShow);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('pagehide', onHide);
+      window.removeEventListener('pageshow', onShow);
+    };
+  }, [isDirectHls]);
+
   const tryNextSource = () => {
     if (activeChannel < allChannels.length - 1) {
       setActiveChannel(prev => prev + 1);
@@ -242,10 +293,14 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
   const toggleFullscreen = () => {
     const el = playerRef.current;
     if (!el) return;
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
+    const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+    if (isFs) {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
     } else if (el.requestFullscreen) {
       el.requestFullscreen();
+    } else if (el.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
     }
   };
 
@@ -287,6 +342,38 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
 
   return (
     <div className="w-full space-y-4">
+
+      {/* Ad Redirect Recovery Banner */}
+      {!videoOnly && adRedirectDetected && !isDirectHls && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm shadow-sm animate-fade-in">
+          <div className="flex items-start gap-2.5">
+            <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-900 text-xs">Ad redirect detected</p>
+              <p className="text-amber-700 text-xs mt-0.5 font-medium">
+                A stream ad briefly hijacked your browser. Enable <strong>Ad-Shield</strong> to block this — note it may break some streams.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => { setSandboxShield(true); setAdRedirectDetected(false); }}
+              className="rounded-lg bg-amber-600 hover:bg-amber-500 px-3 py-1.5 text-xs font-bold text-white transition-colors cursor-pointer"
+            >
+              Enable Ad-Shield
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdRedirectDetected(false)}
+              className="rounded-lg border border-amber-300 bg-white hover:bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 transition-colors cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Player window container */}
       <div 
         ref={playerRef} 
@@ -374,12 +461,12 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
             src={currentUrl}
             className="absolute inset-0 block h-full w-full min-h-0 border-0 bg-black"
             allowFullScreen
-            allow="autoplay; fullscreen; encrypted-media; picture-in-picture; cross-origin-isolated"
+            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
             loading="eager"
             referrerPolicy="no-referrer-when-downgrade"
             onLoad={handleLoad}
             onError={handleError}
-            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups"
           />
         ) : (
           <iframe
@@ -388,7 +475,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
             src={currentUrl}
             className="absolute inset-0 block h-full w-full min-h-0 border-0 bg-black"
             allowFullScreen
-            allow="autoplay; fullscreen; encrypted-media; picture-in-picture; cross-origin-isolated"
+            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
             loading="eager"
             referrerPolicy="no-referrer-when-downgrade"
             onLoad={handleLoad}

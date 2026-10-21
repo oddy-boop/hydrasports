@@ -63,11 +63,79 @@ function parseScore(event: ScoreEvent): MatchScore {
 
 function getEspnLeague(tournament: string): string | null {
   const league = tournament.toLowerCase();
-  if (league.includes('la liga')) return 'esp.1';
-  if (league.includes('serie a')) return 'ita.1';
-  if (league.includes('premier league')) return 'eng.1';
-  if (league.includes('bundesliga')) return 'ger.1';
-  if (league.includes('ligue 1')) return 'fra.1';
+
+  // ── UEFA Club Competitions ─────────────────────────────────────────────────
+  if (league.includes('champions league') || league.includes('ucl'))
+    return 'uefa.champions';
+  if (league.includes('europa league') || league.includes('uel'))
+    return 'uefa.europa';
+  if (league.includes('conference league') || league.includes('uecl'))
+    return 'uefa.europa.conference';
+  if (league.includes('europa conference'))
+    return 'uefa.europa.conference';
+
+  // ── UEFA International / Nations ──────────────────────────────────────────
+  if (league.includes('nations league'))
+    return 'uefa.nations';
+  if (league.includes('euro') && !league.includes('europa'))
+    return 'uefa.euro';
+
+  // ── Top Domestic Leagues ──────────────────────────────────────────────────
+  if (league.includes('premier league') && !league.includes('saudi') && !league.includes('russian'))
+    return 'eng.1';
+  if (league.includes('championship') && league.includes('eng'))
+    return 'eng.2';
+  if (league.includes('la liga') || (league.includes('spain') && league.includes('primera')))
+    return 'esp.1';
+  if (league.includes('serie a') && !league.includes('serie b'))
+    return 'ita.1';
+  if (league.includes('serie b'))
+    return 'ita.2';
+  if ((league.includes('bundesliga') && !league.includes('austrian') && !league.includes('2. bundesliga')))
+    return 'ger.1';
+  if (league.includes('2. bundesliga'))
+    return 'ger.2';
+  if (league.includes('ligue 1'))
+    return 'fra.1';
+  if (league.includes('ligue 2'))
+    return 'fra.2';
+  if (league.includes('primeira liga') || league.includes('portuguese premier'))
+    return 'por.1';
+  if (league.includes('eredivisie'))
+    return 'ned.1';
+  if (league.includes('pro league') && league.includes('belg'))
+    return 'bel.1';
+  if (league.includes('scottish premiership'))
+    return 'sco.1';
+  if (league.includes('super lig') && league.includes('turk'))
+    return 'tur.1';
+  if (league.includes('superliga') && league.includes('rus'))
+    return 'rus.1';
+  if (league.includes('saudi pro') || (league.includes('saudi') && league.includes('league')))
+    return 'sau.1';
+  if (league.includes('mls'))
+    return 'usa.1';
+  if (league.includes('liga mx'))
+    return 'mex.1';
+  if (league.includes('brasileirao') || league.includes('serie a') && league.includes('brazil'))
+    return 'bra.1';
+  if (league.includes('argentina') && (league.includes('primera') || league.includes('liga profesional')))
+    return 'arg.1';
+
+  // ── Domestic Cups ────────────────────────────────────────────────────────
+  if (league.includes('fa cup'))
+    return 'eng.fa';
+  if (league.includes('efl cup') || league.includes('carabao') || league.includes('league cup'))
+    return 'eng.league_cup';
+  if (league.includes('copa del rey'))
+    return 'esp.copa_del_rey';
+  if (league.includes('dfb') || (league.includes('german') && league.includes('cup')))
+    return 'ger.dfb_pokal';
+  if (league.includes('coppa italia'))
+    return 'ita.coppa_italia';
+  if (league.includes('coupe de france'))
+    return 'fra.coupe_de_france';
+
   return null;
 }
 

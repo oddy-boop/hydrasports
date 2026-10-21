@@ -7,9 +7,22 @@ export default function WatchBackButton() {
   const router = useRouter();
 
   const goBack = () => {
-    if (window.history.length > 1) {
-      router.back();
-    } else {
+    // Check if the browser's previous page was from our own site.
+    // If the referrer is from the same origin, router.back() is safe.
+    // If not (e.g. ad page hijacked history), go to the homepage.
+    try {
+      const referrer = document.referrer;
+      const isSameOrigin =
+        referrer &&
+        new URL(referrer).origin === window.location.origin;
+
+      if (isSameOrigin && window.history.length > 1) {
+        router.back();
+      } else {
+        router.push('/');
+      }
+    } catch {
+      // Fallback: if URL parsing fails, always go home
       router.push('/');
     }
   };
