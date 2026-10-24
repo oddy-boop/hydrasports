@@ -15,6 +15,13 @@ describe('adsConfig', () => {
     expect(adsConfig.slots.stickyFooter).toBeDefined();
   });
 
+  it('should define socialBar configuration', () => {
+    expect(adsConfig.socialBar).toBeDefined();
+    expect(adsConfig.socialBar.enabled).toBe(true);
+    expect(typeof adsConfig.socialBar.scriptSrc).toBe('string');
+    expect(adsConfig.socialBar.scriptSrc).toContain('czernik.org');
+  });
+
   it('should have enabled slots with required configuration keys', () => {
     const slots = ['header', 'matchHub', 'sidebar', 'inContent', 'stickyFooter'] as const;
     for (const slotKey of slots) {
