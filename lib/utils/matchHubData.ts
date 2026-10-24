@@ -818,7 +818,15 @@ export function parseMatchHubData(match: any, stats: any) {
       secondaryLabel,
     };
   } else if (homeStarters.length > 0) {
-    const lead = homeStarters.find(p => p.positionGroup === 'FW') ||
+    // When no direct goalscorer exists (e.g. 0-0 or 1-0 via own goal):
+    // Prioritize top tactical performer from homeKeyPlayers or clean-sheet goalkeeper / anchor
+    const topKeyPlayer = homeKeyPlayers?.[0];
+    const cleanKeyName = (topKeyPlayer?.name || '').toLowerCase().trim();
+    const matchedKeyStarter = cleanKeyName ? homeStarters.find(p => p.name.toLowerCase().trim() === cleanKeyName || cleanKeyName.includes(p.name.toLowerCase().trim())) : null;
+
+    const lead = matchedKeyStarter ||
+      homeStarters.find(p => p.positionGroup === 'GK') ||
+      homeStarters.find(p => p.positionGroup === 'DF') ||
       homeStarters.find(p => p.positionGroup === 'MF') ||
       homeStarters[0];
     const estPts = (sport === 'basketball' && match?.homeScore && match.homeScore > 0)

@@ -176,6 +176,12 @@ export default function MatchHubView({
   const currentFormation = selectedTeamTab === 'home' ? (hubData.formations?.home || '4-3-3') : (hubData.formations?.away || '4-3-3');
   const currentTeamName = selectedTeamTab === 'home' ? hubData.homeName : hubData.awayName;
   const currentTeamBadge = selectedTeamTab === 'home' ? hubData.homeBadge : hubData.awayBadge;
+  const currentTeamPossession = selectedTeamTab === 'home'
+    ? (parseFloat(hubData.stats?.possession?.home) || 50)
+    : (parseFloat(hubData.stats?.possession?.away) || 50);
+  const currentTeamShots = selectedTeamTab === 'home'
+    ? (parseInt(hubData.stats?.totalShots?.home, 10) || 0)
+    : (parseInt(hubData.stats?.totalShots?.away, 10) || 0);
 
   // Real player face fetching
   const [playerFaces, setPlayerFaces] = useState({});
@@ -202,15 +208,28 @@ export default function MatchHubView({
       hubData.cards?.some(c => c.cardType === 'yellow' && (normalizePlayerName(c.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(c.player || ''))))
     );
 
+    const isHome = isHomeTeam;
+    const possNum = isHome
+      ? (parseFloat(hubData.stats?.possession?.home) || 50)
+      : (parseFloat(hubData.stats?.possession?.away) || 50);
+    const shotsNum = isHome
+      ? (parseInt(hubData.stats?.totalShots?.home, 10) || 0)
+      : (parseInt(hubData.stats?.totalShots?.away, 10) || 0);
+
     const details = buildPlayerFullDetails({ ...p, hasRedCard, hasYellowCard }, teamName, teamBadge, faceUrl, {
       bestPlayerName: hubData.bestPlayer?.name,
       bestPlayer: hubData.bestPlayer,
       timelineEvents: hubData.timelineEvents,
-      goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal').map(e => e.player || ''),
+      goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal' && !e.isOwnGoal).map(e => e.player || ''),
       yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
       isHome: isHomeTeam,
       homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
       awayScore: match?.awayScore ?? hubData.score?.away ?? 0,
+      currentMinute: match?.currentMinute ? parseInt(match.currentMinute, 10) : 90,
+      matchStatus: match?.status,
+      possessionPct: possNum,
+      totalTeamShots: shotsNum,
+      matchId: match?.id,
     });
     details.hasRedCard = hasRedCard;
     details.hasYellowCard = hasYellowCard;
@@ -1110,10 +1129,14 @@ export default function MatchHubView({
                               bestPlayerName: hubData.bestPlayer?.name,
                               goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal' && !e.isOwnGoal).map(e => e.player || ''),
                               yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
+                              timelineEvents: hubData.timelineEvents,
                               isHome: selectedTeamTab === 'home',
                               homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
                               awayScore: match?.awayScore ?? hubData.score?.away ?? 0,
                               currentMinute: match?.currentMinute ? parseInt(match.currentMinute, 10) : 90,
+                              possessionPct: currentTeamPossession,
+                              totalTeamShots: currentTeamShots,
+                              matchId: match?.id,
                             });
                             return (
                               <div 
@@ -1193,10 +1216,14 @@ export default function MatchHubView({
                             bestPlayerName: hubData.bestPlayer?.name,
                             goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal' && !e.isOwnGoal).map(e => e.player || ''),
                             yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
+                            timelineEvents: hubData.timelineEvents,
                             isHome: selectedTeamTab === 'home',
                             homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
                             awayScore: match?.awayScore ?? hubData.score?.away ?? 0,
                             currentMinute: match?.currentMinute ? parseInt(match.currentMinute, 10) : 90,
+                            possessionPct: currentTeamPossession,
+                            totalTeamShots: currentTeamShots,
+                            matchId: match?.id,
                           });
                           return (
                             <div 
@@ -1287,10 +1314,14 @@ export default function MatchHubView({
                         bestPlayerName: hubData.bestPlayer?.name,
                         goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal' && !e.isOwnGoal).map(e => e.player || ''),
                         yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
+                        timelineEvents: hubData.timelineEvents,
                         isHome: selectedTeamTab === 'home',
                         homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
                         awayScore: match?.awayScore ?? hubData.score?.away ?? 0,
                         currentMinute: match?.currentMinute ? parseInt(match.currentMinute, 10) : 90,
+                        possessionPct: currentTeamPossession,
+                        totalTeamShots: currentTeamShots,
+                        matchId: match?.id,
                       });
                       return (
                         <div

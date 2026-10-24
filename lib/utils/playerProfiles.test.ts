@@ -192,4 +192,65 @@ describe('playerProfiles utility', () => {
     // Born September 5, 2001 => 25 in October 2026
     expect(saka.age).toBe(25);
   });
+
+  it('applies natural positional variance, penalizes own goals from timeline events, and avoids uniform clone ratings', () => {
+    // Red Bulls vs Inter Miami (1-0 via Casemiro Own Goal 7')
+    const timeline = [
+      { minute: 7, displayMinute: "7'", type: 'goal', isOwnGoal: true, player: 'Casemiro (OG)', text: 'Own Goal by Casemiro' }
+    ];
+
+    // 1. Casemiro scored the own goal => must be penalized into red tier (< 6.0)
+    const casemiro = getPlayerMatchRating(
+      { name: 'Casemiro', jersey: '5', positionGroup: 'MF', starter: true, minutesPlayed: 90 },
+      {
+        timelineEvents: timeline,
+        isHome: false,
+        homeScore: 1,
+        awayScore: 0,
+        possessionPct: 64,
+      }
+    );
+    expect(casemiro.rating).toBeLessThan(6.0);
+    expect(casemiro.tier).toBe('red');
+
+    // 2. High possession midfielder (Inter Miami 64% possession) without errors => rewarded (~6.6 - 7.2)
+    const busquets = getPlayerMatchRating(
+      { name: 'Sergio Busquets', jersey: '5', positionGroup: 'MF', starter: true, minutesPlayed: 90 },
+      {
+        timelineEvents: timeline,
+        isHome: false,
+        homeScore: 1,
+        awayScore: 0,
+        possessionPct: 64,
+      }
+    );
+    expect(busquets.rating).toBeGreaterThanOrEqual(6.6);
+    expect(busquets.isRated).toBe(true);
+
+    // 3. Low possession forward with 0 goals/0 assists (Julian Hall) => realistic (~6.3 - 6.6), NOT 8.1!
+    const julianHall = getPlayerMatchRating(
+      { name: 'Julian Hall', jersey: '11', positionGroup: 'FW', starter: true, minutesPlayed: 90 },
+      {
+        timelineEvents: timeline,
+        isHome: true,
+        homeScore: 1,
+        awayScore: 0,
+        possessionPct: 36,
+      }
+    );
+    expect(julianHall.rating).toBeLessThan(7.5);
+    expect(julianHall.rating).toBeGreaterThan(6.0);
+
+    // 4. Ratings across teammates have natural variance rather than identical 6.2 clones
+    const teammateA = getPlayerMatchRating(
+      { name: 'Emil Forsberg', jersey: '10', positionGroup: 'MF', starter: true, minutesPlayed: 90 },
+      { timelineEvents: timeline, isHome: true, homeScore: 1, awayScore: 0, possessionPct: 36 }
+    );
+    const teammateB = getPlayerMatchRating(
+      { name: 'Lewis Morgan', jersey: '17', positionGroup: 'FW', starter: true, minutesPlayed: 90 },
+      { timelineEvents: timeline, isHome: true, homeScore: 1, awayScore: 0, possessionPct: 36 }
+    );
+    // At least one difference in ratings across outfield players
+    expect([julianHall.rating, teammateA.rating, teammateB.rating].some(r => r !== 6.2)).toBe(true);
+  });
 });
