@@ -352,7 +352,6 @@ function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
   const [error, setError] = useState(null);
   const [muted, setMuted] = useState(slotIndex > 0); // Mute slot 2, 3, 4 by default so they don't blast concurrently!
   const [isPlaying, setIsPlaying] = useState(true);
-  const [sandboxShield, setSandboxShield] = useState(false);
   const [hlsLoaded, setHlsLoaded] = useState(false);
   const [resolveAttempt, setResolveAttempt] = useState(0);
   
@@ -396,14 +395,7 @@ function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
         return;
       }
 
-      if (key === 'a') {
-        e.preventDefault();
-        setSandboxShield((prev) => {
-          const next = !prev;
-          showToast(next ? '🛡️ Shield: ON (Sandbox Shield Active)' : '⚠️ Shield: OFF (Sandbox Shield Inactive)');
-          return next;
-        });
-      } else if (key === 's') {
+      if (key === 's') {
         e.preventDefault();
         if (streams.length > 1) {
           setActiveStreamIdx((prev) => {
@@ -578,11 +570,6 @@ function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
           navigator.vibrate(50);
         } catch (_) {}
       }
-      setSandboxShield((prev) => {
-        const next = !prev;
-        showToast(next ? '🛡️ Shield: ON (Sandbox Shield Active)' : '⚠️ Shield: OFF (Sandbox Shield Inactive)');
-        return next;
-      });
     }, 600);
   };
 
@@ -645,11 +632,6 @@ function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
 
   const handleHeaderDoubleClick = (e) => {
     e.stopPropagation();
-    setSandboxShield((prev) => {
-      const next = !prev;
-      showToast(next ? '🛡️ Shield: ON (Sandbox Shield Active)' : '⚠️ Shield: OFF (Sandbox Shield Inactive)');
-      return next;
-    });
   };
 
   const handleHeaderRightClick = (e) => {
@@ -800,22 +782,13 @@ function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
           <div className="flex items-center justify-center">
             <RefreshCw className="h-5 w-5 text-zinc-500 animate-spin" />
           </div>
-        ) : sandboxShield ? (
-          <iframe
-            key={`${streamUrl}-secured`}
-            src={streamUrl}
-            className="absolute inset-0 h-full w-full border-0"
-            allowFullScreen
-            allow="autoplay; fullscreen"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
-          />
         ) : (
           <iframe
-            key={`${streamUrl}-compat`}
+            key={streamUrl}
             src={streamUrl}
             className="absolute inset-0 h-full w-full border-0"
             allowFullScreen
-            allow="autoplay; fullscreen"
+            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
           />
         )}
       </div>
@@ -862,27 +835,6 @@ function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
-
-            {/* Iframe Sandbox Toggle */}
-            {!isDirectHls && (
-              <button
-                onClick={() => {
-                  setSandboxShield((prev) => {
-                    const next = !prev;
-                    showToast(next ? '🛡️ Shield: ON (Sandbox Shield Active)' : '⚠️ Shield: OFF (Sandbox Shield Inactive)');
-                    return next;
-                  });
-                }}
-                className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded border transition-all ${
-                  sandboxShield 
-                    ? 'border-green-500/40 bg-green-600/10 text-green-400' 
-                    : 'border-zinc-800 bg-black/60 text-zinc-400 hover:text-zinc-200'
-                }`}
-                title="Toggle Iframe Sandbox Shields"
-              >
-                Shield {sandboxShield ? 'ON' : 'OFF'}
-              </button>
-            )}
 
             {/* Refresh stream */}
             <button

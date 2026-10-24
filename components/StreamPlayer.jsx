@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Maximize, RefreshCw, AlertCircle, ShieldAlert, Shield, ShieldOff, Cpu, Play, Pause, Volume2, Volume1, VolumeX } from 'lucide-react';
+import { Maximize, RefreshCw, AlertCircle, ShieldAlert, Cpu, Play, Pause, Volume2, Volume1, VolumeX, Tv } from 'lucide-react';
 
 export default function StreamPlayer({ streamUrl, channels, matchTitle, matchStatus, videoOnly = false }) {
   const isUpcoming = matchStatus === 'upcoming';
@@ -15,10 +15,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(true);
-  const [sandboxShield, setSandboxShield] = useState(false);
   const [isTheaterMode, setIsTheaterMode] = useState(false);
-  // Tracks if an ad redirect was detected so we can show the recovery banner
-  const [adRedirectDetected, setAdRedirectDetected] = useState(false);
 
   const iframeRef = useRef(null);
   const videoRef = useRef(null);
@@ -219,47 +216,6 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
     return () => clearTimeout(timeout);
   }, [currentUrl, isDirectHls]);
 
-  // Ad redirect guard — detects when an ad hijacks the page and the user returns.
-  // Works without iframe sandboxing (which breaks most stream providers).
-  // Strategy: timestamp when the page is hidden; on return, if time gap was short
-  // and the document referrer changed, it was likely an ad redirect.
-  useEffect(() => {
-    if (isDirectHls) return; // HLS native player has no ads
-    let hiddenAt = null;
-
-    const onHide = () => {
-      hiddenAt = Date.now();
-    };
-
-    const onShow = () => {
-      if (!hiddenAt) return;
-      const elapsed = Date.now() - hiddenAt;
-      hiddenAt = null;
-      // If the user was gone for < 12 seconds, it was likely an unwanted redirect
-      if (elapsed < 12000) {
-        setAdRedirectDetected(true);
-      }
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        onHide();
-      } else if (document.visibilityState === 'visible') {
-        onShow();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('pagehide', onHide);
-    window.addEventListener('pageshow', onShow);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('pagehide', onHide);
-      window.removeEventListener('pageshow', onShow);
-    };
-  }, [isDirectHls]);
-
   const tryNextSource = () => {
     if (activeChannel < allChannels.length - 1) {
       setActiveChannel(prev => prev + 1);
@@ -342,38 +298,6 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
 
   return (
     <div className="w-full space-y-4">
-
-      {/* Ad Redirect Recovery Banner */}
-      {!videoOnly && adRedirectDetected && !isDirectHls && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-[#211b10] px-4 py-3 text-sm shadow-xl animate-fade-in">
-          <div className="flex items-start gap-2.5">
-            <ShieldAlert className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold text-amber-300 text-xs">Ad redirect detected</p>
-              <p className="text-amber-200/80 text-xs mt-0.5 font-medium">
-                A stream ad briefly hijacked your browser. Enable <strong>Ad-Shield</strong> to block this — note it may break some streams.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => { setSandboxShield(true); setAdRedirectDetected(false); }}
-              className="rounded-lg bg-amber-600 hover:bg-amber-500 px-3 py-1.5 text-xs font-bold text-white transition-colors cursor-pointer"
-            >
-              Enable Ad-Shield
-            </button>
-            <button
-              type="button"
-              onClick={() => setAdRedirectDetected(false)}
-              className="rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-300 transition-colors cursor-pointer"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Player window container */}
       <div 
         ref={playerRef} 
@@ -444,7 +368,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
           </div>
         )}
 
-        {/* Video Player or Sandboxed Iframe Embed */}
+        {/* Video Player or Direct Stream Iframe Embed */}
         {isDirectHls ? (
           <video
             ref={videoRef}
@@ -454,23 +378,9 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
             muted
             onClick={handlePlayPause}
           />
-        ) : sandboxShield ? (
-          <iframe
-            key={`${currentUrl}-secured`}
-            ref={iframeRef}
-            src={currentUrl}
-            className="absolute inset-0 block h-full w-full min-h-0 border-0 bg-black"
-            allowFullScreen
-            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-            loading="eager"
-            referrerPolicy="no-referrer-when-downgrade"
-            onLoad={handleLoad}
-            onError={handleError}
-            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups"
-          />
         ) : (
           <iframe
-            key={`${currentUrl}-compat`}
+            key={currentUrl}
             ref={iframeRef}
             src={currentUrl}
             className="absolute inset-0 block h-full w-full min-h-0 border-0 bg-black"
@@ -595,80 +505,33 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
         )}
       </div>
 
-      {/* Dynamic Security/Compatibility Hint Alert Ribbon */}
-      {!videoOnly && !isDirectHls && sandboxShield && (
-        <div className="bg-violet-50 dark:bg-violet-950/15 border border-violet-200 dark:border-violet-500/20 rounded-xl p-4 text-xs text-zinc-650 dark:text-zinc-400 leading-relaxed animate-fade-in space-y-2.5 shadow-sm">
-          <div className="flex items-center gap-2 text-violet-700 dark:text-violet-400 font-bold">
-            <Shield className="h-4 w-4 text-violet-600 dark:text-violet-500" />
-            <span>Ad-Shield Active (Intrusive Ad & Popup Blocker)</span>
-          </div>
-          <p className="text-[11.5px] text-zinc-600 dark:text-zinc-400 leading-normal">
-            <strong>What this does:</strong> The stream is loaded inside a secure sandbox that strictly blocks malicious scripts, auto-downloads, tracking cookies, and aggressive popup advertisement redirects.
-          </p>
-          <p className="text-[11.5px] text-zinc-600 dark:text-zinc-400 leading-normal">
-            <strong>What could happen:</strong> Some external stream hosts detect sandboxing and will block playback with an <strong>"Embed Blocked"</strong> or black screen.
-          </p>
-          <p className="text-[11.5px] text-zinc-600 dark:text-zinc-400 leading-normal">
-            <strong>Why it happens:</strong> These third-party stream hosts make revenue through aggressive ad redirects. They block sandboxed players to force you to view their popups. Turn Ad-Shield <strong>OFF</strong> below if the stream refuses to load.
-          </p>
-        </div>
-      )}
-
       {!videoOnly && (
         <div className="flex flex-col xl:flex-row items-stretch gap-4 w-full mt-4">
-          {/* Dynamic Action Toolbar (Refresh, Theater, Fullscreen, Ad-Shield Toggle) */}
-          <div className="flex-1 bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            {/* Left Side: Ad-Shield Toggle */}
-            {!isDirectHls ? (
-              <div className="flex items-center gap-3 bg-slate-100/90 p-2.5 rounded-xl border border-slate-200 shadow-2xs">
-                <div className="flex flex-col text-left">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`h-2 w-2 rounded-full ${sandboxShield ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-800">
-                      Ad-Shield {sandboxShield ? 'ON' : 'OFF'}
-                    </span>
-                  </div>
-                  <span className="text-[9.5px] text-slate-500 mt-0.5 leading-none block font-bold">
-                    {sandboxShield ? "Blocking redirects & popups" : "⚠ Protection disabled"}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSandboxShield(!sandboxShield)}
-                  className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ml-2 ${
-                    sandboxShield ? 'bg-emerald-600' : 'bg-slate-300'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      sandboxShield ? 'translate-x-4' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
+          {/* Dynamic Action Toolbar (Refresh, Theater, Fullscreen) */}
+          <div className="flex-1 bg-[#181628] border border-white/10 p-4 rounded-2xl shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            {/* Left Side: Broadcast Status */}
+            <div className="flex items-center gap-2.5 text-left bg-[#131120] p-2.5 rounded-xl border border-white/10">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <div className="flex flex-col text-left">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                  Direct Live Stream
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5 leading-none block font-medium">
+                  Official feed with full audio & video playback
+                </span>
               </div>
-            ) : (
-              <div className="flex items-center gap-2.5 text-left bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
-                <div className="flex flex-col text-left">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
-                    Native Player Active
-                  </span>
-                  <span className="text-[10px] text-emerald-700 mt-0.5 leading-none block font-medium">
-                    Direct HLS decoder runs inside native media sandbox.
-                  </span>
-                </div>
-              </div>
-            )}
+            </div>
 
             {/* Right Side: Viewport Controls Group */}
-            <div className="flex items-center gap-2 bg-slate-100/90 p-1.5 rounded-xl border border-slate-200 justify-end">
+            <div className="flex items-center gap-2 bg-[#131120] p-1.5 rounded-xl border border-white/10 justify-end">
               {/* Refresh button */}
               <button
                 type="button"
                 onClick={reloadStream}
-                className="rounded-lg bg-white hover:bg-slate-50 px-3 py-1.5 text-slate-700 hover:text-slate-900 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold border border-slate-200 shadow-2xs cursor-pointer"
+                className="rounded-lg bg-white/10 hover:bg-white/20 px-3 py-1.5 text-slate-200 hover:text-white transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold border border-white/10 shadow-sm cursor-pointer"
                 title="Reload Stream Connection"
               >
-                <RefreshCw className={`h-3.5 w-3.5 text-emerald-600 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-3.5 w-3.5 text-emerald-400 ${isLoading ? 'animate-spin' : ''}`} />
                 <span>Refresh</span>
               </button>
 
@@ -678,12 +541,12 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
                 onClick={() => setIsTheaterMode(!isTheaterMode)}
                 className={`rounded-lg px-3 py-1.5 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold border cursor-pointer ${
                   isTheaterMode 
-                    ? 'border-emerald-500 bg-emerald-50 text-emerald-800 shadow-2xs' 
-                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 shadow-2xs'
+                    ? 'border-purple-500 bg-purple-600/30 text-white shadow-sm' 
+                    : 'border-white/10 bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white shadow-sm'
                 }`}
                 title={isTheaterMode ? "Exit Theater Mode" : "Enter Theater Mode"}
               >
-                <Cpu className={`h-3.5 w-3.5 ${isTheaterMode ? 'text-emerald-600 animate-pulse' : 'text-slate-400'}`} />
+                <Cpu className={`h-3.5 w-3.5 ${isTheaterMode ? 'text-purple-400 animate-pulse' : 'text-slate-400'}`} />
                 <span>{isTheaterMode ? "Normal Mode" : "Theater"}</span>
               </button>
 
@@ -691,26 +554,26 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
               <button
                 type="button"
                 onClick={toggleFullscreen}
-                className="rounded-lg bg-white hover:bg-slate-50 px-3 py-1.5 text-slate-700 hover:text-slate-900 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold border border-slate-200 shadow-2xs cursor-pointer"
+                className="rounded-lg bg-white/10 hover:bg-white/20 px-3 py-1.5 text-slate-200 hover:text-white transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold border border-white/10 shadow-sm cursor-pointer"
                 title="Toggle Fullscreen"
               >
-                <Maximize className="h-3.5 w-3.5 text-slate-600" />
+                <Maximize className="h-3.5 w-3.5 text-slate-300" />
                 <span>Fullscreen</span>
               </button>
             </div>
           </div>
 
           {/* Dedicated Servers Selection Panel */}
-          <div className="flex-[1.3] bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs">
+          <div className="flex-[1.3] bg-[#181628] border border-white/10 p-4 rounded-2xl shadow-xl">
             {allChannels.length > 0 ? (
               <div className="flex flex-col gap-2.5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 flex-wrap">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     <span>Available Stream Servers ({allChannels.length})</span>
                   </span>
-                  <span className="text-[9.5px] text-slate-500 font-bold leading-none">
-                    Quality: <span className="text-emerald-700 font-black">HD 1080p / 720p 60FPS</span>
+                  <span className="text-[9.5px] text-slate-400 font-bold leading-none">
+                    Quality: <span className="text-emerald-400 font-black">HD 1080p / 720p 60FPS</span>
                   </span>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -721,13 +584,13 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
                       onClick={() => { setActiveChannel(idx); }}
                       className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition-all cursor-pointer ${
                         activeChannel === idx
-                          ? 'border-emerald-500 bg-emerald-50 text-emerald-900 shadow-xs font-black'
-                          : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                          ? 'border-purple-500 bg-purple-600/30 text-white shadow-md font-black'
+                          : 'border-white/10 bg-[#131120] text-slate-300 hover:bg-white/10 hover:text-white'
                       }`}
                     >
-                      <span className={`h-2 w-2 rounded-full ${activeChannel === idx ? 'bg-emerald-600 animate-pulse' : 'bg-slate-400'}`} />
+                      <span className={`h-2 w-2 rounded-full ${activeChannel === idx ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
                       <span>Server {idx + 1}</span>
-                      <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-white border border-slate-200 ${ch.quality === 'HD' || ch.quality === 'FHD' || ch.quality === '1080p' ? 'text-emerald-700 border-emerald-200' : 'text-slate-500'}`}>
+                      <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-white/10 border border-white/10 ${ch.quality === 'HD' || ch.quality === 'FHD' || ch.quality === '1080p' ? 'text-emerald-400 border-emerald-500/30' : 'text-slate-400'}`}>
                         {ch.quality === 'FHD' || ch.quality === '1080p' ? 'HD' : (ch.quality || 'SD')}
                       </span>
                     </button>
@@ -735,7 +598,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
                 </div>
               </div>
             ) : (
-              <span className="text-xs text-zinc-500 font-semibold">Resolving fallback stream feeds...</span>
+              <span className="text-xs text-slate-400 font-semibold">Resolving fallback stream feeds...</span>
             )}
           </div>
         </div>
