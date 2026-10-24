@@ -5,6 +5,42 @@ import MatchHubView from '@/components/MatchHubView';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+export async function generateMetadata({ params }) {
+  const { matchId } = await params;
+  try {
+    const match = await getMatchDetails(matchId);
+    if (!match) {
+      return {
+        title: 'Watch Live Match',
+        description: 'Watch live sports streaming on HydraSports.',
+      };
+    }
+    const title = match.title || `${match.homeTeam?.name || 'Home'} vs ${match.awayTeam?.name || 'Away'}`;
+    const tournament = match.tournament ? ` (${match.tournament})` : '';
+    const sport = (match.sport || 'sports').toUpperCase();
+
+    return {
+      title: `Live Stream: ${title}${tournament}`,
+      description: `Watch ${title} live stream online. Real-time scores, verified player ratings, tactical lineups, substitutions, and HD broadcast on HydraSports.`,
+      openGraph: {
+        title: `Live Stream: ${title}${tournament}`,
+        description: `Watch ${title} live stream online with real-time match stats and verified tactical telemetry on HydraSports.`,
+        images: match.poster ? [{ url: match.poster }] : undefined,
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: `Live: ${title}${tournament}`,
+        description: `Live sports stream for ${title}. Real-time scores, lineups, and ratings.`,
+      },
+    };
+  } catch {
+    return {
+      title: 'Watch Live Match',
+      description: 'Watch live sports streaming on HydraSports.',
+    };
+  }
+}
+
 export default async function WatchPage({ params }) {
   const { matchId } = await params;
   let match = null;

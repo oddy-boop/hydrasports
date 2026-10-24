@@ -4,9 +4,57 @@ import { MiniPlayerProvider } from '@/components/MiniPlayerProvider';
 import { AuthProvider } from '@/components/AuthContext';
 import FootyLayoutShell from '@/components/FootyLayoutShell';
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sports.skullmux.com';
+
 export const metadata = {
-  title: 'HydraSports — Live Sports & Football Streaming Platform',
-  description: 'Watch live football streams with real-time match scores, lineups, stats, and multi-view on HydraSports.',
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'HydraSports — Live Sports & Football Streaming Platform',
+    template: '%s | HydraSports',
+  },
+  description: 'Watch live football, basketball, tennis, and hockey streams with real-time match scores, tactical lineups, player ratings, stats, and multistream arena on HydraSports.',
+  keywords: [
+    'live sports streaming',
+    'live football stream',
+    'watch soccer online',
+    'live match scores',
+    'football lineups',
+    'flashscore live ratings',
+    'free sports streams',
+    'multistream arena',
+    'hydrasports',
+    'skullmux',
+  ],
+  authors: [{ name: 'HydraSports' }],
+  creator: 'HydraSports',
+  publisher: 'HydraSports',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'HydraSports — Live Sports & Football Streaming Platform',
+    description: 'Watch live sports streams with real-time match scores, verified tactical lineups, player ratings, and multistream view on HydraSports.',
+    url: siteUrl,
+    siteName: 'HydraSports',
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'HydraSports — Live Sports & Football Streaming Platform',
+    description: 'Watch live sports streams with real-time scores, lineups, player ratings, and multistream on HydraSports.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 };
 
 export const viewport = {
