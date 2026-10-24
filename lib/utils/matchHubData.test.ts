@@ -119,4 +119,37 @@ describe('matchHubData parser', () => {
     expect(parsed.homeKeyPlayers[0].name).toBe('Bukayo Saka');
     expect(parsed.hasRealStats).toBe(true);
   });
+
+  it('correctly identifies Own Goals (OG) and attributes score benefit to opponent', () => {
+    const mockMatch = {
+      id: 'match-og',
+      title: 'Napoli vs AS Roma',
+      homeTeam: { name: 'Napoli' },
+      awayTeam: { name: 'AS Roma' },
+      homeScore: 1,
+      awayScore: 0,
+      status: 'live',
+    };
+
+    const mockStats = {
+      commentary: [
+        {
+          type: 'Goal',
+          minute: '34',
+          text: 'Own Goal by Gianluca Mancini, AS Roma. Napoli 1, AS Roma 0.',
+          team: 'AS Roma',
+          participants: [{ name: 'Gianluca Mancini' }],
+        },
+      ],
+    };
+
+    const parsed = parseMatchHubData(mockMatch, mockStats);
+
+    // Goal is by Roma player Mancini, but an Own Goal benefits Napoli on the scoreboard!
+    expect(parsed.homeGoals.length).toBe(1);
+    expect(parsed.homeGoals[0].player).toContain('(OG)');
+    expect(parsed.timelineEvents.length).toBe(1);
+    expect(parsed.timelineEvents[0].isOwnGoal).toBe(true);
+    expect(parsed.timelineEvents[0].type).toBe('goal');
+  });
 });

@@ -15,6 +15,9 @@ export default function PlayerDetailsModal({ player, onClose }) {
 
   if (!player) return null;
 
+  const hasRedCard = (player.stats?.redCards > 0) || player.hasRedCard || player.isRedCard;
+  const hasYellowCard = (player.stats?.yellowCards > 0) || player.hasYellowCard;
+
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in"
@@ -35,9 +38,13 @@ export default function PlayerDetailsModal({ player, onClose }) {
 
         {/* ── 1. PLAYER HERO HEADER ── */}
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 pb-4 border-b border-white/10">
-          {/* Avatar with Glow and Club Badge Accent */}
+          {/* Avatar with Glow, Cards, and Club Badge Accent */}
           <div className="relative shrink-0">
-            <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full border-2 border-purple-400/40 p-1 bg-gradient-to-tr from-purple-900/60 via-indigo-900/40 to-black shadow-xl shadow-purple-900/30">
+            <div className={`h-20 w-20 sm:h-24 sm:w-24 rounded-full border-2 p-1 bg-gradient-to-tr shadow-xl ${
+              hasRedCard 
+                ? 'border-red-500 from-red-950/80 via-black to-red-900/40 shadow-red-900/50' 
+                : 'border-purple-400/40 from-purple-900/60 via-indigo-900/40 to-black shadow-purple-900/30'
+            }`}>
               {player.avatar ? (
                 <img
                   src={player.avatar}
@@ -53,6 +60,24 @@ export default function PlayerDetailsModal({ player, onClose }) {
                 </div>
               )}
             </div>
+
+            {/* Red Card / Yellow Card badge directly beside player avatar */}
+            {hasRedCard ? (
+              <span 
+                className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded bg-red-600 border border-white text-white font-black text-[9px] shadow-lg animate-pulse z-10 flex items-center gap-1"
+                title="Red Card (Sent Off)"
+              >
+                <span>🟥</span>
+                <span>RED CARD</span>
+              </span>
+            ) : hasYellowCard ? (
+              <span 
+                className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded bg-amber-400 border border-black/40 text-black font-black text-[9px] shadow-md z-10 flex items-center gap-0.5"
+                title="Yellow Card"
+              >
+                <span>🟨</span>
+              </span>
+            ) : null}
 
             {/* Club badge on avatar corner */}
             {player.teamBadge && (
@@ -77,6 +102,12 @@ export default function PlayerDetailsModal({ player, onClose }) {
               <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[11px] font-bold text-slate-300 uppercase tracking-wider">
                 {player.position}
               </span>
+              {hasRedCard && (
+                <span className="px-2 py-0.5 rounded-md bg-red-500/20 border border-red-500/40 text-[11px] font-black text-red-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                  <span>🟥</span>
+                  <span>Sent Off</span>
+                </span>
+              )}
             </div>
 
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-wide">

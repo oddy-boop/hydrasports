@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Filter, Flame, Calendar, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Flame, Calendar, Star, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import MatchCard from './MatchCard';
 import { useRouter } from 'next/navigation';
 import { getFavoriteTeams } from '@/lib/utils/favorites';
@@ -238,98 +238,98 @@ export default function MatchGrid({ matches, defaultTab }) {
               )}
             </div>
             
-            {/* Scroll Container Wrapper with Edge Fades */}
-            <div className="relative w-full overflow-hidden group/shelf">
-              {/* Subtle edge fades for scrolling indication */}
-              <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white/80 dark:from-[#08080c]/80 to-transparent pointer-events-none z-10" />
-              <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/80 dark:from-[#08080c]/80 to-transparent pointer-events-none z-10" />
-              
-              {/* Left scroll chevron */}
-              <button 
-                onClick={() => scrollLeagues('left')}
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-white/95 dark:bg-zinc-900/95 border border-zinc-200/60 dark:border-zinc-800/80 text-zinc-600 dark:text-zinc-300 hover:text-violet-600 dark:hover:text-violet-400 shadow-md hover:scale-105 active:scale-95 transition-all opacity-0 group-hover/shelf:opacity-100 cursor-pointer"
-                title="Scroll Left"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-              </button>
-
-              {/* Right scroll chevron */}
-              <button 
-                onClick={() => scrollLeagues('right')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-white/95 dark:bg-zinc-900/95 border border-zinc-200/60 dark:border-zinc-800/80 text-zinc-600 dark:text-zinc-300 hover:text-violet-600 dark:hover:text-violet-400 shadow-md hover:scale-105 active:scale-95 transition-all opacity-0 group-hover/shelf:opacity-100 cursor-pointer"
-                title="Scroll Right"
-              >
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-
-              <div 
-                ref={scrollRef}
-                className="flex flex-row flex-nowrap overflow-x-auto gap-1.5 py-1.5 px-1 -mx-1 custom-horizontal-scrollbar scroll-smooth"
-              >
-                {/* "All Leagues" Pill */}
-                <button
-                  onClick={() => setSelectedLeagues([])}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold tracking-wide transition-all cursor-pointer border shrink-0 ${
-                    isAllSelected
-                      ? 'bg-violet-600 text-white border-violet-500 shadow-md shadow-violet-600/20 scale-[1.02]'
-                      : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800/80 hover:bg-zinc-100 dark:hover:bg-zinc-900/60 hover:scale-[1.01]'
-                  }`}
+            {/* Mobile Tournament Dropdown Selector (Replaces horizontal scrolling) */}
+            <div className="sm:hidden w-full relative mb-1.5">
+              <label htmlFor="tournament-select" className="sr-only">Select Tournament</label>
+              <div className="relative">
+                <select
+                  id="tournament-select"
+                  value={selectedLeagues[0] || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedLeagues(val ? [val] : []);
+                  }}
+                  className="w-full h-9 px-3 pr-8 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-bold text-zinc-800 dark:text-zinc-200 outline-none focus:border-violet-500 cursor-pointer appearance-none shadow-sm"
                 >
-                  <div className={`flex h-3.5 w-3.5 items-center justify-center rounded-full ${
-                    isAllSelected ? 'bg-white/20' : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400'
-                  }`}>
-                    <Star className="h-2 w-2" />
-                  </div>
-                  <span>All Tournaments</span>
-                </button>
-
-                {/* Tournament pills */}
-                {leaguesWithLogos.map((l) => {
-                  const isActive = selectedLeagues.includes(l.name);
-                  const count = baseMatches.filter(m => m.tournament === l.name).length;
-
-                  return (
-                    <button
-                      key={l.name}
-                      onClick={() => {
-                        setSelectedLeagues(prev =>
-                          prev.includes(l.name)
-                            ? prev.filter(name => name !== l.name)
-                            : [...prev, l.name]
-                        );
-                      }}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold tracking-wide transition-all cursor-pointer border shrink-0 ${
-                        isActive
-                          ? 'bg-violet-600 text-white border-violet-500 shadow-md shadow-violet-600/20 scale-[1.02]'
-                          : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800/80 hover:bg-zinc-100 dark:hover:bg-zinc-900/60 hover:scale-[1.01]'
-                      }`}
-                    >
-                      {l.logo ? (
-                        <img 
-                          src={l.logo} 
-                          alt="" 
-                          className="h-3.5 w-3.5 rounded-full object-contain bg-zinc-50 dark:bg-zinc-900 p-0.5" 
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <div className={`flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-black ${
-                          isActive ? 'bg-white/20' : 'bg-violet-500/10 text-violet-500'
-                        }`}>
-                          {l.name.substring(0, 2).toUpperCase()}
-                        </div>
-                      )}
-                      <span>{l.name}</span>
-                      <span className={`text-[8px] px-1 py-0.2 rounded-md font-bold ${
-                        isActive ? 'bg-white/20 text-white' : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
-                      }`}>
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
+                  <option value="">All Tournaments ({baseMatches.length})</option>
+                  {leaguesWithLogos.map((l) => {
+                    const count = baseMatches.filter(m => m.tournament === l.name).length;
+                    return (
+                      <option key={l.name} value={l.name}>
+                        {l.name} ({count})
+                      </option>
+                    );
+                  })}
+                </select>
+                <ChevronDown className="w-4 h-4 text-zinc-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
+            </div>
+
+            {/* Desktop Tournament Shelf (Clean flex-wrap without horizontal blowout) */}
+            <div className="hidden sm:flex flex-wrap items-center gap-1.5 py-1.5 w-full">
+              {/* "All Leagues" Pill */}
+              <button
+                onClick={() => setSelectedLeagues([])}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold tracking-wide transition-all cursor-pointer border shrink-0 ${
+                  isAllSelected
+                    ? 'bg-violet-600 text-white border-violet-500 shadow-md shadow-violet-600/20 scale-[1.02]'
+                    : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800/80 hover:bg-zinc-100 dark:hover:bg-zinc-900/60 hover:scale-[1.01]'
+                }`}
+              >
+                <div className={`flex h-3.5 w-3.5 items-center justify-center rounded-full ${
+                  isAllSelected ? 'bg-white/20' : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400'
+                }`}>
+                  <Star className="h-2 w-2" />
+                </div>
+                <span>All Tournaments</span>
+              </button>
+
+              {/* Tournament pills */}
+              {leaguesWithLogos.map((l) => {
+                const isActive = selectedLeagues.includes(l.name);
+                const count = baseMatches.filter(m => m.tournament === l.name).length;
+
+                return (
+                  <button
+                    key={l.name}
+                    onClick={() => {
+                      setSelectedLeagues(prev =>
+                        prev.includes(l.name)
+                          ? prev.filter(name => name !== l.name)
+                          : [...prev, l.name]
+                      );
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold tracking-wide transition-all cursor-pointer border shrink-0 ${
+                      isActive
+                        ? 'bg-violet-600 text-white border-violet-500 shadow-md shadow-violet-600/20 scale-[1.02]'
+                        : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800/80 hover:bg-zinc-100 dark:hover:bg-zinc-900/60 hover:scale-[1.01]'
+                    }`}
+                  >
+                    {l.logo ? (
+                      <img 
+                        src={l.logo} 
+                        alt="" 
+                        className="h-3.5 w-3.5 rounded-full object-contain bg-zinc-50 dark:bg-zinc-900 p-0.5" 
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className={`flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-black ${
+                        isActive ? 'bg-white/20' : 'bg-violet-500/10 text-violet-500'
+                      }`}>
+                        {l.name.substring(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <span>{l.name}</span>
+                    <span className={`text-[8px] px-1 py-0.2 rounded-md font-bold ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         );

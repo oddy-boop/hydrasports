@@ -506,8 +506,29 @@ export default function MultiStreamPage() {
                 />
               </div>
 
-              {/* Sport Filter Chips */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              {/* Sport Filter Chips / Dropdown */}
+              <div className="sm:hidden">
+                <select
+                  value={selectedSportFilter}
+                  onChange={(e) => setSelectedSportFilter(e.target.value)}
+                  className="w-full bg-[#13121f] text-white border border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
+                  aria-label="Filter by sport"
+                >
+                  {[
+                    { id: 'all', label: 'All Sports' },
+                    { id: 'live', label: '🔴 Live Now' },
+                    { id: 'football', label: 'Football' },
+                    { id: 'basketball', label: 'Basketball' },
+                    { id: 'tennis', label: 'Tennis' },
+                    { id: 'combat', label: 'Combat' },
+                  ].map((f) => (
+                    <option key={f.id} value={f.id} className="bg-[#13121f] text-white">
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="hidden sm:flex items-center gap-1.5 flex-wrap pb-1">
                 {[
                   { id: 'all', label: 'All' },
                   { id: 'live', label: '🔴 Live Now' },

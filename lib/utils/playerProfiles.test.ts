@@ -147,6 +147,32 @@ describe('playerProfiles utility', () => {
     expect(exposito.nationality).toBe('Spain');
   });
 
+  it('penalizes own goals and reflects red cards in player rating and profile', () => {
+    const ogPlayer = getPlayerMatchRating({
+      name: 'Gianluca Mancini',
+      starter: true,
+      minutesPlayed: 60,
+      realStats: { ownGoals: 1, goals: 0, assists: 0 },
+    });
+    // Base 6.0 - 1.2 = 4.8 (< 6.0, red tier)
+    expect(ogPlayer.rating).toBeLessThan(6.0);
+    expect(ogPlayer.tier).toBe('red');
+
+    const redPlayer = buildPlayerFullDetails(
+      {
+        name: 'Amir Rrahmani',
+        starter: true,
+        minutesPlayed: 75,
+        hasRedCard: true,
+      },
+      'Napoli',
+      '',
+      ''
+    );
+    expect(redPlayer.stats.redCards).toBe(1);
+    expect(redPlayer.rating).toBeLessThan(6.0);
+  });
+
   it('correctly calculates age in 2026 for players from their real birth date', () => {
     const haaland = buildPlayerFullDetails(
       { name: 'Erling Haaland', jersey: '9', positionGroup: 'FW' },

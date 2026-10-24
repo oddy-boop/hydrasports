@@ -616,6 +616,20 @@ export function getPlayerMatchRating(
     }
   }
 
+  if ((player as any).hasRedCard || (player as any).isRedCard) {
+    redCards = Math.max(redCards, 1);
+  }
+  if ((player as any).hasYellowCard) {
+    yellowCards = Math.max(yellowCards, 1);
+  }
+  if (redCards === 0 && matchContext && (matchContext as any).timelineEvents && Array.isArray((matchContext as any).timelineEvents)) {
+    redCards = (matchContext as any).timelineEvents.filter((e: any) => {
+      if (e.type !== 'red_card') return false;
+      const cleanP = normalizePlayerName(e.player || e.text || '');
+      return cleanP.includes(norm) || norm.includes(cleanP);
+    }).length;
+  }
+
   // 4. Role-based scoring (Opta model)
   // Goals (Hat-tricks can reach up to 10.0)
   if (goals > 0) {
@@ -655,7 +669,22 @@ export function getPlayerMatchRating(
     }
   }
 
-  // Disciplinary penalties
+  // Disciplinary and error penalties
+  let ownGoals = stats?.ownGoals ?? 0;
+  if (ownGoals === 0 && (player as any).hasOwnGoal) {
+    ownGoals = 1;
+  }
+  if (ownGoals === 0 && matchContext && (matchContext as any).timelineEvents && Array.isArray((matchContext as any).timelineEvents)) {
+    ownGoals = (matchContext as any).timelineEvents.filter((e: any) => {
+      if (!e.isOwnGoal && e.type !== 'own_goal') return false;
+      const cleanP = normalizePlayerName(e.player || e.text || '');
+      return cleanP.includes(norm) || norm.includes(cleanP);
+    }).length;
+  }
+  if (ownGoals > 0) {
+    rating -= ownGoals * 1.2;
+  }
+
   if (yellowCards > 0) {
     rating -= yellowCards * 0.4;
   }
@@ -825,6 +854,9 @@ export function buildPlayerFullDetails(
   }
 
   // Real cards calculation from fixture
+  if (player.hasYellowCard) {
+    actualYellowCards = Math.max(actualYellowCards, 1);
+  }
   if (actualYellowCards === 0 && matchContext) {
     if (matchContext.timelineEvents && Array.isArray(matchContext.timelineEvents)) {
       actualYellowCards = matchContext.timelineEvents.filter((e: any) => {
@@ -840,6 +872,9 @@ export function buildPlayerFullDetails(
     }
   }
 
+  if (player.hasRedCard || player.isRedCard) {
+    actualRedCards = Math.max(actualRedCards, 1);
+  }
   if (actualRedCards === 0 && matchContext && matchContext.timelineEvents && Array.isArray(matchContext.timelineEvents)) {
     actualRedCards = matchContext.timelineEvents.filter((e: any) => {
       if (e.type !== 'red_card') return false;

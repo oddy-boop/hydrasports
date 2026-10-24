@@ -157,40 +157,23 @@ export default function HydraSportsActivityRail() {
             </button>
           </div>
 
-          {/* Quick League Selector Switcher Buttons & Dropdown */}
-          <div className="flex items-center gap-1.5 mb-3">
-            <div className="flex items-center gap-1 flex-1 overflow-x-auto no-scrollbar py-0.5">
-              {QUICK_LEAGUES.map((l) => (
-                <button
-                  key={l.id}
-                  type="button"
-                  onClick={() => setCardLeague(l.id)}
-                  className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold transition-all cursor-pointer shrink-0 ${
-                    cardLeague === l.id
-                      ? 'bg-purple-600 text-white shadow-sm shadow-purple-600/30'
-                      : 'bg-white/5 hover:bg-white/10 text-slate-300'
-                  }`}
-                >
-                  {l.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Dropdown Switcher for All Leagues */}
-            <div className="relative shrink-0">
+          {/* League Dropdown Selector (Replaces horizontal scroll) */}
+          <div className="mb-3 w-full relative">
+            <label htmlFor="rail-league-select" className="sr-only">Select Standings League</label>
+            <div className="relative">
               <select
+                id="rail-league-select"
                 value={cardLeague}
                 onChange={(e) => setCardLeague(e.target.value)}
-                className="h-6 px-1.5 pr-5 rounded-md bg-[#25223c] hover:bg-[#2d2948] border border-white/10 text-[10px] font-bold text-slate-200 outline-none cursor-pointer appearance-none"
-                title="Switch Standings Table League"
+                className="w-full h-8 px-2.5 pr-8 rounded-lg bg-[#1c1a2d] border border-white/15 text-xs font-bold text-purple-300 outline-none focus:border-purple-500 cursor-pointer appearance-none shadow-sm"
               >
                 {SUPPORTED_LEAGUES_TABLE.map((lg) => (
-                  <option key={lg.id} value={lg.id} className="bg-[#1c1a2d] text-white">
+                  <option key={lg.id} value={lg.id} className="bg-[#1c1a2d] text-white font-medium">
                     {lg.name}
                   </option>
                 ))}
               </select>
-              <ChevronDown className="w-2.5 h-2.5 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <ChevronDown className="w-3.5 h-3.5 text-purple-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
 
@@ -379,28 +362,15 @@ export default function HydraSportsActivityRail() {
               </button>
             </div>
 
-            {/* Quick league pills & dropdown on mobile */}
-            <div className="flex items-center gap-1.5 mb-3 overflow-x-auto no-scrollbar py-1">
-              {QUICK_LEAGUES.map((l) => (
-                <button
-                  key={l.id}
-                  type="button"
-                  onClick={() => setCardLeague(l.id)}
-                  className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer shrink-0 ${
-                    cardLeague === l.id
-                      ? 'bg-purple-600 text-white shadow-sm shadow-purple-600/30'
-                      : 'bg-white/5 hover:bg-white/10 text-slate-300'
-                  }`}
-                >
-                  {l.label}
-                </button>
-              ))}
-
-              <div className="relative shrink-0 ml-auto">
+            {/* League Dropdown on mobile (Replaces horizontal scroll) */}
+            <div className="mb-3 w-full relative">
+              <label htmlFor="mobile-rail-league-select" className="sr-only">Select Standings League</label>
+              <div className="relative">
                 <select
+                  id="mobile-rail-league-select"
                   value={cardLeague}
                   onChange={(e) => setCardLeague(e.target.value)}
-                  className="h-7 px-2 pr-6 rounded-lg bg-[#25223c] border border-white/10 text-xs font-bold text-slate-200 outline-none cursor-pointer appearance-none"
+                  className="w-full h-8 px-2.5 pr-8 rounded-lg bg-[#1c1a2d] border border-white/15 text-xs font-bold text-purple-300 outline-none focus:border-purple-500 cursor-pointer appearance-none shadow-sm"
                   title="Switch League"
                 >
                   {SUPPORTED_LEAGUES_TABLE.map((lg) => (
@@ -409,7 +379,7 @@ export default function HydraSportsActivityRail() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 text-purple-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 

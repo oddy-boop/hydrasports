@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bell, Menu, Search, User, Layers, Radio, X } from 'lucide-react';
+import { Bell, Menu, Search, User, Layers, Radio, X, ChevronDown } from 'lucide-react';
 import { useHydraSports } from './HydraContext';
 import { useAuth } from './AuthContext';
 import { normalizeSport } from './leagueMatcher';
@@ -204,27 +204,29 @@ export default function FootyTopbar() {
       </div>
     </header>
 
-      {/* Mobile Horizontal Sports Scrollbar */}
-      <div className="flex md:hidden items-center gap-1.5 px-3 py-2 bg-[#121020] border-b border-white/[0.06] overflow-x-auto no-scrollbar shrink-0">
-        {sports.map((sport) => {
-          const isActive = normalizeSport(activeSport || 'Football') === normalizeSport(sport);
-          return (
-            <button
-              key={sport}
-              type="button"
-              onClick={() => {
-                if (setActiveSport) setActiveSport(sport);
-              }}
-              className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-purple-600 text-white shadow-sm shadow-purple-600/30'
-                  : 'bg-white/5 text-slate-300 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              {sport}
-            </button>
-          );
-        })}
+      {/* Mobile Sports Dropdown (Replaces horizontal scrolling) */}
+      <div className="flex md:hidden items-center justify-between gap-2.5 px-3 py-2 bg-[#121020] border-b border-white/[0.06] shrink-0">
+        <label htmlFor="mobile-sports-selector" className="text-xs font-black uppercase tracking-wider text-slate-400 shrink-0 flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-pulse" />
+          <span>Sport:</span>
+        </label>
+        <div className="relative flex-1">
+          <select
+            id="mobile-sports-selector"
+            value={activeSport || 'Football'}
+            onChange={(e) => {
+              if (setActiveSport) setActiveSport(e.target.value);
+            }}
+            className="w-full h-8 px-3 pr-8 rounded-lg bg-[#1c1a2d] border border-white/15 text-xs font-bold text-purple-300 outline-none focus:border-purple-500 cursor-pointer appearance-none shadow-sm"
+          >
+            {sports.map((sport) => (
+              <option key={sport} value={sport} className="bg-[#1c1a2d] text-white">
+                {sport}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="w-3.5 h-3.5 text-purple-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        </div>
       </div>
     </>
   );

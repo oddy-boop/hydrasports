@@ -35,7 +35,7 @@ import StreamPlayer from './StreamPlayer';
 import PlayerDetailsModal from './PlayerDetailsModal';
 import { useAuth } from './AuthContext';
 import { parseMatchHubData } from '@/lib/utils/matchHubData';
-import { buildPlayerFullDetails, getPlayerMatchRating } from '@/lib/utils/playerProfiles';
+import { buildPlayerFullDetails, getPlayerMatchRating, normalizePlayerName } from '@/lib/utils/playerProfiles';
 
 export default function MatchHubView({
   match: initialMatch,
@@ -186,8 +186,23 @@ export default function MatchHubView({
     const teamName = isHomeTeam ? hubData.homeName : hubData.awayName;
     const teamBadge = isHomeTeam ? hubData.homeBadge : hubData.awayBadge;
     const cleanName = p.name.toLowerCase().trim();
+    const cleanPName = normalizePlayerName(p.name);
     const faceUrl = playerFaces[cleanName] || p.avatar;
-    const details = buildPlayerFullDetails(p, teamName, teamBadge, faceUrl, {
+
+    const hasRedCard = Boolean(
+      p.hasRedCard || p.isRedCard ||
+      (p.realStats?.redCards && p.realStats.redCards > 0) ||
+      hubData.timelineEvents?.some(e => e.type === 'red_card' && (normalizePlayerName(e.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(e.player || '')))) ||
+      hubData.cards?.some(c => c.cardType === 'red' && (normalizePlayerName(c.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(c.player || ''))))
+    );
+    const hasYellowCard = Boolean(
+      p.hasYellowCard ||
+      (p.realStats?.yellowCards && p.realStats.yellowCards > 0) ||
+      hubData.timelineEvents?.some(e => e.type === 'yellow_card' && (normalizePlayerName(e.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(e.player || '')))) ||
+      hubData.cards?.some(c => c.cardType === 'yellow' && (normalizePlayerName(c.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(c.player || ''))))
+    );
+
+    const details = buildPlayerFullDetails({ ...p, hasRedCard, hasYellowCard }, teamName, teamBadge, faceUrl, {
       bestPlayerName: hubData.bestPlayer?.name,
       bestPlayer: hubData.bestPlayer,
       timelineEvents: hubData.timelineEvents,
@@ -197,6 +212,8 @@ export default function MatchHubView({
       homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
       awayScore: match?.awayScore ?? hubData.score?.away ?? 0,
     });
+    details.hasRedCard = hasRedCard;
+    details.hasYellowCard = hasYellowCard;
     setSelectedPlayerDetails(details);
 
     // If athlete ID is available, fetch exact real bio details from ESPN
@@ -271,47 +288,50 @@ export default function MatchHubView({
     const text = `${pos} ${grp}`;
 
     // GK
-    if (grp === 'GK' || pos === 'G' || pos === 'GK' || text.includes('GOAL')) {
+    if (grp === 'GK' || pos === 'G' || pos === 'GK' || text.includes('GOAL') || text.includes('KEEPER')) {
       return { tier: 0, x: 0 };
     }
 
-    // Horizontal position X (-2: Left, -1: Center-Left, 0: Center, 1: Center-Right, 2: Right)
+    // Horizontal flank position X (-2: Left, -1: Center-Left, 0: Center, 1: Center-Right, 2: Right)
     let x = 0;
     if (
       text.includes('LEFT') || pos.endsWith('-L') || pos.startsWith('L') ||
-      pos === 'LB' || pos === 'LWB' || pos === 'LM' || pos === 'LW' || pos === 'AML' || pos === 'LCB'
+      pos === 'LB' || pos === 'LWB' || pos === 'LM' || pos === 'LW' || pos === 'AML' || pos === 'LCB' || pos === 'LF'
     ) {
-      x = (pos === 'LB' || pos === 'LWB' || pos === 'LW' || text.includes('LEFT BACK') || text.includes('LEFT WING')) ? -2 : -1;
+      x = (pos === 'LB' || pos === 'LWB' || pos === 'LW' || pos === 'LF' || text.includes('LEFT BACK') || text.includes('LEFT WING') || text.includes('LEFT FORWARD')) ? -2 : -1;
     } else if (
       text.includes('RIGHT') || pos.endsWith('-R') || pos.startsWith('R') ||
-      pos === 'RB' || pos === 'RWB' || pos === 'RM' || pos === 'RW' || pos === 'AMR' || pos === 'RCB'
+      pos === 'RB' || pos === 'RWB' || pos === 'RM' || pos === 'RW' || pos === 'AMR' || pos === 'RCB' || pos === 'RF'
     ) {
-      x = (pos === 'RB' || pos === 'RWB' || pos === 'RW' || text.includes('RIGHT BACK') || text.includes('RIGHT WING')) ? 2 : 1;
+      x = (pos === 'RB' || pos === 'RWB' || pos === 'RW' || pos === 'RF' || text.includes('RIGHT BACK') || text.includes('RIGHT WING') || text.includes('RIGHT FORWARD')) ? 2 : 1;
     }
 
-    // Vertical Tier:
-    // 1: Defenders
-    // 2: Defensive / Holding / Deep Midfielders
-    // 3: Attacking Midfielders / Wingers
-    // 4: Strikers / Forwards
-    let tier = 1;
-    if (grp === 'DF' || text.includes('DEF') || text.includes('BACK') || pos === 'CB' || pos === 'LB' || pos === 'RB' || pos.startsWith('CD')) {
-      tier = 1;
-    } else if (grp === 'FW' || pos === 'F' || pos === 'ST' || pos === 'CF' || text.includes('FORWARD') || text.includes('STRIKER')) {
-      tier = 4;
-    } else if (
-      text.includes('ATTACKING') || pos.startsWith('AM') || pos === 'LW' || pos === 'RW' ||
-      pos === 'CAM' || pos === 'AML' || pos === 'AMR'
+    // Vertical Tier: Based strictly on the coach's assigned match position for this game!
+    // If a coach plays a career CM as an RB, their match pos is "Right Back", placing them in Tier 1 (Defenders)
+    let tier = 2; // default Midfield
+    if (
+      text.includes('BACK') || text.includes('DEF') || pos.startsWith('CD') ||
+      pos === 'CB' || pos === 'LB' || pos === 'RB' || pos === 'LWB' || pos === 'RWB' || grp === 'DF'
     ) {
-      tier = 3;
+      tier = 1; // Backline Defenders
+    } else if (
+      text.includes('FORWARD') || text.includes('STRIKER') || pos === 'F' || pos === 'ST' ||
+      pos === 'CF' || pos === 'LF' || pos === 'RF' || pos === 'LW' || pos === 'RW' || grp === 'FW'
+    ) {
+      tier = 4; // Forward Attackers
+    } else if (
+      text.includes('ATTACKING') || pos.startsWith('AM') || pos === 'CAM' || pos === 'AML' || pos === 'AMR'
+    ) {
+      tier = 3; // Attacking Midfielders
     } else {
-      tier = 2; // Central/defensive midfielders (DM, CM, LM, RM)
+      tier = 2; // Midfielders (CM, DM, LM, RM)
     }
 
     return { tier, x };
   };
 
   // Dynamic tactical formation rows (e.g. 4-2-3-1, 4-3-3, 3-5-2)
+  // Strictly follows actual match data and the coach's lineup assignments
   const getFormationRows = (formationStr, starters) => {
     if (!starters || starters.length === 0) return { gk: [], outfieldRows: [] };
 
@@ -322,6 +342,19 @@ export default function MatchHubView({
 
     const nums = (formationStr || '').match(/\d+/g)?.map(Number) || [];
     const sum = nums.reduce((a, b) => a + b, 0);
+
+    // Group players into coach-assigned match lines
+    const dfLine = outfield.filter(p => getPlayerRoleScore(p).tier === 1).sort((a, b) => getPlayerRoleScore(a).x - getPlayerRoleScore(b).x);
+    const mfLine = outfield.filter(p => getPlayerRoleScore(p).tier === 2 || getPlayerRoleScore(p).tier === 3).sort((a, b) => getPlayerRoleScore(a).x - getPlayerRoleScore(b).x);
+    const fwLine = outfield.filter(p => getPlayerRoleScore(p).tier === 4).sort((a, b) => getPlayerRoleScore(a).x - getPlayerRoleScore(b).x);
+
+    // If standard 3-tier formation (e.g. 4-3-3, 3-5-2, 4-4-2) matches the counts:
+    if (nums.length === 3 && nums[0] === dfLine.length && nums[1] === mfLine.length && nums[2] === fwLine.length) {
+      return {
+        gk: actualGk,
+        outfieldRows: [fwLine, mfLine, dfLine], // Top = Attackers, Bottom = Defenders
+      };
+    }
 
     // Sort outfield strictly by vertical tier (Defenders -> Midfielders -> Attackers)
     // and horizontally left-to-right within each tier
@@ -337,14 +370,13 @@ export default function MatchHubView({
       const rows = [];
       for (const count of nums) {
         const rowPlayers = sortedOutfield.slice(offset, offset + count);
-        // Ensure within each row, players are arranged strictly Left to Right
         rowPlayers.sort((a, b) => getPlayerRoleScore(a).x - getPlayerRoleScore(b).x);
         rows.push(rowPlayers);
         offset += count;
       }
       return {
         gk: actualGk,
-        outfieldRows: [...rows].reverse(), // Top row = Attackers (e.g. Striker), bottom row = Defenders
+        outfieldRows: [...rows].reverse(), // Top row = Attackers, bottom row = Defenders
       };
     }
 
@@ -428,22 +460,32 @@ export default function MatchHubView({
           <div className="grid grid-cols-2 gap-3 text-xs">
             {/* Home Scorers */}
             <div className="space-y-1 text-left">
-              {hubData.homeScorersList.map((s, idx) => (
-                <p key={idx} className="text-slate-200 font-bold truncate">
-                  <span>{s.player} </span>
-                  <span className="text-purple-400 font-mono text-[11px]">{s.minutes}</span>
-                </p>
-              ))}
+              {hubData.homeScorersList.map((s, idx) => {
+                const isOG = Boolean(s.isOwnGoal || s.player.includes('(OG)'));
+                const cleanName = s.player.replace(/\s*\(OG\)/i, '').trim();
+                return (
+                  <p key={idx} className="text-slate-200 font-bold truncate">
+                    <span>{cleanName} </span>
+                    {isOG && <span className="text-rose-400 font-black text-[10px] mr-1">(OG)</span>}
+                    <span className="text-purple-400 font-mono text-[11px]">{s.minutes}</span>
+                  </p>
+                );
+              })}
             </div>
 
             {/* Away Scorers */}
             <div className="space-y-1 text-right">
-              {hubData.awayScorersList.map((s, idx) => (
-                <p key={idx} className="text-slate-200 font-bold truncate">
-                  <span>{s.player} </span>
-                  <span className="text-blue-400 font-mono text-[11px]">{s.minutes}</span>
-                </p>
-              ))}
+              {hubData.awayScorersList.map((s, idx) => {
+                const isOG = Boolean(s.isOwnGoal || s.player.includes('(OG)'));
+                const cleanName = s.player.replace(/\s*\(OG\)/i, '').trim();
+                return (
+                  <p key={idx} className="text-slate-200 font-bold truncate">
+                    <span>{cleanName} </span>
+                    {isOG && <span className="text-rose-400 font-black text-[10px] mr-1">(OG)</span>}
+                    <span className="text-blue-400 font-mono text-[11px]">{s.minutes}</span>
+                  </p>
+                );
+              })}
             </div>
           </div>
         ) : (
@@ -627,7 +669,53 @@ export default function MatchHubView({
             
             {/* Tactical Navigation Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10 w-full min-w-0">
-              <div className="flex items-center gap-1.5 overflow-x-auto py-1 no-scrollbar w-full sm:w-auto min-w-0 -mx-1 px-1">
+              {/* Mobile Tactical View Dropdown (Replaces horizontal scrolling) */}
+              <div className="sm:hidden w-full relative">
+                <label htmlFor="tactical-view-select" className="sr-only">Select Tactical View</label>
+                <div className="relative">
+                  <select
+                    id="tactical-view-select"
+                    value={tacticalTab}
+                    onChange={(e) => setTacticalTab(e.target.value)}
+                    className="w-full h-10 px-3.5 pr-10 rounded-xl bg-[#1b1930] border border-white/15 text-xs font-black uppercase tracking-wider text-purple-300 outline-none focus:border-purple-500 cursor-pointer appearance-none shadow-md"
+                  >
+                    <option value="lineups" className="bg-[#1b1930] text-white">
+                      👥 {hubData.sport === 'basketball' ? 'Starting 5 & Roster' :
+                          hubData.sport === 'hockey' ? 'Starting 6 & Lines' :
+                          hubData.sport === 'tennis' ? 'Head-to-Head Draw' :
+                          'Formations & Lineups'}
+                    </option>
+                    <option value="subs" className="bg-[#1b1930] text-white">
+                      🔄 {hubData.sport === 'basketball' ? `Rotations (${hubData.substitutions.length})` :
+                          hubData.sport === 'hockey' ? `Line Changes (${hubData.substitutions.length})` :
+                          hubData.sport === 'tennis' ? 'Match Progress' :
+                          `Substitutions (${hubData.substitutions.length})`}
+                    </option>
+                    <option value="discipline" className="bg-[#1b1930] text-white">
+                      ⚠️ {hubData.sport === 'basketball' ? `Fouls (${hubData.cards.length})` :
+                          hubData.sport === 'hockey' ? `Penalties (${hubData.cards.length})` :
+                          hubData.sport === 'tennis' ? 'Serve & Faults' :
+                          `Discipline (${hubData.cards.length})`}
+                    </option>
+                    <option value="stats" className="bg-[#1b1930] text-white">
+                      📊 {hubData.sport === 'basketball' ? 'Game Statistics' :
+                          hubData.sport === 'hockey' ? 'Game Statistics' :
+                          hubData.sport === 'tennis' ? 'Match Statistics' :
+                          'Detailed Statistics'}
+                    </option>
+                    <option value="zones" className="bg-[#1b1930] text-white">
+                      🎯 {hubData.sport === 'basketball' ? 'Court Shot Zones' :
+                          hubData.sport === 'hockey' ? 'Rink Attack Zones' :
+                          hubData.sport === 'tennis' ? 'Court Placement' :
+                          'Attack Zones & Keys'}
+                    </option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-purple-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Desktop Tactical Navigation Buttons (Clean flex-wrap, no horizontal scroll) */}
+              <div className="hidden sm:flex items-center gap-1.5 flex-wrap w-full sm:w-auto min-w-0">
                 <button
                   onClick={() => setTacticalTab('lineups')}
                   className={`flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shrink-0 whitespace-nowrap ${
@@ -1005,10 +1093,22 @@ export default function MatchHubView({
                         <div key={rIdx} className="flex items-center justify-around w-full px-1 sm:px-2">
                           {rowPlayers.map((p, pIdx) => {
                             const cleanName = p.name?.toLowerCase().trim();
+                            const cleanPName = normalizePlayerName(p.name);
                             const faceUrl = playerFaces[cleanName] || p.avatar;
+                            const hasRedCard = Boolean(
+                              (p.realStats?.redCards && p.realStats.redCards > 0) ||
+                              hubData.timelineEvents?.some(e => e.type === 'red_card' && (normalizePlayerName(e.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(e.player || '')))) ||
+                              hubData.cards?.some(c => c.cardType === 'red' && (normalizePlayerName(c.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(c.player || ''))))
+                            );
+                            const hasYellowCard = Boolean(
+                              (p.realStats?.yellowCards && p.realStats.yellowCards > 0) ||
+                              hubData.timelineEvents?.some(e => e.type === 'yellow_card' && (normalizePlayerName(e.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(e.player || '')))) ||
+                              hubData.cards?.some(c => c.cardType === 'yellow' && (normalizePlayerName(c.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(c.player || ''))))
+                            );
+
                             const ratingObj = getPlayerMatchRating(p, {
                               bestPlayerName: hubData.bestPlayer?.name,
-                              goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal').map(e => e.player || ''),
+                              goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal' && !e.isOwnGoal).map(e => e.player || ''),
                               yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
                               isHome: selectedTeamTab === 'home',
                               homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
@@ -1038,6 +1138,19 @@ export default function MatchHubView({
                                     {p.jersey}
                                   </span>
 
+                                  {/* Disciplinary Badge Beside Player Image */}
+                                  {hasRedCard ? (
+                                    <span 
+                                      className="absolute -top-1 -left-1 sm:-left-1.5 h-4 w-3 rounded-[3px] bg-red-600 border border-white text-[8px] font-black flex items-center justify-center shadow-lg ring-1 ring-red-400 z-20 animate-pulse"
+                                      title="Red Card (Sent Off)"
+                                    />
+                                  ) : hasYellowCard ? (
+                                    <span 
+                                      className="absolute -top-1 -left-1 sm:-left-1.5 h-3.5 w-2.5 rounded-[2px] bg-amber-400 border border-black/40 shadow-md z-20"
+                                      title="Yellow Card"
+                                    />
+                                  ) : null}
+
                                   {/* Live Match Rating Badge on Player Side (Flashscore Opta model) */}
                                   <span 
                                     className={`absolute -bottom-1 -right-1 sm:-right-1.5 px-0.5 sm:px-1 min-w-[18px] sm:min-w-[20px] h-3.5 sm:h-4 rounded-full border border-black/40 text-[8px] sm:text-[8.5px] font-black flex items-center justify-center shadow-md leading-none ${ratingObj.colorClass}`}
@@ -1063,10 +1176,22 @@ export default function MatchHubView({
                       <div className="flex items-center justify-center w-full">
                         {gk.map((p, idx) => {
                           const cleanName = p.name?.toLowerCase().trim();
+                          const cleanPName = normalizePlayerName(p.name);
                           const faceUrl = playerFaces[cleanName] || p.avatar;
+                          const hasRedCard = Boolean(
+                            (p.realStats?.redCards && p.realStats.redCards > 0) ||
+                            hubData.timelineEvents?.some(e => e.type === 'red_card' && (normalizePlayerName(e.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(e.player || '')))) ||
+                            hubData.cards?.some(c => c.cardType === 'red' && (normalizePlayerName(c.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(c.player || ''))))
+                          );
+                          const hasYellowCard = Boolean(
+                            (p.realStats?.yellowCards && p.realStats.yellowCards > 0) ||
+                            hubData.timelineEvents?.some(e => e.type === 'yellow_card' && (normalizePlayerName(e.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(e.player || '')))) ||
+                            hubData.cards?.some(c => c.cardType === 'yellow' && (normalizePlayerName(c.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(c.player || ''))))
+                          );
+
                           const ratingObj = getPlayerMatchRating(p, {
                             bestPlayerName: hubData.bestPlayer?.name,
-                            goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal').map(e => e.player || ''),
+                            goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal' && !e.isOwnGoal).map(e => e.player || ''),
                             yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
                             isHome: selectedTeamTab === 'home',
                             homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
@@ -1095,6 +1220,19 @@ export default function MatchHubView({
                                 <span className="text-[10px] sm:text-[11px] font-black text-white absolute inset-0 flex items-center justify-center -z-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                                   {p.jersey}
                                 </span>
+
+                                {/* Disciplinary Badge Beside Goalkeeper Image */}
+                                {hasRedCard ? (
+                                  <span 
+                                    className="absolute -top-1 -left-1 sm:-left-1.5 h-4 w-3 rounded-[3px] bg-red-600 border border-white text-[8px] font-black flex items-center justify-center shadow-lg ring-1 ring-red-400 z-20 animate-pulse"
+                                    title="Red Card (Sent Off)"
+                                  />
+                                ) : hasYellowCard ? (
+                                  <span 
+                                    className="absolute -top-1 -left-1 sm:-left-1.5 h-3.5 w-2.5 rounded-[2px] bg-amber-400 border border-black/40 shadow-md z-20"
+                                    title="Yellow Card"
+                                  />
+                                ) : null}
 
                                 {/* Live Match Rating Badge on Goalkeeper Side (Flashscore Opta model) */}
                                 <span 
@@ -1132,10 +1270,22 @@ export default function MatchHubView({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto max-h-[340px] pr-1">
                     {currentStarters.map((player, idx) => {
                       const cleanName = player.name?.toLowerCase().trim();
+                      const cleanPName = normalizePlayerName(player.name);
                       const faceUrl = playerFaces[cleanName] || player.avatar;
+                      const hasRedCard = Boolean(
+                        (player.realStats?.redCards && player.realStats.redCards > 0) ||
+                        hubData.timelineEvents?.some(e => e.type === 'red_card' && (normalizePlayerName(e.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(e.player || '')))) ||
+                        hubData.cards?.some(c => c.cardType === 'red' && (normalizePlayerName(c.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(c.player || ''))))
+                      );
+                      const hasYellowCard = Boolean(
+                        (player.realStats?.yellowCards && player.realStats.yellowCards > 0) ||
+                        hubData.timelineEvents?.some(e => e.type === 'yellow_card' && (normalizePlayerName(e.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(e.player || '')))) ||
+                        hubData.cards?.some(c => c.cardType === 'yellow' && (normalizePlayerName(c.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(c.player || ''))))
+                      );
+
                       const ratingObj = getPlayerMatchRating(player, {
                         bestPlayerName: hubData.bestPlayer?.name,
-                        goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal').map(e => e.player || ''),
+                        goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal' && !e.isOwnGoal).map(e => e.player || ''),
                         yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
                         isHome: selectedTeamTab === 'home',
                         homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
@@ -1150,19 +1300,35 @@ export default function MatchHubView({
                           className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/5 hover:border-purple-500/30 hover:bg-white/10 transition-all cursor-pointer group"
                         >
                           <div className="flex items-center gap-2 min-w-0">
-                            <div className="relative h-7 w-7 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center shrink-0">
-                              {faceUrl ? (
-                                <img
-                                  src={faceUrl}
-                                  alt={player.name}
-                                  className="h-full w-full object-cover object-top"
-                                  loading="lazy"
-                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            <div className="relative h-7 w-7 rounded-full bg-white/10 border border-white/20 overflow-visible flex items-center justify-center shrink-0">
+                              <div className="h-full w-full rounded-full overflow-hidden flex items-center justify-center">
+                                {faceUrl ? (
+                                  <img
+                                    src={faceUrl}
+                                    alt={player.name}
+                                    className="h-full w-full object-cover object-top"
+                                    loading="lazy"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                ) : null}
+                                <span className="text-[10px] font-black text-purple-300 absolute inset-0 flex items-center justify-center -z-0">
+                                  {player.jersey}
+                                </span>
+                              </div>
+
+                              {/* Disciplinary Badge Beside Player Image on Roster */}
+                              {hasRedCard && (
+                                <span 
+                                  className="absolute -top-1 -left-1 h-3.5 w-2.5 rounded-[2px] bg-red-600 border border-white shadow-md z-20 animate-pulse"
+                                  title="Red Card (Sent Off)"
                                 />
-                              ) : null}
-                              <span className="text-[10px] font-black text-purple-300 absolute inset-0 flex items-center justify-center -z-0">
-                                {player.jersey}
-                              </span>
+                              )}
+                              {hasYellowCard && !hasRedCard && (
+                                <span 
+                                  className="absolute -top-1 -left-1 h-3 w-2 rounded-[2px] bg-amber-400 border border-black/40 shadow-sm z-20"
+                                  title="Yellow Card"
+                                />
+                              )}
                             </div>
                             <span className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition-colors">
                               {player.name}
@@ -1632,7 +1798,7 @@ export default function MatchHubView({
             })()}
           </div>
 
-          {/* CARD 3: Match Minute & Timeline Progress */}
+          {/* CARD 3: Match Minute & Timeline Progress (Full natural length without artificial cutting) */}
           <div className="rounded-3xl bg-[#131222]/95 backdrop-blur-xl border border-white/10 p-5 shadow-2xl">
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/5">
               <span className="text-xs font-black uppercase tracking-wider text-white">
@@ -1644,20 +1810,65 @@ export default function MatchHubView({
               </span>
             </div>
 
-            {/* Events summary */}
-            <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
+            {/* Events summary: Full length without cutting off */}
+            <div className="space-y-2 w-full">
               {hubData.timelineEvents.length > 0 ? (
-                hubData.timelineEvents.map((evt, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs p-1.5 rounded-lg bg-white/5">
-                    <span className="font-mono text-purple-400 font-bold">{evt.displayMinute}</span>
-                    <span className="text-slate-200 font-medium truncate max-w-[200px]">
-                      {evt.type === 'goal' ? '⚽ Goal! ' : evt.type === 'yellow_card' ? '🟨 ' : evt.type === 'red_card' ? '🟥 ' : '🔄 '}
-                      {evt.player || evt.text}
-                    </span>
-                  </div>
-                ))
+                hubData.timelineEvents.map((evt, idx) => {
+                  const isRed = evt.type === 'red_card';
+                  const isYellow = evt.type === 'yellow_card';
+                  const isGoal = evt.type === 'goal';
+                  const isOG = Boolean(evt.isOwnGoal || (evt.player && evt.player.includes('(OG)')) || evt.text?.toLowerCase().includes('own goal'));
+
+                  return (
+                    <div 
+                      key={idx} 
+                      className={`flex items-center justify-between text-xs p-2 rounded-xl border transition-all ${
+                        isRed
+                          ? 'bg-rose-950/40 border-rose-500/40 shadow-sm shadow-rose-950/30'
+                          : isOG
+                          ? 'bg-red-950/30 border-red-500/30'
+                          : isGoal
+                          ? 'bg-emerald-950/30 border-emerald-500/30'
+                          : isYellow
+                          ? 'bg-amber-950/20 border-amber-500/20'
+                          : 'bg-white/5 border-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-mono text-purple-400 font-black text-xs shrink-0 w-8">
+                          {evt.displayMinute}
+                        </span>
+                        <span className="text-slate-200 font-semibold truncate flex items-center gap-1.5">
+                          {isRed ? (
+                            <span className="h-3.5 w-2.5 rounded-[2px] bg-red-600 border border-white inline-block shrink-0 shadow-sm" />
+                          ) : isYellow ? (
+                            <span className="h-3.5 w-2.5 rounded-[2px] bg-amber-400 border border-black/30 inline-block shrink-0 shadow-sm" />
+                          ) : isOG ? (
+                            <span className="text-red-400 font-black text-xs">⚽ (OG)</span>
+                          ) : isGoal ? (
+                            <span className="text-emerald-400 font-black text-xs">⚽</span>
+                          ) : (
+                            <span className="text-purple-400">🔄</span>
+                          )}
+                          <span className="truncate">{evt.player || evt.text}</span>
+                        </span>
+                      </div>
+
+                      {isOG && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-red-600/20 text-red-400 border border-red-500/30 shrink-0">
+                          Own Goal
+                        </span>
+                      )}
+                      {isRed && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-rose-600/20 text-rose-300 border border-rose-500/30 shrink-0">
+                          Sent Off
+                        </span>
+                      )}
+                    </div>
+                  );
+                })
               ) : (
-                <p className="text-[11px] text-slate-500 text-center italic py-3">
+                <p className="text-[11px] text-slate-500 text-center italic py-4">
                   Match events will appear here in real-time
                 </p>
               )}

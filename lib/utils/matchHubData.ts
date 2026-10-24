@@ -81,6 +81,7 @@ export interface TimelineEvent {
   text: string;
   team: 'home' | 'away' | 'neutral';
   player?: string;
+  isOwnGoal?: boolean;
 }
 
 export interface SubstitutionEvent {
@@ -116,6 +117,7 @@ export interface AttackZonesData {
 export interface ScorerItem {
   player: string;
   minutes: string;
+  isOwnGoal?: boolean;
   card?: string;
 }
 
@@ -288,8 +290,26 @@ export function parseMatchHubData(match: any, stats: any) {
     const typeStr = (item.type || '').toLowerCase();
     const textStr = (item.text || '').toLowerCase();
 
+    const isOwnGoal = 
+      typeStr.includes('own goal') ||
+      typeStr.includes('own-goal') ||
+      typeStr.includes('owngoal') ||
+      typeStr.includes('autogol') ||
+      typeStr === 'og' ||
+      textStr.includes('own goal') ||
+      textStr.includes('own-goal') ||
+      textStr.includes('owngoal') ||
+      textStr.includes('(og)') ||
+      textStr.includes('(o.g.)') ||
+      textStr.includes(' o.g.') ||
+      textStr.includes(' og ') ||
+      textStr.includes('autogol') ||
+      textStr.includes('but contre son camp') ||
+      textStr.includes('gol en contra') ||
+      Boolean(item.ownGoal || item.isOwnGoal);
+
     let eventType: TimelineEvent['type'] = 'other';
-    if (typeStr.includes('goal') || textStr.includes('goal!') || typeStr.includes('score') || typeStr.includes('shot made')) {
+    if (isOwnGoal || typeStr.includes('goal') || textStr.includes('goal!') || typeStr.includes('score') || typeStr.includes('shot made')) {
       eventType = 'goal';
     } else if (typeStr.includes('red card') || textStr.includes('red card')) {
       eventType = 'red_card';
@@ -323,33 +343,53 @@ export function parseMatchHubData(match: any, stats: any) {
     const participants = item.participants || [];
     let player = participants[0]?.name || '';
 
-    // If player name is missing, extract from text pattern "Goal! ... Player Name (Team Name)"
+    // If player name is missing, extract from text pattern "Goal! ... Player Name (Team Name)" or "Own Goal by ..."
     if (!player && eventType === 'goal' && item.text) {
-      const goalMatch = item.text.match(/Goal!.*?[.]\s*([A-Za-z\u00C0-\u024F\s\.\'-]+?)\s*\(([^)]+)\)/i);
-      if (goalMatch) {
-        player = goalMatch[1].trim();
-        if (team === 'neutral') {
-          const tParen = goalMatch[2].toLowerCase();
-          if (homeName.toLowerCase().includes(tParen) || tParen.includes(homeName.toLowerCase())) team = 'home';
-          else if (awayName.toLowerCase().includes(tParen) || tParen.includes(awayName.toLowerCase())) team = 'away';
+      if (isOwnGoal) {
+        const ogMatch = item.text.match(/own goal by\s+([^,.(]+)/i) || item.text.match(/([A-Za-z\u00C0-\u024F\s\.\'-]+?)\s*\(og\)/i);
+        if (ogMatch) {
+          player = ogMatch[1].trim();
+        }
+      }
+      if (!player) {
+        const goalMatch = item.text.match(/Goal!.*?[.]\s*([A-Za-z\u00C0-\u024F\s\.\'-]+?)\s*\(([^)]+)\)/i);
+        if (goalMatch) {
+          player = goalMatch[1].trim();
+          if (team === 'neutral') {
+            const tParen = goalMatch[2].toLowerCase();
+            if (homeName.toLowerCase().includes(tParen) || tParen.includes(homeName.toLowerCase())) team = 'home';
+            else if (awayName.toLowerCase().includes(tParen) || tParen.includes(awayName.toLowerCase())) team = 'away';
+          }
         }
       }
     }
 
     if (eventType === 'goal') {
-      const targetGoals = team === 'home' ? homeGoals : team === 'away' ? awayGoals : null;
+      // For own goals: in football, an own goal by team A benefits team B on the scoreboard!
+      let scoreBeneficiaryTeam = team;
+      if (isOwnGoal) {
+        if (team === 'home') scoreBeneficiaryTeam = 'away';
+        else if (team === 'away') scoreBeneficiaryTeam = 'home';
+      }
+
+      const displayScorerName = isOwnGoal 
+        ? (player ? (player.includes('(OG)') ? player : `${player} (OG)`) : (team === 'home' ? `${awayName} (OG)` : `${homeName} (OG)`))
+        : (player || (team === 'home' ? homeName : awayName));
+
+      const targetGoals = scoreBeneficiaryTeam === 'home' ? homeGoals : scoreBeneficiaryTeam === 'away' ? awayGoals : null;
       if (targetGoals) {
         const existingIdx = targetGoals.findIndex(g => g.minute === displayMin || (minuteNum > 0 && parseInt(g.minute, 10) === minuteNum));
         if (existingIdx !== -1) {
-          if ((targetGoals[existingIdx].player === homeName || targetGoals[existingIdx].player === awayName) && player) {
-            targetGoals[existingIdx].player = player;
+          if ((targetGoals[existingIdx].player === homeName || targetGoals[existingIdx].player === awayName) && displayScorerName) {
+            targetGoals[existingIdx].player = displayScorerName;
           }
         } else {
-          targetGoals.push({ minute: displayMin, player: player || (team === 'home' ? homeName : awayName) });
+          targetGoals.push({ minute: displayMin, player: displayScorerName });
         }
       }
 
-      if (player && (team === 'home' || team === 'away')) {
+      // Record playerGoalCounts only for real attacking goals (never for own goals!)
+      if (!isOwnGoal && player && (team === 'home' || team === 'away')) {
         if (!playerGoalCounts[player]) {
           playerGoalCounts[player] = {
             count: 0,
@@ -405,17 +445,22 @@ export function parseMatchHubData(match: any, stats: any) {
     }
 
     if (eventType !== 'other') {
+      const displayTimelinePlayer = isOwnGoal 
+        ? (player ? (player.includes('(OG)') ? player : `${player} (OG)`) : 'Own Goal (OG)')
+        : player;
+
       const isDuplicate = timelineEvents.some(
-        e => e.minute === minuteNum && e.type === eventType && (e.player === player || (!player && e.team === team))
+        e => e.minute === minuteNum && e.type === eventType && (e.player === displayTimelinePlayer || (!player && e.team === team))
       );
       if (!isDuplicate) {
         timelineEvents.push({
           minute: Math.min(minuteNum, 90),
           displayMinute: displayMin,
           type: eventType,
+          isOwnGoal: Boolean(isOwnGoal),
           text: item.text || '',
           team,
-          player,
+          player: displayTimelinePlayer,
         });
       }
     }
@@ -929,18 +974,20 @@ export function parseMatchHubData(match: any, stats: any) {
   function formatScorers(goals: { minute: string; player: string }[], fallbackTeam: string): ScorerItem[] {
     const hasNamedScorer = goals.some(g => g.player && g.player !== fallbackTeam);
     const validGoals = hasNamedScorer ? goals.filter(g => g.player && g.player !== fallbackTeam) : goals;
-    const map = new Map<string, string[]>();
+    const map = new Map<string, { mins: string[]; isOwnGoal: boolean }>();
     for (const g of validGoals) {
       if (!g.player) continue;
-      const mins = map.get(g.player) || [];
-      if (!mins.includes(g.minute)) {
-        mins.push(g.minute);
+      const isOG = g.player.includes('(OG)');
+      const entry = map.get(g.player) || { mins: [], isOwnGoal: isOG };
+      if (!entry.mins.includes(g.minute)) {
+        entry.mins.push(g.minute);
       }
-      map.set(g.player, mins);
+      map.set(g.player, entry);
     }
-    return Array.from(map.entries()).map(([player, mins]) => ({
+    return Array.from(map.entries()).map(([player, data]) => ({
       player,
-      minutes: mins.join(', '),
+      minutes: data.mins.join(', '),
+      isOwnGoal: data.isOwnGoal,
     }));
   }
 
