@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import StreamPlayer from './StreamPlayer';
 import PlayerDetailsModal from './PlayerDetailsModal';
+import AdBanner from './AdBanner';
 import { useAuth } from './AuthContext';
 import { parseMatchHubData } from '@/lib/utils/matchHubData';
 import { buildPlayerFullDetails, getPlayerMatchRating, normalizePlayerName } from '@/lib/utils/playerProfiles';
@@ -693,6 +694,11 @@ export default function MatchHubView({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* ── LIVE MATCH SPONSOR / AD BANNER (UNDER STREAM PLAYER) ── */}
+          <div className="w-full max-w-full flex justify-center">
+            <AdBanner slot="matchHub" className="!my-1" />
           </div>
 
           {/* ── 3. TACTICAL MATCH TELEMETRY (PLACED CLEANLY BELOW VIDEO PLAYER) ── */}

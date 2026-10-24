@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import FootySidebar from './HydraSidebar';
 import FootyTopbar from './HydraTopbar';
 import HydraSportsActivityRail from './FriendsActivityRail';
+import AdBanner from './AdBanner';
+import StickyAdFooter from './StickyAdFooter';
 
 export default function FootyLayoutShell({ children }) {
   const pathname = usePathname() || '/';
@@ -15,8 +17,9 @@ export default function FootyLayoutShell({ children }) {
 
   if (isFullScreenView) {
     return (
-      <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[#0d0c15] text-white flex flex-col">
+      <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[#0d0c15] text-white flex flex-col pb-20">
         {children}
+        <StickyAdFooter />
       </div>
     );
   }
@@ -25,7 +28,7 @@ export default function FootyLayoutShell({ children }) {
   return (
     <>
       <FootyTopbar />
-      <div className="reference-canvas">
+      <div className="reference-canvas pb-20">
         {/* Left Football Sidebar */}
         <FootySidebar />
 
@@ -34,12 +37,14 @@ export default function FootyLayoutShell({ children }) {
           {/* Main Content + Right Live Activity Rail */}
           <div className="dashboard-main flex-col lg:flex-row">
             <main className="dashboard-content">
+              <AdBanner slot="header" />
               {children}
             </main>
             <HydraSportsActivityRail />
           </div>
         </div>
       </div>
+      <StickyAdFooter />
     </>
   );
 }

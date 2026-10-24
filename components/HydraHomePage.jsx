@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import FootyHeroBanner from './HydraHeroBanner';
 import MatchCard from './MatchCard';
+import AdBanner from './AdBanner';
 import { useHydraSports } from './HydraContext';
 import { ChevronDown, Radio } from 'lucide-react';
 import { matchBelongsToLeague, normalizeSport } from './leagueMatcher';
@@ -87,6 +88,9 @@ export default function FootyHomePage({ initialMatches = [] }) {
     <div className="space-y-6">
       {/* 1. Super Big Match Hero Banner (Image 1) */}
       {topMatch && <FootyHeroBanner featuredMatch={topMatch} />}
+
+      {/* In-Feed Sponsor / Monetization Ad Slot */}
+      <AdBanner slot="inContent" />
 
       {/* 2. Matches Section Header with Dropdown Filter (Image 1) */}
       <div className="pt-2">

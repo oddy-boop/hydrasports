@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useHydraSports } from './HydraContext';
 import { Trophy, Newspaper, ExternalLink, Loader2, X, ChevronRight, ChevronDown } from 'lucide-react';
+import AdBanner from './AdBanner';
 
 const SUPPORTED_LEAGUES_TABLE = [
   { id: 'Premier League', name: 'Premier League (ENG)' },
@@ -241,6 +242,9 @@ export default function HydraSportsActivityRail() {
             </div>
           )}
         </div>
+
+        {/* ── SPONSOR / AD SLOT (300x250) ── */}
+        <AdBanner slot="sidebar" />
 
         {/* ── CARD 2: Real Sports News Feed (Multiple Stories) ── */}
         <div className="rounded-2xl bg-[#1c1a2d] border border-white/[0.06] p-4 shadow-xl flex flex-col">
