@@ -16,7 +16,7 @@ describe('adsConfig', () => {
   });
 
   it('should have enabled slots with required configuration keys', () => {
-    const slots = ['header', 'matchHub', 'sidebar', 'inContent', 'stickyFooter'];
+    const slots = ['header', 'matchHub', 'sidebar', 'inContent', 'stickyFooter'] as const;
     for (const slotKey of slots) {
       const slot = adsConfig.slots[slotKey];
       expect(slot.enabled).toBe(true);
