@@ -447,18 +447,15 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
           </div>
         )}
 
-        {/* Floating details overlay (Top left) */}
-        {!videoOnly && <div className="absolute top-3 left-3 z-20 flex items-center gap-2 pointer-events-none">
-          <span className="rounded-full bg-black/75 backdrop-blur-md border border-zinc-800/80 px-3 py-1 text-xs font-bold text-white">
-            {matchTitle}
-          </span>
-          {streamStatus === 'active' && matchStatus === 'live' && (
+        {/* Floating Live Stream badge (Bottom of stream - top kept clear for broadcast scoreboard) */}
+        {!videoOnly && streamStatus === 'active' && (matchStatus === 'live' || !matchStatus) && (
+          <div className={`absolute bottom-3 left-3 z-20 flex items-center pointer-events-none ${isDirectHls ? 'group-hover:opacity-0' : ''} transition-opacity duration-300`}>
             <span className="flex items-center gap-1.5 rounded-full bg-red-600/90 border border-red-500/30 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-white shadow-lg animate-pulse">
               <span className="h-1.5 w-1.5 rounded-full bg-white" />
               Live Stream
             </span>
-          )}
-        </div>}
+          </div>
+        )}
 
         {/* CUSTOM VIDEO CONTROLS OVERLAY (Only for Direct HLS Video) */}
         {!videoOnly && isDirectHls && streamStatus === 'active' && (

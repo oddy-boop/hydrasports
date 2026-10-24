@@ -31,8 +31,10 @@ import {
   Flame,
 } from 'lucide-react';
 import StreamPlayer from './StreamPlayer';
+import PlayerDetailsModal from './PlayerDetailsModal';
 import { useAuth } from './AuthContext';
 import { parseMatchHubData } from '@/lib/utils/matchHubData';
+import { buildPlayerFullDetails, getPlayerMatchRating } from '@/lib/utils/playerProfiles';
 
 export default function MatchHubView({
   match: initialMatch,
@@ -110,6 +112,24 @@ export default function MatchHubView({
 
   // Real player face fetching
   const [playerFaces, setPlayerFaces] = useState({});
+  const [selectedPlayerDetails, setSelectedPlayerDetails] = useState(null);
+
+  const handlePlayerClick = (p, isHomeTeam = true) => {
+    if (!p || !p.name) return;
+    const teamName = isHomeTeam ? hubData.homeName : hubData.awayName;
+    const teamBadge = isHomeTeam ? hubData.homeBadge : hubData.awayBadge;
+    const cleanName = p.name.toLowerCase().trim();
+    const faceUrl = playerFaces[cleanName] || p.avatar;
+    const details = buildPlayerFullDetails(p, teamName, teamBadge, faceUrl, {
+      bestPlayerName: hubData.bestPlayer?.name,
+      goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal').map(e => e.player || ''),
+      yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
+      isHome: isHomeTeam,
+      homeScore: hubData.score.home,
+      awayScore: hubData.score.away,
+    });
+    setSelectedPlayerDetails(details);
+  };
 
   useEffect(() => {
     const candidateNames = [
@@ -551,7 +571,7 @@ export default function MatchHubView({
                       {/* PG */}
                       <div className="flex items-center justify-center">
                         {currentStarters.filter(p => p.positionGroup === 'PG').concat(currentStarters.slice(0, 1)).slice(0, 1).map((p, idx) => (
-                          <div key={idx} className="flex flex-col items-center group">
+                          <div key={idx} onClick={() => handlePlayerClick(p, selectedTeamTab === 'home')} className="flex flex-col items-center group cursor-pointer">
                             <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-amber-500 to-amber-700 border-2 border-amber-200 flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
                               {p.jersey}
                             </div>
@@ -565,7 +585,7 @@ export default function MatchHubView({
                       {/* Wings SF & SG */}
                       <div className="flex items-center justify-around px-2">
                         {currentStarters.filter(p => p.positionGroup === 'SF').concat(currentStarters.slice(2, 3)).slice(0, 1).map((p, idx) => (
-                          <div key={idx} className="flex flex-col items-center group">
+                          <div key={idx} onClick={() => handlePlayerClick(p, selectedTeamTab === 'home')} className="flex flex-col items-center group cursor-pointer">
                             <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-orange-500 to-amber-600 border-2 border-amber-200 flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
                               {p.jersey}
                             </div>
@@ -576,7 +596,7 @@ export default function MatchHubView({
                         ))}
 
                         {currentStarters.filter(p => p.positionGroup === 'SG').concat(currentStarters.slice(1, 2)).slice(0, 1).map((p, idx) => (
-                          <div key={idx} className="flex flex-col items-center group">
+                          <div key={idx} onClick={() => handlePlayerClick(p, selectedTeamTab === 'home')} className="flex flex-col items-center group cursor-pointer">
                             <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-orange-500 to-amber-600 border-2 border-amber-200 flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
                               {p.jersey}
                             </div>
@@ -590,7 +610,7 @@ export default function MatchHubView({
                       {/* Frontcourt PF & C */}
                       <div className="flex items-center justify-center gap-12">
                         {currentStarters.filter(p => p.positionGroup === 'PF').concat(currentStarters.slice(3, 4)).slice(0, 1).map((p, idx) => (
-                          <div key={idx} className="flex flex-col items-center group">
+                          <div key={idx} onClick={() => handlePlayerClick(p, selectedTeamTab === 'home')} className="flex flex-col items-center group cursor-pointer">
                             <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-yellow-600 to-amber-700 border-2 border-amber-200 flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
                               {p.jersey}
                             </div>
@@ -601,7 +621,7 @@ export default function MatchHubView({
                         ))}
 
                         {currentStarters.filter(p => p.positionGroup === 'C').concat(currentStarters.slice(4, 5)).slice(0, 1).map((p, idx) => (
-                          <div key={idx} className="flex flex-col items-center group">
+                          <div key={idx} onClick={() => handlePlayerClick(p, selectedTeamTab === 'home')} className="flex flex-col items-center group cursor-pointer">
                             <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-amber-600 to-red-700 border-2 border-amber-200 flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
                               {p.jersey}
                             </div>
@@ -783,8 +803,21 @@ export default function MatchHubView({
                           {rowPlayers.map((p, pIdx) => {
                             const cleanName = p.name?.toLowerCase().trim();
                             const faceUrl = playerFaces[cleanName] || p.avatar;
+                            const ratingObj = getPlayerMatchRating(p, {
+                              bestPlayerName: hubData.bestPlayer?.name,
+                              goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal').map(e => e.player || ''),
+                              yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
+                              isHome: selectedTeamTab === 'home',
+                              homeScore: hubData.score.home,
+                              awayScore: hubData.score.away,
+                            });
                             return (
-                              <div key={p.id || pIdx} title={`${p.name} #${p.jersey} (${p.position})`} className="flex flex-col items-center group relative cursor-pointer">
+                              <div 
+                                key={p.id || pIdx} 
+                                onClick={() => handlePlayerClick(p, selectedTeamTab === 'home')}
+                                title={`Click to view profile & market value: ${p.name} #${p.jersey} (${p.position})`} 
+                                className="flex flex-col items-center group relative cursor-pointer"
+                              >
                                 <div className="relative h-10 w-10 sm:h-11 sm:w-11 rounded-full border-2 border-white/85 bg-gradient-to-tr from-[#1a103c] via-[#2d1b69] to-[#4c1d95] flex items-center justify-center shadow-lg group-hover:scale-115 group-hover:border-purple-400 group-hover:shadow-[0_0_15px_rgba(168,85,247,0.5)] transition-all duration-300">
                                   {faceUrl ? (
                                     <img
@@ -797,17 +830,20 @@ export default function MatchHubView({
                                       }}
                                     />
                                   ) : null}
-                                  <span className="text-[11px] font-black text-white absolute inset-0 flex items-center justify-center -z-0">
+                                  <span className="text-[11px] font-black text-white absolute inset-0 flex items-center justify-center -z-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                                     {p.jersey}
                                   </span>
 
-                                  {/* Small Jersey Number Badge */}
-                                  <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-purple-600 border border-white text-[8.5px] font-black text-white flex items-center justify-center shadow">
-                                    {p.jersey}
+                                  {/* Live Match Rating Badge on Player Side (FotMob / Sofascore style) */}
+                                  <span 
+                                    className={`absolute -bottom-1 -right-1.5 px-1 min-w-[20px] h-4 rounded-full border border-black/40 text-[8.5px] font-black flex items-center justify-center shadow-md leading-none ${ratingObj.colorClass}`}
+                                    title={`Match Rating: ${ratingObj.rating.toFixed(1)} (${ratingObj.label})`}
+                                  >
+                                    {ratingObj.rating.toFixed(1)}
                                   </span>
                                 </div>
 
-                                <span className="text-[9.5px] font-bold text-white mt-1 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md truncate max-w-[95px] border border-white/10 shadow text-center flex items-center justify-center gap-1">
+                                <span className="text-[9.5px] font-bold text-white mt-1 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md truncate max-w-[95px] border border-white/10 shadow text-center flex items-center justify-center gap-1 group-hover:border-purple-400/50 group-hover:text-purple-200 transition-colors">
                                   <span>{p.name.split(' ').slice(-1)[0]}</span>
                                   {p.position && (
                                     <span className="text-[7.5px] text-purple-300 font-black uppercase opacity-90">{p.position}</span>
@@ -824,8 +860,21 @@ export default function MatchHubView({
                         {gk.map((p, idx) => {
                           const cleanName = p.name?.toLowerCase().trim();
                           const faceUrl = playerFaces[cleanName] || p.avatar;
+                          const ratingObj = getPlayerMatchRating(p, {
+                            bestPlayerName: hubData.bestPlayer?.name,
+                            goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal').map(e => e.player || ''),
+                            yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
+                            isHome: selectedTeamTab === 'home',
+                            homeScore: hubData.score.home,
+                            awayScore: hubData.score.away,
+                          });
                           return (
-                            <div key={p.id || idx} title={`${p.name} #${p.jersey} (Goalkeeper)`} className="flex flex-col items-center group relative cursor-pointer">
+                            <div 
+                              key={p.id || idx} 
+                              onClick={() => handlePlayerClick(p, selectedTeamTab === 'home')}
+                              title={`Click to view profile & market value: ${p.name} #${p.jersey} (Goalkeeper)`} 
+                              className="flex flex-col items-center group relative cursor-pointer"
+                            >
                               <div className="relative h-10 w-10 sm:h-11 sm:w-11 rounded-full border-2 border-emerald-300 bg-gradient-to-tr from-[#064e3b] to-[#047857] flex items-center justify-center shadow-lg group-hover:scale-115 group-hover:border-emerald-200 transition-all duration-300">
                                 {faceUrl ? (
                                   <img
@@ -838,16 +887,20 @@ export default function MatchHubView({
                                     }}
                                   />
                                 ) : null}
-                                <span className="text-[11px] font-black text-white absolute inset-0 flex items-center justify-center -z-0">
+                                <span className="text-[11px] font-black text-white absolute inset-0 flex items-center justify-center -z-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                                   {p.jersey}
                                 </span>
 
-                                <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-emerald-600 border border-white text-[8.5px] font-black text-white flex items-center justify-center shadow">
-                                  {p.jersey}
+                                {/* Live Match Rating Badge on Goalkeeper Side */}
+                                <span 
+                                  className={`absolute -bottom-1 -right-1.5 px-1 min-w-[20px] h-4 rounded-full border border-black/40 text-[8.5px] font-black flex items-center justify-center shadow-md leading-none ${ratingObj.colorClass}`}
+                                  title={`Match Rating: ${ratingObj.rating.toFixed(1)} (${ratingObj.label})`}
+                                >
+                                  {ratingObj.rating.toFixed(1)}
                                 </span>
                               </div>
 
-                              <span className="text-[9.5px] font-bold text-emerald-200 mt-1 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md truncate max-w-[95px] border border-emerald-500/30 shadow text-center flex items-center justify-center gap-1">
+                              <span className="text-[9.5px] font-bold text-emerald-200 mt-1 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md truncate max-w-[95px] border border-emerald-500/30 shadow text-center flex items-center justify-center gap-1 group-hover:border-emerald-400 group-hover:text-emerald-100 transition-colors">
                                 <span>{p.name.split(' ').slice(-1)[0]}</span>
                                 <span className="text-[7.5px] text-emerald-400 font-black uppercase opacity-90">GK</span>
                               </span>
@@ -875,10 +928,20 @@ export default function MatchHubView({
                     {currentStarters.map((player, idx) => {
                       const cleanName = player.name?.toLowerCase().trim();
                       const faceUrl = playerFaces[cleanName] || player.avatar;
+                      const ratingObj = getPlayerMatchRating(player, {
+                        bestPlayerName: hubData.bestPlayer?.name,
+                        goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal').map(e => e.player || ''),
+                        yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
+                        isHome: selectedTeamTab === 'home',
+                        homeScore: hubData.score.home,
+                        awayScore: hubData.score.away,
+                      });
                       return (
                         <div
                           key={idx}
-                          className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/5 hover:border-purple-500/30 transition-all"
+                          onClick={() => handlePlayerClick(player, selectedTeamTab === 'home')}
+                          title={`Click to view profile & market value: ${player.name}`}
+                          className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/5 hover:border-purple-500/30 hover:bg-white/10 transition-all cursor-pointer group"
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="relative h-7 w-7 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center shrink-0">
@@ -895,22 +958,27 @@ export default function MatchHubView({
                                 {player.jersey}
                               </span>
                             </div>
-                            <span className="text-xs font-bold text-white truncate">
+                            <span className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition-colors">
                               {player.name}
                             </span>
                           </div>
 
-                          <span className={`text-[10px] font-black px-1.5 py-0.5 rounded uppercase shrink-0 ${
-                            player.positionGroup === 'GK' || player.positionGroup === 'G'
-                              ? 'bg-emerald-500/20 text-emerald-300'
-                              : player.positionGroup === 'DF' || player.positionGroup === 'LD' || player.positionGroup === 'RD' || player.positionGroup === 'PF'
-                              ? 'bg-blue-500/20 text-blue-300'
-                              : player.positionGroup === 'MF' || player.positionGroup === 'PG' || player.positionGroup === 'SG' || player.positionGroup === 'C'
-                              ? 'bg-purple-500/20 text-purple-300'
-                              : 'bg-rose-500/20 text-rose-300'
-                          }`}>
-                            {player.position}
-                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${ratingObj.colorClass}`}>
+                              {ratingObj.rating.toFixed(1)}
+                            </span>
+                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded uppercase ${
+                              player.positionGroup === 'GK' || player.positionGroup === 'G'
+                                ? 'bg-emerald-500/20 text-emerald-300'
+                                : player.positionGroup === 'DF' || player.positionGroup === 'LD' || player.positionGroup === 'RD' || player.positionGroup === 'PF'
+                                ? 'bg-blue-500/20 text-blue-300'
+                                : player.positionGroup === 'MF' || player.positionGroup === 'PG' || player.positionGroup === 'SG' || player.positionGroup === 'C'
+                                ? 'bg-purple-500/20 text-purple-300'
+                                : 'bg-rose-500/20 text-rose-300'
+                            }`}>
+                              {player.position}
+                            </span>
+                          </div>
                         </div>
                       );
                     })}
@@ -988,13 +1056,15 @@ export default function MatchHubView({
                       {currentSubstitutes.map((player, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5"
+                          onClick={() => handlePlayerClick(player, selectedTeamTab === 'home')}
+                          title={`Click to view profile & market value: ${player.name}`}
+                          className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-purple-500/30 hover:bg-white/10 transition-all cursor-pointer group"
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="h-6 w-6 rounded-md bg-white/10 flex items-center justify-center text-xs font-bold text-slate-300 shrink-0">
                               {player.jersey}
                             </span>
-                            <span className="text-xs font-bold text-white truncate">
+                            <span className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition-colors">
                               {player.name}
                             </span>
                           </div>
@@ -1348,7 +1418,11 @@ export default function MatchHubView({
           </div>
 
           {/* CARD 2: Star Player / Man of the Match (Strictly from this fixture!) */}
-          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#7c3aed] via-[#6d28d9] to-[#4c1d95] p-5 shadow-2xl shadow-purple-600/30 text-white min-h-[200px] flex flex-col justify-between">
+          <div 
+            onClick={() => handlePlayerClick({ name: hubData.bestPlayer.name, jersey: hubData.bestPlayer.jersey, avatar: hubData.bestPlayer.avatar, role: 'Featured Match Performer', starter: true }, hubData.bestPlayer.teamName === hubData.homeName)}
+            title={`Click to view full profile & market value for ${hubData.bestPlayer.name}`}
+            className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#7c3aed] via-[#6d28d9] to-[#4c1d95] p-5 shadow-2xl shadow-purple-600/30 text-white min-h-[200px] flex flex-col justify-between cursor-pointer hover:scale-[1.01] hover:shadow-purple-500/40 transition-all group"
+          >
             {/* Watermark Jersey Number */}
             <div className="absolute right-6 top-1/2 -translate-y-1/2 text-[120px] font-black text-white/10 select-none pointer-events-none leading-none">
               {hubData.bestPlayer.jersey}
@@ -1491,6 +1565,12 @@ export default function MatchHubView({
 
         </aside>
       </main>
+
+      {/* Interactive Player Details & Market Value Modal */}
+      <PlayerDetailsModal
+        player={selectedPlayerDetails}
+        onClose={() => setSelectedPlayerDetails(null)}
+      />
     </div>
   );
 }
