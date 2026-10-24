@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useHydraSports } from './HydraContext';
-import { ChevronDown, Trophy, Globe, Flame, X } from 'lucide-react';
+import { ChevronDown, Trophy, Globe, Flame, X, Layers, Calendar, Star, Zap, Tv, Radio } from 'lucide-react';
 
 export const REGIONAL_LEAGUES = [
   { id: 'Champions League', name: 'Champions League', icon: '⚽', color: '#3b82f6', category: 'regional' },
@@ -27,6 +28,7 @@ export const INTERNATIONAL_LEAGUES = [
 ];
 
 export default function FootySidebar() {
+  const pathname = usePathname();
   const {
     selectedLeague = 'Serie A',
     selectLeague,
@@ -74,7 +76,7 @@ export default function FootySidebar() {
         <div className="space-y-6">
           {/* Close button on mobile */}
           <div className="flex items-center justify-between lg:hidden mb-2">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Leagues</span>
+            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Navigation</span>
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
@@ -83,6 +85,47 @@ export default function FootySidebar() {
             >
               <X className="h-4 w-4" />
             </button>
+          </div>
+
+          {/* Primary Platform Menu (Unhiding Multi-Stream, Schedule, Favourites, API Hub) */}
+          <div>
+            <div className="px-2 mb-2 text-[11px] font-black uppercase tracking-wider text-slate-400">
+              Platform
+            </div>
+            <nav className="flex flex-col space-y-1">
+              {[
+                { href: '/', label: 'Live Matches', icon: Tv, highlight: pathname === '/' },
+                { href: '/multistream', label: 'Multi-Stream', icon: Layers, highlight: pathname === '/multistream', badge: 'Quad' },
+                { href: '/schedule', label: 'Kickoff Schedule', icon: Calendar, highlight: pathname === '/schedule' },
+                { href: '/favourites', label: 'Pinned Clubs', icon: Star, highlight: pathname === '/favourites' },
+                { href: '/competitions', label: 'Competitions', icon: Trophy, highlight: pathname === '/competitions' },
+                { href: '/api-hub', label: 'Stream API Hub', icon: Zap, highlight: pathname === '/api-hub' },
+              ].map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`min-h-[38px] text-xs font-semibold py-2 px-3 rounded-xl transition-all duration-200 flex items-center justify-between group ${
+                      item.highlight
+                        ? 'bg-purple-600 text-white font-bold shadow-md shadow-purple-600/30'
+                        : 'text-slate-300 hover:text-white hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <IconComponent className={`w-4 h-4 shrink-0 ${item.highlight ? 'text-white' : 'text-purple-400 group-hover:text-purple-300'}`} />
+                      <span className="truncate text-[12px]">{item.label}</span>
+                    </div>
+                    {item.badge && (
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
 
           {/* Section 1: Regional Leagues (Image 1) */}

@@ -39,7 +39,47 @@ export default function MatchCard({ match, tab }) {
   const [liveData, setLiveData] = useState(null);
   const [homeFav, setHomeFav] = useState(false);
   const [awayFav, setAwayFav] = useState(false);
+  const [countdownText, setCountdownText] = useState('');
+  const [hasStarted, setHasStarted] = useState(() => {
+    return status === 'live' || status === 'finished' || (timestamp ? timestamp <= Date.now() : true);
+  });
   const polling = useRef(null);
+
+  useEffect(() => {
+    if (status === 'live' || status === 'finished') {
+      setHasStarted(true);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      const diff = (timestamp || now) - now;
+      if (diff <= 0) {
+        setHasStarted(true);
+        setCountdownText('');
+        return;
+      }
+      setHasStarted(false);
+      const totalSeconds = Math.floor(diff / 1000);
+      const days = Math.floor(totalSeconds / (3600 * 24));
+      const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      if (days > 0) {
+        setCountdownText(`${days}d ${hours}h ${minutes}m`);
+      } else {
+        const hh = String(hours).padStart(2, '0');
+        const mm = String(minutes).padStart(2, '0');
+        const ss = String(seconds).padStart(2, '0');
+        setCountdownText(`${hh}:${mm}:${ss}`);
+      }
+    };
+
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
+    return () => clearInterval(timer);
+  }, [timestamp, status]);
 
   useEffect(() => {
     const checkFavs = () => {
@@ -163,15 +203,32 @@ export default function MatchCard({ match, tab }) {
         </div>
       </div>
 
-      {/* ── ACTION BUTTON: Vibrant Emerald Green Pill "Watch Now" (Image 1) ── */}
+      {/* ── ACTION BUTTON: Watch Now vs Live Countdown (Image 1) ── */}
       <div className="mt-4 pt-3 border-t border-white/[0.06]">
-        <Link
-          href={`/watch/${id}?tab=${tab || 'live'}`}
-          className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[#10b981] hover:bg-[#059669] active:scale-[0.98] text-white font-black text-xs uppercase tracking-wider transition-all duration-200 shadow-[0_4px_16px_rgba(16,185,129,0.3)] cursor-pointer"
-        >
-          <Play className="w-3.5 h-3.5 fill-white text-white" />
-          <span>Watch Now</span>
-        </Link>
+        {!hasStarted && countdownText ? (
+          <Link
+            href={`/watch/${id}?tab=${tab || 'upcoming'}`}
+            className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[#232039] hover:bg-[#2b2746] border border-amber-500/30 text-amber-300 font-extrabold text-xs uppercase tracking-wider transition-all duration-200 shadow-inner group/timer cursor-pointer"
+          >
+            <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <span>Starts in {countdownText}</span>
+          </Link>
+        ) : status === 'finished' ? (
+          <Link
+            href={`/watch/${id}?tab=${tab || 'finished'}`}
+            className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-white/[0.06] hover:bg-white/10 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all duration-200"
+          >
+            <span>Match Ended · View Details</span>
+          </Link>
+        ) : (
+          <Link
+            href={`/watch/${id}?tab=${tab || 'live'}`}
+            className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[#10b981] hover:bg-[#059669] active:scale-[0.98] text-white font-black text-xs uppercase tracking-wider transition-all duration-200 shadow-[0_4px_16px_rgba(16,185,129,0.3)] cursor-pointer"
+          >
+            <Play className="w-3.5 h-3.5 fill-white text-white" />
+            <span>Watch Now</span>
+          </Link>
+        )}
       </div>
 
     </div>

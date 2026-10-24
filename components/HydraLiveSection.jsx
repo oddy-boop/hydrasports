@@ -209,12 +209,12 @@ export default function HydraSportsSection({ matches = [], teamFilter = '' }) {
                 ? 'Past Match Results'
                 : activeMenu === 'favourites'
                 ? 'Favourite Teams Matches'
-                : selectedLeague !== 'All'
+                : selectedLeague && selectedLeague !== 'All'
                 ? `${selectedLeague} Fixtures`
                 : 'Live & Upcoming Fixtures'}
             </h3>
 
-            {selectedLeague !== 'All' && (
+            {selectedLeague && selectedLeague !== 'All' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-black bg-purple-600/30 text-purple-300 px-2.5 py-0.5 rounded-full border border-purple-500/30">
                 <span>{selectedLeague}</span>
                 <button
@@ -228,9 +228,6 @@ export default function HydraSportsSection({ matches = [], teamFilter = '' }) {
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-400 mt-1 font-medium">
-            Live scores and streams aggregated across real verified providers
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">

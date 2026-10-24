@@ -5,13 +5,12 @@ import { usePathname } from 'next/navigation';
 import FootySidebar from './HydraSidebar';
 import FootyTopbar from './HydraTopbar';
 import HydraSportsActivityRail from './FriendsActivityRail';
-import FootyNowBar from './HydraPlayerBar';
 
 export default function FootyLayoutShell({ children }) {
   const pathname = usePathname() || '/';
 
   // Watch Match Page & Multi-stream page take the FULL UI!
-  // No sidebar, no right activity rail, and no bottom floating player bar.
+  // No sidebar, no right activity rail.
   const isFullScreenView = pathname.startsWith('/watch/') || pathname === '/multistream' || pathname.startsWith('/auth') || pathname.startsWith('/login') || pathname.startsWith('/register');
 
   if (isFullScreenView) {
@@ -41,9 +40,6 @@ export default function FootyLayoutShell({ children }) {
           </div>
         </div>
       </div>
-
-      {/* Bottom Persistent Live Match Stream Controller Bar */}
-      <FootyNowBar />
     </>
   );
 }

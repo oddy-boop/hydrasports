@@ -1,22 +1,55 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bell, Menu, Search, User } from 'lucide-react';
+import { Bell, Menu, Search, User, Layers, Radio, X } from 'lucide-react';
 import { useHydraSports } from './HydraContext';
 import { useAuth } from './AuthContext';
 
 export default function FootyTopbar() {
   const router = useRouter();
-  const { setSidebarOpen, activeSport = 'Football', setActiveSport } = useHydraSports();
+  const {
+    setSidebarOpen,
+    activeSport = 'Football',
+    setActiveSport,
+    searchQuery,
+    setSearchQuery,
+  } = useHydraSports();
   const { user } = useAuth();
+
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [liveMatches, setLiveMatches] = useState([]);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const sports = ['Football', 'Tennis', 'Basketball', 'Rugby', 'Badminton'];
 
+  // Fetch real live matches for notifications
+  useEffect(() => {
+    let cancelled = false;
+    const fetchLive = async () => {
+      try {
+        const res = await fetch('/api/matches', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data.matches)) {
+          const live = data.matches.filter((m) => m.status === 'live');
+          setLiveMatches(live);
+        }
+      } catch {}
+    };
+
+    fetchLive();
+    const interval = setInterval(fetchLive, 20000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <header className="sticky top-0 z-[60] h-[68px] w-full px-4 sm:px-6 lg:px-8 flex items-center justify-between border-b border-white/[0.06] bg-[#141221] backdrop-blur-xl">
-      {/* Left: Brand Logo & Mobile Trigger */}
+      {/* Left: Brand Logo (HydraSports) & Mobile Trigger */}
       <div className="flex items-center gap-3 sm:gap-4 min-w-[200px]">
         <button
           type="button"
@@ -28,20 +61,16 @@ export default function FootyTopbar() {
         </button>
 
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#6366f1] to-[#8b5cf6] flex items-center justify-center text-white shadow-[0_4px_16px_rgba(124,58,237,0.35)] group-hover:scale-105 transition-transform">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect width="18" height="18" x="3" y="3" rx="4" />
-              <path d="M9 12h6" />
-              <path d="M12 9v6" />
-            </svg>
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#6366f1] via-[#8b5cf6] to-[#ec4899] flex items-center justify-center text-white shadow-[0_4px_16px_rgba(124,58,237,0.35)] group-hover:scale-105 transition-transform">
+            <Radio className="w-4 h-4 text-white" />
           </div>
           <span className="text-[17px] font-black tracking-tight text-white flex items-center">
-            Full<span className="text-[#a78bfa]">time</span>
+            Hydra<span className="text-[#a78bfa]">Sports</span>
           </span>
         </Link>
       </div>
 
-      {/* Center: Sports Category Tabs from Image 1 */}
+      {/* Center: Sports Category Tabs that actually filter real data */}
       <nav className="hidden md:flex items-center gap-1 sm:gap-2">
         {sports.map((sport) => {
           const isActive = (activeSport || 'Football').toLowerCase() === sport.toLowerCase();
@@ -49,7 +78,9 @@ export default function FootyTopbar() {
             <button
               key={sport}
               type="button"
-              onClick={() => setActiveSport && setActiveSport(sport)}
+              onClick={() => {
+                if (setActiveSport) setActiveSport(sport);
+              }}
               className={`relative px-4 py-2 text-xs font-bold transition-all duration-200 cursor-pointer ${
                 isActive
                   ? 'text-white'
@@ -65,19 +96,111 @@ export default function FootyTopbar() {
         })}
       </nav>
 
-      {/* Right: Notifications & User Avatar Profile */}
-      <div className="flex items-center gap-3 sm:gap-4 min-w-[200px] justify-end">
-        {/* Notification Bell with Badge */}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#ef4444] ring-2 ring-[#141221]" />
-        </button>
+      {/* Right Controls: Search, Multi-Stream, Notifications, Profile */}
+      <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-[200px] justify-end">
+        {/* Real Live Search Input */}
+        <div className="relative">
+          {searchOpen ? (
+            <div className="flex items-center gap-1 bg-[#1c1a2d] border border-white/15 rounded-xl px-2.5 py-1">
+              <Search className="w-3.5 h-3.5 text-slate-400" />
+              <input
+                type="text"
+                autoFocus
+                placeholder="Search clubs, sports..."
+                value={searchQuery || ''}
+                onChange={(e) => setSearchQuery && setSearchQuery(e.target.value)}
+                className="w-32 sm:w-48 bg-transparent text-xs text-white placeholder-slate-500 outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchOpen(false);
+                  if (setSearchQuery) setSearchQuery('');
+                }}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+              title="Search matches"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+          )}
+        </div>
 
-        {/* User Profile Avatar linking to Auth / Account */}
+        {/* Multi-Stream Button (Prominently unhidden!) */}
+        <Link
+          href="/multistream"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition-all hover:scale-105 shrink-0"
+          title="Watch up to 4 live streams concurrently"
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Multi-Stream</span>
+        </Link>
+
+        {/* Real Notifications Dropdown */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setNotificationsOpen(!notificationsOpen)}
+            aria-label="Notifications"
+            className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+          >
+            <Bell className="w-4 h-4" />
+            {liveMatches.length > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#ef4444] ring-2 ring-[#141221]" />
+            )}
+          </button>
+
+          {notificationsOpen && (
+            <div className="absolute right-0 top-full mt-2 w-80 rounded-2xl bg-[#181628] border border-white/15 p-3 shadow-2xl z-50 animate-fade-in text-white">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
+                <span className="text-xs font-extrabold text-white">Live Broadcast Alerts</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-600/20 text-red-400 border border-red-500/30">
+                  {liveMatches.length} Live
+                </span>
+              </div>
+
+              {liveMatches.length === 0 ? (
+                <p className="text-xs text-slate-400 py-4 text-center">
+                  No matches currently in progress. Upcoming games will appear here.
+                </p>
+              ) : (
+                <div className="max-h-60 overflow-y-auto space-y-1.5">
+                  {liveMatches.slice(0, 5).map((match) => (
+                    <Link
+                      key={match.id}
+                      href={`/watch/${match.id}`}
+                      onClick={() => setNotificationsOpen(false)}
+                      className="block p-2 rounded-xl bg-[#1e1c32] hover:bg-[#25233e] transition-colors"
+                    >
+                      <div className="flex items-center justify-between text-[11px] font-bold text-white">
+                        <span className="truncate max-w-[180px]">{match.title}</span>
+                        <span className="text-emerald-400 font-black tabular-nums">
+                          {match.homeScore ?? 0} - {match.awayScore ?? 0}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                        <span>{match.currentMinute || 'Live'}</span>
+                        <span>·</span>
+                        <span className="truncate">{match.tournament || 'Live fixture'}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* User Profile Avatar */}
         <Link
           href="/auth"
           className="flex items-center gap-2 p-1 pl-1.5 rounded-full hover:bg-white/[0.08] border border-white/[0.08] transition-all group"

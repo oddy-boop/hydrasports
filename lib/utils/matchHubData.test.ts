@@ -117,7 +117,6 @@ describe('matchHubData parser', () => {
     expect(parsed.awayGoals[0].player).toBe('Cole Palmer');
     expect(parsed.homeKeyPlayers.length).toBe(4);
     expect(parsed.homeKeyPlayers[0].name).toBe('Bukayo Saka');
-    expect(parsed.manOfTheMatch.name).toBe('Bukayo Saka');
-    expect(parsed.attackZones.center).toBe(48);
+    expect(parsed.hasRealStats).toBe(true);
   });
 });

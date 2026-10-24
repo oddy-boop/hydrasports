@@ -62,7 +62,7 @@ export default function AuthPage() {
             <div className="w-7 h-7 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white font-bold text-xs shadow-inner">
               <ShieldCheck className="w-4 h-4 text-white" />
             </div>
-            <span className="text-white font-bold tracking-wider text-sm uppercase">FIFA ID</span>
+            <span className="text-white font-bold tracking-wider text-sm uppercase">HydraSports ID</span>
           </Link>
 
           {/* Hero Headline and description matching Image 2 */}
@@ -108,7 +108,7 @@ export default function AuthPage() {
               <div className="w-6 h-6 rounded bg-white/20 flex items-center justify-center text-white">
                 <ShieldCheck className="w-3.5 h-3.5" />
               </div>
-              <span className="text-[11px] font-black tracking-widest text-white/90 uppercase">FIFA ID</span>
+              <span className="text-[11px] font-black tracking-widest text-white/90 uppercase">HydraSports ID</span>
             </div>
 
             {/* Title & Subtitle */}

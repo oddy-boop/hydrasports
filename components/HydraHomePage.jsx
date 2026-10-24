@@ -8,40 +8,51 @@ import { ChevronDown, Radio } from 'lucide-react';
 import { matchBelongsToLeague } from './leagueMatcher';
 
 export default function FootyHomePage({ initialMatches = [] }) {
-  const { selectedLeague = 'Serie A' } = useHydraSports();
+  const {
+    selectedLeague = 'Serie A',
+    activeSport = 'Football',
+    searchQuery = '',
+  } = useHydraSports();
   const [filterMode, setFilterMode] = useState('featured'); // 'featured' | 'live' | 'all'
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
 
-  // Top featured match for Hero Banner
-  const topMatch = useMemo(() => {
-    if (!initialMatches || initialMatches.length === 0) return null;
-    // Prefer match in selected league, else live match, else first match
-    if (selectedLeague && selectedLeague !== 'All') {
-      const leagueMatch = initialMatches.find(m => matchBelongsToLeague(m, selectedLeague) && m.status === 'live') ||
-        initialMatches.find(m => matchBelongsToLeague(m, selectedLeague));
-      if (leagueMatch) return leagueMatch;
-    }
-    return initialMatches.find((m) => m.status === 'live') ||
-      initialMatches.find((m) => m.status !== 'finished') ||
-      initialMatches[0];
-  }, [initialMatches, selectedLeague]);
-
-  // Filter matches based on selectedLeague and filterMode
+  // Filter matches based on activeSport, searchQuery, selectedLeague, and filterMode
   const displayedMatches = useMemo(() => {
     let list = initialMatches || [];
 
-    // Filter by selected league if not 'All'
-    if (selectedLeague && selectedLeague !== 'All') {
-      const filtered = list.filter(m => matchBelongsToLeague(m, selectedLeague));
-      if (filtered.length > 0) {
-        list = filtered;
+    // 1. Filter by activeSport (Football, Basketball, Tennis, Rugby, Badminton, etc.)
+    if (activeSport) {
+      const sportLower = activeSport.toLowerCase();
+      const sportMatches = list.filter(m => (m.sport || '').toLowerCase() === sportLower);
+      if (sportMatches.length > 0) {
+        list = sportMatches;
       }
     }
 
+    // 2. Filter by search query if user typed into topbar search
+    if (searchQuery && searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(m =>
+        m.title?.toLowerCase().includes(q) ||
+        m.homeTeam?.name?.toLowerCase().includes(q) ||
+        m.awayTeam?.name?.toLowerCase().includes(q) ||
+        m.tournament?.toLowerCase().includes(q)
+      );
+    }
+
+    // 3. Filter by selected league if football and not 'All'
+    if (activeSport?.toLowerCase() === 'football' && selectedLeague && selectedLeague !== 'All') {
+      const leagueMatches = list.filter(m => matchBelongsToLeague(m, selectedLeague));
+      if (leagueMatches.length > 0) {
+        list = leagueMatches;
+      }
+    }
+
+    // 4. Status filter mode
     if (filterMode === 'live') {
       list = list.filter(m => m.status === 'live');
     } else if (filterMode === 'featured') {
-      // Prioritize live then high priority
+      // Prioritize live matches, then high priority
       list = [...list].sort((a, b) => {
         if (a.status === 'live' && b.status !== 'live') return -1;
         if (b.status === 'live' && a.status !== 'live') return 1;
@@ -50,11 +61,30 @@ export default function FootyHomePage({ initialMatches = [] }) {
     }
 
     return list;
-  }, [initialMatches, selectedLeague, filterMode]);
+  }, [initialMatches, activeSport, searchQuery, selectedLeague, filterMode]);
 
-  const leagueTitle = selectedLeague && selectedLeague !== 'All' 
-    ? `${selectedLeague} Match` 
-    : 'Serie A Match';
+  // Top featured match for Hero Banner from active selection
+  const topMatch = useMemo(() => {
+    if (!displayedMatches || displayedMatches.length === 0) {
+      return initialMatches?.[0] || null;
+    }
+    return displayedMatches.find((m) => m.status === 'live') ||
+      displayedMatches.find((m) => m.status !== 'finished') ||
+      displayedMatches[0];
+  }, [displayedMatches, initialMatches]);
+
+  const leagueTitle = useMemo(() => {
+    if (searchQuery && searchQuery.trim()) {
+      return `Search: "${searchQuery.trim()}"`;
+    }
+    if (activeSport && activeSport.toLowerCase() !== 'football') {
+      return `${activeSport} Matches`;
+    }
+    if (selectedLeague && selectedLeague !== 'All') {
+      return `${selectedLeague} Match`;
+    }
+    return 'Featured Matches';
+  }, [searchQuery, activeSport, selectedLeague]);
 
   return (
     <div className="space-y-6">
