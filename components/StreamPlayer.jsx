@@ -26,6 +26,37 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
   const [adShieldDropdownOpen, setAdShieldDropdownOpen] = useState(false);
   const [blockedRedirectCount, setBlockedRedirectCount] = useState(0);
 
+  const iframeRef = useRef(null);
+  const videoRef = useRef(null);
+  const playerRef = useRef(null);
+  const hlsInstanceRef = useRef(null);
+
+  const allChannels = channels && channels.length > 0 ? channels : [{ name: 'Stream 1', url: streamUrl, proxiedUrl: streamUrl }];
+  const activeCh = allChannels[activeChannel] || allChannels[0];
+
+  const rawTargetUrl = activeCh?.url || streamUrl || '';
+  const proxiedTargetUrl = activeCh?.proxiedUrl || '';
+
+  // Auto-detect direct stream sources like .m3u8, .mpd, .mp4 checking both raw and proxied URLs
+  const isDirectHls = Boolean(
+    rawTargetUrl.includes('.m3u8') || 
+    rawTargetUrl.includes('.mpd') || 
+    rawTargetUrl.includes('/hls/') || 
+    rawTargetUrl.includes('.mp4') ||
+    proxiedTargetUrl.includes('.m3u8') ||
+    proxiedTargetUrl.includes('.mpd') ||
+    proxiedTargetUrl.includes('/hls/') ||
+    proxiedTargetUrl.includes('.mp4') ||
+    activeCh?.provider?.includes('hls') ||
+    activeCh?.provider?.includes('tennis') ||
+    activeCh?.name?.includes('HLS')
+  );
+
+  // For direct HLS, use rawTargetUrl directly so Hls.js loads the master playlist and segments seamlessly
+  const currentUrl = isDirectHls
+    ? (rawTargetUrl || proxiedTargetUrl || streamUrl)
+    : (proxiedTargetUrl || rawTargetUrl || streamUrl);
+
   useEffect(() => {
     const handleFsChange = () => {
       const isFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
@@ -84,37 +115,6 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [isDirectHls, adShieldMode]);
-
-  const iframeRef = useRef(null);
-  const videoRef = useRef(null);
-  const playerRef = useRef(null);
-  const hlsInstanceRef = useRef(null);
-
-  const allChannels = channels && channels.length > 0 ? channels : [{ name: 'Stream 1', url: streamUrl, proxiedUrl: streamUrl }];
-  const activeCh = allChannels[activeChannel] || allChannels[0];
-
-  const rawTargetUrl = activeCh?.url || streamUrl || '';
-  const proxiedTargetUrl = activeCh?.proxiedUrl || '';
-
-  // Auto-detect direct stream sources like .m3u8, .mpd, .mp4 checking both raw and proxied URLs
-  const isDirectHls = Boolean(
-    rawTargetUrl.includes('.m3u8') || 
-    rawTargetUrl.includes('.mpd') || 
-    rawTargetUrl.includes('/hls/') || 
-    rawTargetUrl.includes('.mp4') ||
-    proxiedTargetUrl.includes('.m3u8') ||
-    proxiedTargetUrl.includes('.mpd') ||
-    proxiedTargetUrl.includes('/hls/') ||
-    proxiedTargetUrl.includes('.mp4') ||
-    activeCh?.provider?.includes('hls') ||
-    activeCh?.provider?.includes('tennis') ||
-    activeCh?.name?.includes('HLS')
-  );
-
-  // For direct HLS, use rawTargetUrl directly so Hls.js loads the master playlist and segments seamlessly
-  const currentUrl = isDirectHls
-    ? (rawTargetUrl || proxiedTargetUrl || streamUrl)
-    : (proxiedTargetUrl || rawTargetUrl || streamUrl);
 
   const handleLoad = () => {
     setIsLoading(false);
