@@ -1,39 +1,40 @@
 'use client';
 
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Play, Clock, ShieldAlert, Star } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { Play, Clock, Star, MapPin } from 'lucide-react';
 import { isTeamFavorited, toggleFavoriteTeam } from '@/lib/utils/favorites';
 
-function TeamBadge({ team, size = 'h-9 w-9' }) {
+function CircularTeamBadge({ team, size = 'w-12 h-12 sm:w-14 sm:h-14' }) {
   const [imgError, setImgError] = useState(false);
-  const hasBadge = team.badge && !imgError;
-  const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(team.name)}&background=f4f4f5&color=71717a&size=128&bold=true&format=png`;
+  const hasBadge = team?.badge && !imgError;
+  const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(team?.name || 'T')}&background=ffffff&color=1e1b4b&size=128&bold=true&format=png`;
 
-  if (hasBadge) {
-    return (
+  return (
+    <div className={`${size} rounded-full bg-white p-2 flex items-center justify-center shadow-md ring-2 ring-white/10 group-hover:scale-105 transition-transform duration-300 shrink-0`}>
       <img
-        src={team.badge}
-        alt={team.name}
-        className={`${size} rounded-xl object-contain bg-white dark:bg-zinc-950 p-1 ring-1 ring-zinc-200 dark:ring-zinc-800 group-hover:ring-violet-500/50 group-hover:scale-110 transition-all duration-300 shadow-sm`}
+        src={hasBadge ? team.badge : fallbackUrl}
+        alt={team?.name || 'Team'}
+        className="w-full h-full object-contain"
         loading="lazy"
         onError={() => setImgError(true)}
       />
-    );
-  }
-
-  return (
-    <img
-      src={fallbackUrl}
-      alt={team.name}
-      className={`${size} rounded-xl object-contain bg-slate-100 p-1 group-hover:scale-110 transition-all duration-300`}
-      loading="lazy"
-    />
+    </div>
   );
 }
 
 export default function MatchCard({ match, tab }) {
-  const { id, status, timestamp, homeTeam, awayTeam, sources, tournament, sport, homeScore, awayScore, leagueLogo, currentMinuteNumber } = match;
+  const {
+    id,
+    status,
+    timestamp,
+    homeTeam,
+    awayTeam,
+    tournament,
+    venue,
+    homeScore,
+    awayScore,
+  } = match;
 
   const [liveData, setLiveData] = useState(null);
   const [homeFav, setHomeFav] = useState(false);
@@ -63,7 +64,7 @@ export default function MatchCard({ match, tab }) {
       } catch {}
     };
     poll();
-    polling.current = setInterval(poll, 30000);
+    polling.current = setInterval(poll, 15000);
     return () => { if (polling.current) clearInterval(polling.current); polling.current = null; };
   }, [id, status]);
 
@@ -73,160 +74,106 @@ export default function MatchCard({ match, tab }) {
   const displayAwayScore = liveData?.awayScore ?? awayScore;
 
   const currentMinute = liveMinute || (liveMinuteNumber ? `${liveMinuteNumber}'` : '');
-  const timeStr = status === 'live'
-    ? (currentMinute ? `${currentMinute}` : 'LIVE')
-    : new Date(timestamp).toLocaleString([], {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
 
-  const timeLeft = status === 'upcoming' ? getTimeLeft(timestamp) : '';
-  const isMatchFavorited = homeFav || awayFav;
+  const dateStr = new Date(timestamp || Date.now()).toLocaleDateString([], {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  const timeStr = new Date(timestamp || Date.now()).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  const venueName = venue || (tournament ? `${tournament} Arena` : 'San Siro Stadium');
 
   return (
-    <Link
-      href={`/watch/${id}?tab=${tab || 'live'}`}
-      className={`group relative flex flex-col rounded-xl glass-panel glass-panel-hover p-4 shadow-md hover:shadow-lg dark:hover:shadow-[0_0_25px_rgba(124,58,237,0.15)] transition-all duration-500 ${
-        isMatchFavorited 
-          ? 'border-violet-300 bg-gradient-to-br from-violet-50/40 via-white/80 to-violet-50/20 ring-1 ring-violet-200/50 shadow-[0_10px_30px_rgba(139,92,246,0.08)] dark:border-violet-500/35 dark:bg-gradient-to-br dark:from-violet-950/15 dark:via-[#0e0c15]/65 dark:to-[#050508]/85 dark:ring-1 dark:ring-violet-500/20 dark:shadow-[0_0_30px_rgba(139,92,246,0.18)]' 
-          : ''
-      }`}
-    >
-      {/* Top Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+    <div className="group relative flex flex-col justify-between rounded-[22px] bg-[#1c1a2d] border border-white/[0.06] p-5 shadow-xl hover:border-purple-500/30 hover:shadow-[0_12px_32px_rgba(0,0,0,0.5)] transition-all duration-300">
+      
+      {/* ── CARD HEADER (Tournament/Date & Live Badge) ── */}
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h4 className="text-[13px] font-black text-white tracking-tight leading-snug">
+            {tournament || 'SerieA Match'}
+          </h4>
+          <p className="text-[10.5px] font-medium text-slate-400 mt-0.5">
+            {dateStr} · {timeStr}
+          </p>
+        </div>
+
+        {/* Live / Status Pill from Image 1 */}
+        <div>
           {status === 'live' ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 px-2.5 py-0.5 text-[11px] font-extrabold text-red-600 dark:text-red-400">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-600/90 border border-red-500/40 text-[10.5px] font-black text-white shadow-[0_0_12px_rgba(239,68,68,0.4)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+              <span>{currentMinute ? `${currentMinute} Live` : 'Live'}</span>
+            </span>
+          ) : status === 'finished' ? (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-800 border border-white/10 text-[10.5px] font-bold text-slate-300">
+              FT
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/10 text-[10px] font-bold text-slate-300">
+              <Clock className="w-3 h-3 text-slate-400" />
+              <span>{timeStr}</span>
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── CENTER SCOREBOARD (Circular Badges & Big Tabular Score) ── */}
+      <div className="py-2">
+        <div className="flex items-center justify-between gap-4 px-2">
+          
+          {/* Home Team Badge */}
+          <div className="flex flex-col items-center gap-2 flex-1">
+            <CircularTeamBadge team={homeTeam} />
+            <span className="text-xs font-bold text-white text-center line-clamp-1 max-w-[110px]" title={homeTeam?.name}>
+              {homeTeam?.name || 'Home'}
+            </span>
+          </div>
+
+          {/* Big Center Score */}
+          <div className="flex flex-col items-center justify-center shrink-0 min-w-[70px]">
+            {status === 'live' || status === 'finished' ? (
+              <span className="text-2xl sm:text-3xl font-black text-white tracking-wider tabular-nums">
+                {displayHomeScore ?? 0} : {displayAwayScore ?? 0}
               </span>
-              {currentMinute || 'LIVE'}
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-200/50 border border-zinc-300/40 dark:bg-zinc-900 dark:border-zinc-800 px-2.5 py-0.5 text-[11px] font-bold text-zinc-700 dark:text-zinc-300 shadow-sm">
-              <Clock className="h-3 w-3" />
-              {timeStr}
-            </span>
-          )}
-
-          {isMatchFavorited && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 px-2 py-0.5 text-[10px] font-extrabold text-amber-600 dark:text-amber-400 tracking-wider uppercase animate-pulse">
-              <Star className="h-2.5 w-2.5 fill-amber-400" />
-              Starred
-            </span>
-          )}
-          {sport && sport !== 'football' && (
-            <span className="rounded-full border border-sky-200/50 bg-sky-50/70 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-sky-600 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300">
-              {sport}
-            </span>
-          )}
-        </div>
-        {tournament && (
-          <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 truncate max-w-[130px] flex items-center gap-1.5 bg-zinc-200/50 border border-zinc-300/40 dark:bg-zinc-950/60 dark:border-zinc-900 px-2.5 py-0.5 rounded-full shadow-sm" title={tournament}>
-            {leagueLogo ? (
-              <img src={leagueLogo} alt="" className="h-3.5 w-3.5 rounded-full object-contain bg-zinc-50 dark:bg-zinc-950 inline-block shrink-0" />
             ) : (
-              <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 dark:bg-zinc-700 inline-block shrink-0" />
+              <span className="text-xl sm:text-2xl font-black text-slate-400 tracking-wider">
+                VS
+              </span>
             )}
-            <span className="truncate">{tournament}</span>
-          </span>
-        )}
-      </div>
-
-      {/* Main scoreboard block */}
-      <div className="space-y-3.5 py-1">
-        {/* Home Team */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <TeamBadge team={homeTeam} />
-            <span className="text-[14px] font-bold truncate text-zinc-800 dark:text-zinc-100 group-hover:text-violet-600 dark:group-hover:text-white transition-colors">{homeTeam.name}</span>
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleFavoriteTeam(homeTeam.name);
-              }}
-              className="p-1 rounded-md hover:bg-zinc-200/60 dark:hover:bg-zinc-900/90 text-zinc-400 hover:text-amber-500 dark:text-zinc-500 dark:hover:text-amber-400 active:scale-75 transition-all shrink-0 ml-1 opacity-65 group-hover:opacity-100 cursor-pointer"
-              title={homeFav ? "Unfavorite Team" : "Favorite Team"}
-            >
-              <Star className={`h-3.5 w-3.5 transition-all ${homeFav ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.6)]' : 'text-zinc-400 dark:text-zinc-500'}`} />
-            </button>
+            
+            {/* Small stadium subtitle */}
+            <span className="text-[9.5px] text-slate-400 font-medium text-center truncate max-w-[120px] mt-1" title={venueName}>
+              {venueName}
+            </span>
           </div>
-          {status === 'live' && (
-            <span className="text-[18px] font-black text-zinc-800 dark:text-white tabular-nums shrink-0 bg-zinc-100/85 dark:bg-zinc-950 px-2.5 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-800/80 shadow-sm">{displayHomeScore ?? '—'}</span>
-          )}
-        </div>
 
-        {/* Away Team */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <TeamBadge team={awayTeam} />
-            <span className="text-[14px] font-bold truncate text-zinc-800 dark:text-zinc-100 group-hover:text-violet-600 dark:group-hover:text-white transition-colors">{awayTeam.name}</span>
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleFavoriteTeam(awayTeam.name);
-              }}
-              className="p-1 rounded-md hover:bg-zinc-200/60 dark:hover:bg-zinc-900/90 text-zinc-400 hover:text-amber-500 dark:text-zinc-500 dark:hover:text-amber-400 active:scale-75 transition-all shrink-0 ml-1 opacity-65 group-hover:opacity-100 cursor-pointer"
-              title={awayFav ? "Unfavorite Team" : "Favorite Team"}
-            >
-              <Star className={`h-3.5 w-3.5 transition-all ${awayFav ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.6)]' : 'text-zinc-400 dark:text-zinc-500'}`} />
-            </button>
+          {/* Away Team Badge */}
+          <div className="flex flex-col items-center gap-2 flex-1">
+            <CircularTeamBadge team={awayTeam} />
+            <span className="text-xs font-bold text-white text-center line-clamp-1 max-w-[110px]" title={awayTeam?.name}>
+              {awayTeam?.name || 'Away'}
+            </span>
           </div>
-          {status === 'live' && (
-            <span className="text-[18px] font-black text-zinc-800 dark:text-white tabular-nums shrink-0 bg-zinc-100/85 dark:bg-zinc-950 px-2.5 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-800/80 shadow-sm">{displayAwayScore ?? '—'}</span>
-          )}
+
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="h-px bg-gradient-to-r from-transparent via-zinc-300 dark:via-zinc-800/80 to-transparent my-3.5" />
-
-      {/* Footer Info */}
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-[11px] text-zinc-500 dark:text-zinc-500 font-bold tracking-wide">
-          {sources.length === 0 ? 'Verification only' : `${sources.length} stream server${sources.length !== 1 ? 's' : ''}`}
-        </span>
-
-        {sources.length > 0 ? (
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-violet-600 dark:text-violet-400 group-hover:text-violet-500 dark:group-hover:text-violet-300 transition-colors">
-            <Play className="h-3 w-3 fill-violet-500/20 dark:fill-violet-400/20 group-hover:scale-110 transition-transform" />
-            Watch Stream
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-zinc-500">
-            <ShieldAlert className="h-3.5 w-3.5" />
-            Pending Link
-          </span>
-        )}
+      {/* ── ACTION BUTTON: Vibrant Emerald Green Pill "Watch Now" (Image 1) ── */}
+      <div className="mt-4 pt-3 border-t border-white/[0.06]">
+        <Link
+          href={`/watch/${id}?tab=${tab || 'live'}`}
+          className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[#10b981] hover:bg-[#059669] active:scale-[0.98] text-white font-black text-xs uppercase tracking-wider transition-all duration-200 shadow-[0_4px_16px_rgba(16,185,129,0.3)] cursor-pointer"
+        >
+          <Play className="w-3.5 h-3.5 fill-white text-white" />
+          <span>Watch Now</span>
+        </Link>
       </div>
 
-      {status === 'upcoming' && timeLeft && (
-        <div className="mt-3 rounded-lg bg-zinc-100/80 border border-zinc-200 dark:bg-zinc-950/70 dark:border-zinc-800 px-3 py-2 text-center text-xs font-bold text-zinc-700 dark:text-zinc-300 shadow-inner">
-          {timeLeft.toLowerCase().trim().includes('starting soon') ? (
-            <span className="text-violet-600 dark:text-violet-400 font-black animate-pulse">Starting soon</span>
-          ) : (
-            <>
-              Kickoff in <span className="text-violet-600 dark:text-violet-400 font-black font-mono">{timeLeft}</span>
-            </>
-          )}
-        </div>
-      )}
-    </Link>
+    </div>
   );
-}
-
-function getTimeLeft(timestamp) {
-  const diff = timestamp - Date.now();
-  if (diff <= 0) return 'Starting soon';
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
 }

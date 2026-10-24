@@ -1,48 +1,100 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Menu } from 'lucide-react';
+import { Bell, Menu, Search, User } from 'lucide-react';
 import { useHydraSports } from './HydraContext';
+import { useAuth } from './AuthContext';
 
 export default function FootyTopbar() {
   const router = useRouter();
-  const { searchQuery, setSearchQuery, setSidebarOpen } = useHydraSports();
+  const { setSidebarOpen, activeSport = 'Football', setActiveSport } = useHydraSports();
+  const { user } = useAuth();
+
+  const sports = ['Football', 'Tennis', 'Basketball', 'Rugby', 'Badminton'];
 
   return (
-    <header className="dashboard-topbar fixed top-3 left-1/2 z-[55] h-[68px] w-[min(860px,calc(100vw-112px))] -translate-x-1/2 px-6 lg:px-8 flex items-center justify-between gap-4 rounded-[20px] border border-slate-200/90 bg-white/90 shadow-[0_14px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl">
-      <div className="flex items-center">
+    <header className="sticky top-0 z-[60] h-[68px] w-full px-4 sm:px-6 lg:px-8 flex items-center justify-between border-b border-white/[0.06] bg-[#141221] backdrop-blur-xl">
+      {/* Left: Brand Logo & Mobile Trigger */}
+      <div className="flex items-center gap-3 sm:gap-4 min-w-[200px]">
         <button
           type="button"
           onClick={() => setSidebarOpen(true)}
-          className="mobile-menu-trigger relative z-[70] flex h-10 w-10 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 lg:hidden"
+          className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           aria-label="Open menu"
-          aria-expanded={false}
         >
           <Menu className="w-5 h-5" />
         </button>
+
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#6366f1] to-[#8b5cf6] flex items-center justify-center text-white shadow-[0_4px_16px_rgba(124,58,237,0.35)] group-hover:scale-105 transition-transform">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect width="18" height="18" x="3" y="3" rx="4" />
+              <path d="M9 12h6" />
+              <path d="M12 9v6" />
+            </svg>
+          </div>
+          <span className="text-[17px] font-black tracking-tight text-white flex items-center">
+            Full<span className="text-[#a78bfa]">time</span>
+          </span>
+        </Link>
       </div>
 
-      <div className="flex-1 max-w-[480px]">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && searchQuery.trim()) {
-                router.push(`/teams/${encodeURIComponent(searchQuery.trim())}`);
-              }
-            }}
-            placeholder="Search clubs, matches, leagues..."
-            className="w-full h-[38px] pl-10 pr-4 rounded-full bg-slate-100/80 hover:bg-white focus:bg-white text-[12px] text-slate-900 placeholder-slate-400 border border-slate-200 shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-medium"
-          />
-        </div>
+      {/* Center: Sports Category Tabs from Image 1 */}
+      <nav className="hidden md:flex items-center gap-1 sm:gap-2">
+        {sports.map((sport) => {
+          const isActive = (activeSport || 'Football').toLowerCase() === sport.toLowerCase();
+          return (
+            <button
+              key={sport}
+              type="button"
+              onClick={() => setActiveSport && setActiveSport(sport)}
+              className={`relative px-4 py-2 text-xs font-bold transition-all duration-200 cursor-pointer ${
+                isActive
+                  ? 'text-white'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span>{sport}</span>
+              {isActive && (
+                <span className="absolute bottom-[-18px] left-0 right-0 h-[3px] bg-[#8b5cf6] rounded-full shadow-[0_0_12px_rgba(139,92,246,0.8)]" />
+              )}
+            </button>
+          );
+        })}
+      </nav>
 
+      {/* Right: Notifications & User Avatar Profile */}
+      <div className="flex items-center gap-3 sm:gap-4 min-w-[200px] justify-end">
+        {/* Notification Bell with Badge */}
+        <button
+          type="button"
+          aria-label="Notifications"
+          className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+        >
+          <Bell className="w-4 h-4" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#ef4444] ring-2 ring-[#141221]" />
+        </button>
+
+        {/* User Profile Avatar linking to Auth / Account */}
+        <Link
+          href="/auth"
+          className="flex items-center gap-2 p-1 pl-1.5 rounded-full hover:bg-white/[0.08] border border-white/[0.08] transition-all group"
+          title={user?.name ? `Logged in as ${user.name}` : 'Sign in / Register'}
+        >
+          <span className="hidden sm:inline-block text-xs font-semibold text-slate-300 group-hover:text-white pr-1">
+            {user?.name || 'Miguel Fox'}
+          </span>
+          <div className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/20 bg-slate-800 flex items-center justify-center">
+            {user?.avatar ? (
+              <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-4 h-4 text-slate-300" />
+            )}
+          </div>
+        </Link>
       </div>
-
-      <span className="hidden sm:block text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Search teams</span>
     </header>
   );
 }

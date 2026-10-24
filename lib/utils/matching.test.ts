@@ -35,6 +35,8 @@ describe('Team Similarity Scoring', () => {
 describe('Teams Matching Algorithm', () => {
   it('should match identical games with different syntax', () => {
     expect(teamsMatch('Arsenal vs Chelsea', 'Chelsea - Arsenal FC')).toBe(true);
+    expect(teamsMatch('Manchester United vs Como', 'Manchester United at Como')).toBe(true);
+    expect(teamsMatch('Real Madrid v Barcelona', 'Barcelona vs Real Madrid')).toBe(true);
   });
 
   it('should match with minor name variations', () => {
@@ -50,6 +52,7 @@ describe('League Priority & Country Parsing', () => {
   it('should assign correct priority tiers', () => {
     expect(getLeaguePriority('Premier League')).toBe(2);
     expect(getLeaguePriority('UEFA Champions League')).toBe(1);
+    expect(getLeaguePriority("Champion's League")).toBe(1);
     expect(getLeaguePriority('Random League')).toBe(5);
   });
 

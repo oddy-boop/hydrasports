@@ -12,11 +12,11 @@ export default function FootyLayoutShell({ children }) {
 
   // Watch Match Page & Multi-stream page take the FULL UI!
   // No sidebar, no right activity rail, and no bottom floating player bar.
-  const isFullScreenView = pathname.startsWith('/watch/') || pathname === '/multistream';
+  const isFullScreenView = pathname.startsWith('/watch/') || pathname === '/multistream' || pathname.startsWith('/auth') || pathname.startsWith('/login') || pathname.startsWith('/register');
 
   if (isFullScreenView) {
     return (
-      <div className="min-h-screen w-full bg-[#f8fafc] text-slate-900 flex flex-col">
+      <div className="min-h-screen w-full bg-[#0d0c15] text-white flex flex-col">
         {children}
       </div>
     );

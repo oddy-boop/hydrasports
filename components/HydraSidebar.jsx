@@ -1,30 +1,41 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useHydraSports } from './HydraContext';
-import { Radio, Layers, Database, Trophy, Calendar, Star, Compass, History, X } from 'lucide-react';
-import { COMPETITIONS_LIST } from './leagueMatcher';
+import { ChevronDown, Trophy, Globe, Flame, X } from 'lucide-react';
+
+export const REGIONAL_LEAGUES = [
+  { id: 'Champions League', name: 'Champions League', icon: '⚽', color: '#3b82f6', category: 'regional' },
+  { id: 'Europa League', name: 'Europa League', icon: '🏆', color: '#f97316', category: 'regional' },
+  { id: 'Premier League', name: 'Premiere League', icon: '🦁', color: '#8b5cf6', category: 'regional' },
+  { id: 'La Liga', name: 'LaLiga Santander', icon: '🇪🇸', color: '#eab308', category: 'regional' },
+  { id: 'Serie A', name: 'SerieA Italian', icon: '🇮🇹', badgeIcon: 'A', color: '#06b6d4', category: 'regional' },
+  { id: 'Ligue 1', name: 'League 1 France', icon: '🇫🇷', color: '#10b981', category: 'regional' },
+  { id: 'Bundesliga', name: 'Bundesliga Germany', icon: '🇩🇪', color: '#ef4444', category: 'regional' },
+  { id: 'Brasileiro', name: 'Brasileiro Série A', icon: '🇧🇷', color: '#22c55e', category: 'regional' },
+  { id: 'SAF Primera', name: 'SAF Primera Division', icon: '🇦🇷', color: '#38bdf8', category: 'regional' },
+  { id: 'Eredivisie', name: 'Dutch Eredivise', icon: '🇳🇱', color: '#f43f5e', category: 'regional' },
+  { id: 'MLS', name: 'Major League Soccer', icon: '🇺🇸', color: '#6366f1', category: 'regional' },
+];
+
+export const INTERNATIONAL_LEAGUES = [
+  { id: 'World Cup', name: 'World Cup 2022', icon: '🌍', color: '#fbbf24', category: 'international' },
+  { id: 'Euro', name: 'UEFA Euro 2020', icon: '🇪🇺', color: '#3b82f6', category: 'international' },
+  { id: 'Concacaf', name: 'Concacaf 2023', icon: '🌎', color: '#f59e0b', category: 'international' },
+  { id: 'Asian Cup', name: 'Asian Cup 2023', icon: '🌏', color: '#ec4899', category: 'international' },
+];
 
 export default function FootySidebar() {
   const {
-    activeMenu,
-    selectMenu,
-    selectedLeague,
+    selectedLeague = 'Serie A',
     selectLeague,
     sidebarOpen,
     setSidebarOpen,
-    favouriteTeams,
   } = useHydraSports();
 
-  const menuItems = [
-    { id: 'live', label: 'Live Now', icon: Radio, isLivePulse: true },
-    { id: 'explore', label: 'Explore Fixtures', icon: Compass },
-    { id: 'schedule', label: 'Today\'s Schedule', icon: Calendar },
-    { id: 'results', label: 'Past Results', icon: History },
-    { id: 'competitions', label: 'Competitions', icon: Trophy },
-    { id: 'favourites', label: 'Favourite Teams', icon: Star, badgeCount: favouriteTeams.length },
-  ];
+  const [regionalOpen, setRegionalOpen] = useState(true);
+  const [intlOpen, setIntlOpen] = useState(true);
 
   useEffect(() => {
     if (!sidebarOpen) return undefined;
@@ -39,176 +50,135 @@ export default function FootySidebar() {
     };
   }, [sidebarOpen, setSidebarOpen]);
 
+  const handleSelect = (leagueId) => {
+    selectLeague(leagueId);
+    setSidebarOpen(false);
+  };
+
   return (
     <>
       {/* Mobile Backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       <aside
-        className={`sidebar-rail fixed top-0 bottom-0 left-0 z-50 w-[220px] shrink-0 bg-white p-6 lg:p-7 border-r border-slate-200/80 flex flex-col justify-between transition-[width,transform] duration-300 h-screen max-h-screen ${
+        className={`fixed top-[68px] bottom-0 left-0 z-50 w-[240px] shrink-0 bg-[#141221] p-4 lg:p-5 border-r border-white/[0.06] flex flex-col justify-between transition-transform duration-300 h-[calc(100vh-68px)] overflow-y-auto ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
-        aria-label="Sports navigation"
+        aria-label="Leagues navigation"
       >
-        <div className="sidebar-scroll-area min-h-0 overflow-y-auto pr-1">
-          {/* Brand Logo lockup */}
-          <Link
-            href="/"
-            onClick={() => selectMenu('live')}
-            className="flex items-center gap-2.5 mb-8 group"
-          >
-            <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="m4.93 4.93 4.24 4.24" />
-                <path d="m14.83 9.17 4.24-4.24" />
-                <path d="m14.83 14.83 4.24 4.24" />
-                <path d="m9.17 14.83-4.24 4.24" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            </span>
-            <div className="sidebar-brand-copy">
-              <span className="text-[19px] font-black tracking-tight text-slate-900 block leading-tight">
-                Hydra<span className="text-emerald-600">Sport</span>
-              </span>
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">
-                Live Sports
-              </span>
-            </div>
-          </Link>
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(false)}
-            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 lg:hidden"
-            aria-label="Close menu"
-          >
-            <X className="h-5 w-5" />
-          </button>
-
-          {/* Section: MENU */}
-          <div className="mb-6">
-            <h3 className="sidebar-copy text-[10px] font-black tracking-[0.16em] text-slate-400 uppercase mb-3 px-1">
-              Menu
-            </h3>
-            <nav className="flex flex-col space-y-1">
-              {menuItems.map((item) => {
-                const isActive = activeMenu === item.id;
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.id}
-                    href={item.id === 'live' ? '/' : `/${item.id}`}
-                    onClick={() => {
-                      selectMenu(item.id);
-                      setSidebarOpen(false);
-                    }}
-                    className={`relative min-h-11 text-left text-[12.5px] font-bold py-2.5 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-between group cursor-pointer ${
-                      isActive
-                        ? 'text-emerald-700 bg-emerald-50 shadow-xs ring-1 ring-emerald-200/60'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                      <span className="sidebar-copy">{item.label}</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      {item.badgeCount !== undefined && item.badgeCount > 0 && (
-                        <span className="sidebar-copy text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800">
-                          {item.badgeCount}
-                        </span>
-                      )}
-
-                      {item.isLivePulse && (
-                        <span className="flex h-2 w-2 relative">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                        </span>
-                      )}
-
-                      {isActive && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                      )}
-                    </div>
-                  </Link>
-                );
-              })}
-            </nav>
+        <div className="space-y-6">
+          {/* Close button on mobile */}
+          <div className="flex items-center justify-between lg:hidden mb-2">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Leagues</span>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+              aria-label="Close menu"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
 
-          {/* Section: TOP LEAGUES */}
+          {/* Section 1: Regional Leagues (Image 1) */}
           <div>
-            <div className="flex items-center justify-between mb-3 px-1">
-              <h3 className="sidebar-copy text-[10px] font-black tracking-[0.16em] text-slate-400 uppercase">
-                Top Leagues
-              </h3>
-              {selectedLeague !== 'All' && (
-                <button
-                  type="button"
-                  onClick={() => selectLeague('All')}
-                  className="text-[9.5px] font-bold text-emerald-600 hover:text-emerald-700 cursor-pointer"
-                >
-                  <span className="sidebar-copy">Reset</span>
-                </button>
-              )}
-            </div>
-            <nav className="flex flex-col space-y-1">
-              {COMPETITIONS_LIST.map((league) => {
-                const isSelected = selectedLeague === league.id;
-                return (
-                  <button
-                    key={league.id}
-                    type="button"
-                    onClick={() => selectLeague(league.id)}
-                    className={`min-h-10 text-left text-[12px] font-semibold py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-between group cursor-pointer ${
-                      isSelected
-                        ? 'text-emerald-800 bg-emerald-50/90 font-bold ring-1 ring-emerald-300/80 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm select-none">{league.flag}</span>
-                      <span className="sidebar-copy truncate">{league.name}</span>
-                    </div>
-                    {isSelected && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
+            <button
+              type="button"
+              onClick={() => setRegionalOpen(!regionalOpen)}
+              className="w-full flex items-center justify-between text-left text-xs font-bold text-slate-300 hover:text-white px-2 py-1.5 mb-2 rounded-lg transition-colors cursor-pointer group"
+            >
+              <span className="flex items-center gap-2">
+                <span className="text-[12px] font-extrabold tracking-wide text-slate-200">Regional Leagues</span>
+              </span>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-transform duration-200 ${regionalOpen ? 'rotate-0' : '-rotate-90'}`} />
+            </button>
+
+            {regionalOpen && (
+              <nav className="flex flex-col space-y-1">
+                {REGIONAL_LEAGUES.map((league) => {
+                  const isSelected = (selectedLeague || 'Serie A').toLowerCase().includes(league.id.toLowerCase()) ||
+                    league.name.toLowerCase().includes((selectedLeague || 'Serie A').toLowerCase());
+
+                  return (
+                    <button
+                      key={league.id}
+                      type="button"
+                      onClick={() => handleSelect(league.id)}
+                      className={`min-h-[38px] text-left text-xs font-medium py-2 px-3 rounded-xl transition-all duration-200 flex items-center justify-between group cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#252336] text-white font-bold shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {league.badgeIcon ? (
+                          <span className={`w-4 h-4 rounded flex items-center justify-center text-[10px] font-black ${
+                            isSelected ? 'bg-cyan-500 text-white' : 'bg-slate-700 text-slate-300'
+                          }`}>
+                            {league.badgeIcon}
+                          </span>
+                        ) : (
+                          <span className="text-xs select-none">{league.icon}</span>
+                        )}
+                        <span className="truncate text-[12px]">{league.name}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </nav>
+            )}
+          </div>
+
+          {/* Section 2: International Leagues (Image 1) */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setIntlOpen(!intlOpen)}
+              className="w-full flex items-center justify-between text-left text-xs font-bold text-slate-300 hover:text-white px-2 py-1.5 mb-2 rounded-lg transition-colors cursor-pointer group"
+            >
+              <span className="flex items-center gap-2">
+                <span className="text-[12px] font-extrabold tracking-wide text-slate-200">International</span>
+              </span>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-transform duration-200 ${intlOpen ? 'rotate-0' : '-rotate-90'}`} />
+            </button>
+
+            {intlOpen && (
+              <nav className="flex flex-col space-y-1">
+                {INTERNATIONAL_LEAGUES.map((league) => {
+                  const isSelected = (selectedLeague || '').toLowerCase().includes(league.id.toLowerCase());
+
+                  return (
+                    <button
+                      key={league.id}
+                      type="button"
+                      onClick={() => handleSelect(league.id)}
+                      className={`min-h-[38px] text-left text-xs font-medium py-2 px-3 rounded-xl transition-all duration-200 flex items-center justify-between group cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#252336] text-white font-bold shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-xs select-none">{league.icon}</span>
+                        <span className="truncate text-[12px]">{league.name}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </nav>
+            )}
           </div>
         </div>
 
-        {/* Live Streaming Engine quick access */}
-        <div className="pt-4 border-t border-slate-200/80 mt-4 space-y-2">
-          <div className="flex items-center gap-2 px-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50/80 py-1.5 rounded-lg border border-emerald-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="sidebar-copy">3 Stream Servers Online</span>
-          </div>
-
-          <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-600">
-            <Link
-              href="/multistream"
-              className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-all"
-            >
-              <Layers className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="sidebar-copy">Multi-view Arena</span>
-            </Link>
-            <Link
-              href="/api-hub"
-              className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-all"
-            >
-              <Database className="w-3.5 h-3.5 text-slate-400" />
-              <span className="sidebar-copy">API Engine Hub</span>
-            </Link>
-          </div>
+        {/* Bottom Status Indicator */}
+        <div className="pt-4 border-t border-white/[0.06] mt-4 flex items-center gap-2 px-2 text-[11px] text-slate-400 font-semibold">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Real-time Stream Engine</span>
         </div>
       </aside>
     </>

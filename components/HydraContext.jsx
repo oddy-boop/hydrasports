@@ -10,6 +10,7 @@ export function HydraProvider({ children }) {
   const pathname = usePathname();
 
   const [activeMenu, setActiveMenu] = useState('live');
+  const [activeSport, setActiveSport] = useState('Football');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLeague, setSelectedLeague] = useState('All');
   const [favouriteTeams, setFavouriteTeams] = useState(['Arsenal', 'Real Madrid']);
@@ -175,6 +176,8 @@ export function HydraProvider({ children }) {
         activeMenu,
         setActiveMenu,
         selectMenu,
+        activeSport,
+        setActiveSport,
         searchQuery,
         setSearchQuery,
         selectedLeague,

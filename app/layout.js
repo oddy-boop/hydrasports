@@ -1,6 +1,7 @@
 import './globals.css';
 import { HydraProvider } from '@/components/HydraContext';
 import { MiniPlayerProvider } from '@/components/MiniPlayerProvider';
+import { AuthProvider } from '@/components/AuthContext';
 import FootyLayoutShell from '@/components/FootyLayoutShell';
 
 export const metadata = {
@@ -33,13 +34,15 @@ export default function RootLayout({ children }) {
         ` }} />
       </head>
       <body className="app-shell" suppressHydrationWarning>
-        <HydraProvider>
-          <MiniPlayerProvider>
-            <FootyLayoutShell>
-              {children}
-            </FootyLayoutShell>
-          </MiniPlayerProvider>
-        </HydraProvider>
+        <AuthProvider>
+          <HydraProvider>
+            <MiniPlayerProvider>
+              <FootyLayoutShell>
+                {children}
+              </FootyLayoutShell>
+            </MiniPlayerProvider>
+          </HydraProvider>
+        </AuthProvider>
       </body>
     </html>
   );

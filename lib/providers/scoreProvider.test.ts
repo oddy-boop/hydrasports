@@ -1,0 +1,35 @@
+import { describe, it, expect } from 'vitest';
+import { getScoreForMatch } from './scoreProvider';
+
+describe('Champions League Score Provider', () => {
+  it('should resolve scores for Champions League match with apostrophe in tournament name', async () => {
+    // Manchester United at Como is an event on UEFA Champions League ESPN scoreboard
+    const score = await getScoreForMatch(
+      'Manchester United vs Como',
+      Date.now(),
+      "Champion's League",
+      undefined,
+      'football'
+    );
+    expect(score).not.toBeNull();
+    if (score) {
+      expect(typeof score.home).toBe('number');
+      expect(typeof score.away).toBe('number');
+    }
+  }, 10000);
+
+  it('should resolve scores for UEFA Champions League format', async () => {
+    const score = await getScoreForMatch(
+      'Como vs Manchester United',
+      Date.now(),
+      'UEFA Champions League',
+      undefined,
+      'football'
+    );
+    expect(score).not.toBeNull();
+    if (score) {
+      expect(score.home).toBe(4);
+      expect(score.away).toBe(1);
+    }
+  }, 10000);
+});

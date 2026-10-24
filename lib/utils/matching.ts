@@ -1,7 +1,7 @@
 export const COMMON_WORDS = new Set([
   'fc', 'cf', 'ac', 'sc', 'afc', 'ssc', 'ud', 'cd',
   'de', 'del', 'da', 'do', 'dos', 'das', 'e', 'o', 'a', 'as', 'os',
-  'the', 'and', 'vs', 'v', 'x', 'club', 'team', 'real', 'united',
+  'the', 'and', 'vs', 'v', 'at', 'x', 'club', 'team', 'real', 'united',
   'city', 'young', 'boys', 'old'
 ]);
 
@@ -11,7 +11,8 @@ export const LEAGUE_TIERS: string[][] = [
   // Tier 1: Continental Championships
   [
     'uefa champions league', 'uefa europa league', 'uefa euro', 'uefa nations',
-    'european championship', 'euro', 'champions league',
+    'european championship', 'euro', 'champions league', "champion's league", "champion’s league",
+    'uefa champions', 'uefa cl', 'ucl',
     'copa libertadores', 'copa sudamericana', 'conmebol',
     'copa america', 'africa cup of nations', 'caf', 'asian cup', 'afc',
     'concacaf gold cup'
@@ -113,7 +114,7 @@ export const LEAGUE_COUNTRIES: Record<string, string> = {
   'division intermedia': 'Paraguay', 'lpr pro': 'Mexico',
   'liga nacional': 'Guatemala',
   'uefa europa league': 'Europe', 'uefa champions league': 'Europe', 'uefa nations league': 'Europe',
-  'champions league': 'Europe', 'europa league': 'Europe',
+  'champions league': 'Europe', "champion's league": 'Europe', "champion’s league": 'Europe', 'uefa champions': 'Europe', 'ucl': 'Europe', 'europa league': 'Europe',
   'world cup': 'World', 'fifa world cup': 'World',
   'copa america': 'South America', 'africa cup of nations': 'Africa',
   'caf': 'Africa', 'asian cup': 'Asia', 'afc': 'Asia',
@@ -183,7 +184,7 @@ export function normalizeTeamName(name: string): string {
 }
 
 export function extractTeamNames(title: string): { home: string; away: string } {
-  const parts = title.split(/\s+vs\s+|\s+-\s+|\s+x\s+/i);
+  const parts = title.split(/\s+(?:vs\.?|v|at|@|-|x)\s+/i);
   if (parts.length >= 2) {
     return { home: parts[0].trim(), away: parts[1].trim() };
   }

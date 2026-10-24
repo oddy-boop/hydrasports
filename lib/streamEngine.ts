@@ -94,9 +94,9 @@ export async function getMatches(): Promise<Match[]> {
 
     if (uniqueMatches.length > 0) {
       const enriched = await Promise.all(uniqueMatches.map(async match => {
-        if (match.homeScore !== null && match.awayScore !== null) return match;
-        const eventId = match.id.match(/(\d+)$/)?.[1];
         if (match.status !== 'live' && match.status !== 'finished') return match;
+        if (match.status !== 'live' && match.homeScore !== null && match.awayScore !== null) return match;
+        const eventId = match.id.match(/(\d+)$/)?.[1];
         const score = await getScoreForMatch(
           match.title,
           match.timestamp,
@@ -104,7 +104,7 @@ export async function getMatches(): Promise<Match[]> {
           eventId,
           match.sport,
         );
-        if (!score) return match;
+        if (!score || score.home === null || score.away === null) return match;
         return {
           ...match,
           homeScore: score.home,

@@ -22,9 +22,19 @@ interface ScoreEvent {
 interface EspnEvent {
   id?: string;
   name?: string;
+  shortName?: string;
   status?: { type?: { state?: string; shortDetail?: string; detail?: string } };
   competitions?: [{
-    competitors?: Array<{ homeAway?: string; score?: string }>;
+    competitors?: Array<{
+      homeAway?: string;
+      score?: string;
+      team?: {
+        displayName?: string;
+        name?: string;
+        shortDisplayName?: string;
+        location?: string;
+      };
+    }>;
     status?: { displayClock?: string };
   }];
 }
@@ -62,17 +72,34 @@ function parseScore(event: ScoreEvent): MatchScore {
 }
 
 function getEspnLeague(tournament: string): string | null {
-  const league = tournament.toLowerCase();
+  if (!tournament) return null;
+  const league = tournament.toLowerCase().replace(/['’]/g, '');
 
   // ── UEFA Club Competitions ─────────────────────────────────────────────────
-  if (league.includes('champions league') || league.includes('ucl'))
+  if (
+    league.includes('champions league') ||
+    league.includes('champion league') ||
+    league.includes('ucl') ||
+    (league.includes('uefa') && league.includes('champion'))
+  ) {
     return 'uefa.champions';
-  if (league.includes('europa league') || league.includes('uel'))
+  }
+  if (
+    league.includes('europa league') ||
+    league.includes('uel') ||
+    (league.includes('uefa') && league.includes('europa') && !league.includes('conference'))
+  ) {
     return 'uefa.europa';
-  if (league.includes('conference league') || league.includes('uecl'))
-    return 'uefa.europa.conference';
-  if (league.includes('europa conference'))
-    return 'uefa.europa.conference';
+  }
+  if (league.includes('conference league') || league.includes('uecl') || league.includes('europa conference')) {
+    return 'uefa.europa';
+  }
+
+  // ── Other Continental ─────────────────────────────────────────────────────
+  if (league.includes('libertadores')) return 'conmebol.libertadores';
+  if (league.includes('sudamericana')) return 'conmebol.sudamericana';
+  if (league.includes('afc') && (league.includes('champion') || league.includes('elite'))) return 'afc.champions';
+  if (league.includes('concacaf') && (league.includes('champion') || league.includes('cup'))) return 'concacaf.champions';
 
   // ── UEFA International / Nations ──────────────────────────────────────────
   if (league.includes('nations league'))
@@ -184,6 +211,45 @@ async function getStreamedScore(
   }
 }
 
+function matchEspnEvent(title: string, event: EspnEvent): boolean {
+  if (!event) return false;
+  if (event.name && teamsMatch(title, event.name)) return true;
+  if (event.shortName && teamsMatch(title, event.shortName)) return true;
+
+  const comps = event.competitions?.[0]?.competitors || [];
+  const home = comps.find(c => c.homeAway === 'home')?.team;
+  const away = comps.find(c => c.homeAway === 'away')?.team;
+  if (home && away) {
+    const homeNames = [home.displayName, home.name, home.shortDisplayName, home.location].filter(Boolean) as string[];
+    const awayNames = [away.displayName, away.name, away.shortDisplayName, away.location].filter(Boolean) as string[];
+    for (const hn of homeNames) {
+      for (const an of awayNames) {
+        if (teamsMatch(title, `${hn} vs ${an}`)) return true;
+      }
+    }
+  }
+  return false;
+}
+
+async function fetchEspnEvents(sport: string, league: string, date?: string): Promise<EspnEvent[]> {
+  const cacheKey = `${sport}:${league}:${date || 'current'}`;
+  const cached = espnCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.events;
+
+  const url = date
+    ? `${ESPN_API}/${sport}/${league}/scoreboard?dates=${date}`
+    : `${ESPN_API}/${sport}/${league}/scoreboard`;
+
+  try {
+    const data = await fetchWithTimeout(url, TIMEOUT_MS) as { events?: EspnEvent[] };
+    const events = Array.isArray(data?.events) ? data.events : [];
+    espnCache.set(cacheKey, { expiresAt: Date.now() + EVENTS_CACHE_TTL, events });
+    return events;
+  } catch (err) {
+    return [];
+  }
+}
+
 async function getEspnScore(
   title: string,
   timestamp: number,
@@ -192,19 +258,33 @@ async function getEspnScore(
 ): Promise<MatchScore | null> {
   const config = getEspnSportConfig(sport, tournament);
   if (!config) return null;
-  const date = new Date(timestamp).toISOString().slice(0, 10).replaceAll('-', '');
-  const cacheKey = `${config.sport}:${config.league}:${date}`;
-  let events = espnCache.get(cacheKey)?.events;
-  if (!events || (espnCache.get(cacheKey)?.expiresAt || 0) <= Date.now()) {
-    const data = await fetchWithTimeout(
-      `${ESPN_API}/${config.sport}/${config.league}/scoreboard?dates=${date}`,
-      TIMEOUT_MS,
-    ) as { events?: EspnEvent[] };
-    events = data.events || [];
-    espnCache.set(cacheKey, { expiresAt: Date.now() + EVENTS_CACHE_TTL, events });
+
+  const date = timestamp ? new Date(timestamp).toISOString().slice(0, 10).replaceAll('-', '') : '';
+
+  // 1. Try with date if available
+  let events = date ? await fetchEspnEvents(config.sport, config.league, date) : [];
+  let event = events.find(candidate => matchEspnEvent(title, candidate));
+
+  // 2. If not found, try the current scoreboard without date (current round/matchday)
+  if (!event) {
+    const currentEvents = await fetchEspnEvents(config.sport, config.league);
+    event = currentEvents.find(candidate => matchEspnEvent(title, candidate));
   }
 
-  const event = events.find(candidate => teamsMatch(title, candidate.name || ''));
+  // 3. If still not found and timestamp is present, check adjacent days (timezone offset)
+  if (!event && timestamp) {
+    const prevDate = new Date(timestamp - 86400000).toISOString().slice(0, 10).replaceAll('-', '');
+    const nextDate = new Date(timestamp + 86400000).toISOString().slice(0, 10).replaceAll('-', '');
+
+    const prevEvents = await fetchEspnEvents(config.sport, config.league, prevDate);
+    event = prevEvents.find(candidate => matchEspnEvent(title, candidate));
+
+    if (!event) {
+      const nextEvents = await fetchEspnEvents(config.sport, config.league, nextDate);
+      event = nextEvents.find(candidate => matchEspnEvent(title, candidate));
+    }
+  }
+
   if (!event) return null;
   const competitors = event.competitions?.[0]?.competitors || [];
   const home = competitors.find(team => team.homeAway === 'home')?.score;
@@ -213,7 +293,8 @@ async function getEspnScore(
     home: home == null ? null : Number(home),
     away: away == null ? null : Number(away),
     currentMinute: event.competitions?.[0]?.status?.displayClock ||
-      event.status?.type?.shortDetail || '',
+      event.status?.type?.shortDetail ||
+      event.status?.type?.detail || '',
   };
 }
 
@@ -308,18 +389,30 @@ async function getEspnEvent(
 ): Promise<EspnEvent | null> {
   const config = getEspnSportConfig(sport, tournament);
   if (!config) return null;
-  const date = new Date(timestamp).toISOString().slice(0, 10).replaceAll('-', '');
-  const cacheKey = `${config.sport}:${config.league}:${date}`;
-  let events = espnCache.get(cacheKey)?.events;
-  if (!events || (espnCache.get(cacheKey)?.expiresAt || 0) <= Date.now()) {
-    const data = await fetchWithTimeout(
-      `${ESPN_API}/${config.sport}/${config.league}/scoreboard?dates=${date}`,
-      TIMEOUT_MS,
-    ) as { events?: EspnEvent[] };
-    events = data.events || [];
-    espnCache.set(cacheKey, { expiresAt: Date.now() + EVENTS_CACHE_TTL, events });
+
+  const date = timestamp ? new Date(timestamp).toISOString().slice(0, 10).replaceAll('-', '') : '';
+  let events = date ? await fetchEspnEvents(config.sport, config.league, date) : [];
+  let event = events.find(candidate => matchEspnEvent(title, candidate));
+
+  if (!event) {
+    const currentEvents = await fetchEspnEvents(config.sport, config.league);
+    event = currentEvents.find(candidate => matchEspnEvent(title, candidate));
   }
-  return events.find(event => teamsMatch(title, event.name || '')) || null;
+
+  if (!event && timestamp) {
+    const prevDate = new Date(timestamp - 86400000).toISOString().slice(0, 10).replaceAll('-', '');
+    const nextDate = new Date(timestamp + 86400000).toISOString().slice(0, 10).replaceAll('-', '');
+
+    const prevEvents = await fetchEspnEvents(config.sport, config.league, prevDate);
+    event = prevEvents.find(candidate => matchEspnEvent(title, candidate));
+
+    if (!event) {
+      const nextEvents = await fetchEspnEvents(config.sport, config.league, nextDate);
+      event = nextEvents.find(candidate => matchEspnEvent(title, candidate));
+    }
+  }
+
+  return event || null;
 }
 
 export async function getExternalMatchStats(
@@ -366,6 +459,9 @@ export async function getScoreForMatch(
   let espnScore: MatchScore | null = null;
   try {
     espnScore = await getEspnScore(title, timestamp, tournament, sport);
+    if (!espnScore && sport === 'football' && !getEspnLeague(tournament)) {
+      espnScore = await getEspnScore(title, timestamp, 'uefa champions league', sport);
+    }
   } catch (error) {
     logger.warn('ESPN score provider unavailable', {
       error: error instanceof Error ? error.message : String(error),

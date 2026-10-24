@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLiveMatchDetails } from '@/lib/streamEngine';
+import { getLiveMatchDetails, getMatchStatsForMatch } from '@/lib/streamEngine';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -15,6 +15,13 @@ export async function GET(
       return NextResponse.json({ match: null }, { status: 404 });
     }
 
+    let stats = null;
+    try {
+      stats = await getMatchStatsForMatch(match);
+    } catch {
+      // stats optional
+    }
+
     const dateStr = new Date(match.timestamp).toLocaleDateString([], {
       weekday: 'short', month: 'short', day: 'numeric',
     });
@@ -24,6 +31,7 @@ export async function GET(
 
     return NextResponse.json({
       match: {
+        id: match.id,
         status: match.status,
         homeScore: match.homeScore,
         awayScore: match.awayScore,
@@ -39,6 +47,7 @@ export async function GET(
         dateStr,
         timeStr,
       },
+      stats,
     }, {
       headers: {
         'Cache-Control': 'no-store, max-age=0',
@@ -48,3 +57,4 @@ export async function GET(
     return NextResponse.json({ error: 'Unable to load match data. Please try again.' }, { status: 500 });
   }
 }
+

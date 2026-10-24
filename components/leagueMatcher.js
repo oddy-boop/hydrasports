@@ -11,7 +11,7 @@ export const LEAGUE_KEYWORDS = {
     'bournemouth', 'nottingham forest', 'forest', 'leicester', 'ipswich', 'southampton'
   ],
   'Champions League': [
-    'champions league', 'ucl', 'uefa champions', 'champions',
+    'champions league', "champion's league", "champion’s league", 'uefa champions league', 'ucl', 'uefa champions', 'champions',
     'real madrid', 'barcelona', 'manchester city', 'bayern munich', 'bayern',
     'paris saint-germain', 'psg', 'inter milan', 'inter', 'arsenal',
     'bayer leverkusen', 'leverkusen', 'atletico madrid', 'atletico', 'atalanta',
