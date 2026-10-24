@@ -49,56 +49,57 @@ export default function FootyTopbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-[60] h-[68px] w-full px-4 sm:px-6 lg:px-8 flex items-center justify-between border-b border-white/[0.06] bg-[#141221] backdrop-blur-xl">
-      {/* Left: Brand Logo (HydraSports) & Mobile Trigger */}
-      <div className="flex items-center gap-3 sm:gap-4 min-w-[200px]">
-        <button
-          type="button"
-          onClick={() => setSidebarOpen(true)}
-          className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-          aria-label="Open menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+    <>
+      <header className="sticky top-0 z-[60] h-[68px] w-full px-3 sm:px-6 lg:px-8 flex items-center justify-between border-b border-white/[0.06] bg-[#141221] backdrop-blur-xl">
+        {/* Left: Brand Logo (HydraSports) & Mobile Trigger */}
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
 
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#6366f1] via-[#8b5cf6] to-[#ec4899] flex items-center justify-center text-white shadow-[0_4px_16px_rgba(124,58,237,0.35)] group-hover:scale-105 transition-transform">
-            <Radio className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-[17px] font-black tracking-tight text-white flex items-center">
-            Hydra<span className="text-[#a78bfa]">Sports</span>
-          </span>
-        </Link>
-      </div>
+          <Link href="/" className="flex items-center gap-2 group min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#6366f1] via-[#8b5cf6] to-[#ec4899] flex items-center justify-center text-white shadow-[0_4px_16px_rgba(124,58,237,0.35)] group-hover:scale-105 transition-transform shrink-0">
+              <Radio className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-[16px] sm:text-[17px] font-black tracking-tight text-white flex items-center truncate">
+              Hydra<span className="text-[#a78bfa]">Sports</span>
+            </span>
+          </Link>
+        </div>
 
-      {/* Center: Sports Category Tabs that actually filter real data */}
-      <nav className="hidden md:flex items-center gap-1 sm:gap-2">
-        {sports.map((sport) => {
-          const isActive = normalizeSport(activeSport || 'Football') === normalizeSport(sport);
-          return (
-            <button
-              key={sport}
-              type="button"
-              onClick={() => {
-                if (setActiveSport) setActiveSport(sport);
-              }}
-              className={`relative px-4 py-2 text-xs font-bold transition-all duration-200 cursor-pointer ${
-                isActive
-                  ? 'text-white'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <span>{sport}</span>
-              {isActive && (
-                <span className="absolute bottom-[-18px] left-0 right-0 h-[3px] bg-[#8b5cf6] rounded-full shadow-[0_0_12px_rgba(139,92,246,0.8)]" />
-              )}
-            </button>
-          );
-        })}
-      </nav>
+        {/* Center: Sports Category Tabs that actually filter real data */}
+        <nav className="hidden md:flex items-center gap-1 sm:gap-2">
+          {sports.map((sport) => {
+            const isActive = normalizeSport(activeSport || 'Football') === normalizeSport(sport);
+            return (
+              <button
+                key={sport}
+                type="button"
+                onClick={() => {
+                  if (setActiveSport) setActiveSport(sport);
+                }}
+                className={`relative px-4 py-2 text-xs font-bold transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'text-white'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>{sport}</span>
+                {isActive && (
+                  <span className="absolute bottom-[-18px] left-0 right-0 h-[3px] bg-[#8b5cf6] rounded-full shadow-[0_0_12px_rgba(139,92,246,0.8)]" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
-      {/* Right Controls: Search, Multi-Stream, Notifications, Profile */}
-      <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-[200px] justify-end">
+        {/* Right Controls: Search, Multi-Stream, Notifications, Profile */}
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 justify-end">
         {/* Real Live Search Input */}
         <div className="relative">
           {searchOpen ? (
@@ -202,5 +203,29 @@ export default function FootyTopbar() {
         </div>
       </div>
     </header>
+
+      {/* Mobile Horizontal Sports Scrollbar */}
+      <div className="flex md:hidden items-center gap-1.5 px-3 py-2 bg-[#121020] border-b border-white/[0.06] overflow-x-auto no-scrollbar shrink-0">
+        {sports.map((sport) => {
+          const isActive = normalizeSport(activeSport || 'Football') === normalizeSport(sport);
+          return (
+            <button
+              key={sport}
+              type="button"
+              onClick={() => {
+                if (setActiveSport) setActiveSport(sport);
+              }}
+              className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 transition-all cursor-pointer ${
+                isActive
+                  ? 'bg-purple-600 text-white shadow-sm shadow-purple-600/30'
+                  : 'bg-white/5 text-slate-300 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              {sport}
+            </button>
+          );
+        })}
+      </div>
+    </>
   );
 }

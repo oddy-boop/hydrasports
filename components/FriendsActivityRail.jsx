@@ -593,14 +593,14 @@ export default function HydraSportsActivityRail() {
             </div>
 
             {/* Modal Table Content */}
-            <div className="flex-1 overflow-y-auto mt-4 pr-1">
+            <div className="flex-1 overflow-y-auto overflow-x-auto mt-4 pr-1">
               {loadingModalStandings ? (
                 <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
                   <Loader2 className="w-7 h-7 animate-spin text-purple-400" />
                   <span className="text-xs font-bold">Fetching verified {modalLeague} table...</span>
                 </div>
               ) : modalStandings.length > 0 ? (
-                <div className="w-full min-w-[560px]">
+                <div className="w-full min-w-[460px] sm:min-w-[560px]">
                   {/* Table Header */}
                   <div className="grid grid-cols-12 text-xs font-black uppercase tracking-wider text-slate-400 border-b border-white/10 pb-2.5 px-3">
                     <div className="col-span-1">Pos</div>

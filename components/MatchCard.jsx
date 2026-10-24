@@ -139,15 +139,15 @@ export default function MatchCard({ match, tab }) {
   );
 
   return (
-    <div className="group relative flex flex-col justify-between rounded-[22px] bg-[#1c1a2d] border border-white/[0.06] p-5 shadow-xl hover:border-purple-500/30 hover:shadow-[0_12px_32px_rgba(0,0,0,0.5)] transition-all duration-300">
+    <div className="group relative flex flex-col justify-between rounded-[22px] bg-[#1c1a2d] border border-white/[0.06] p-3.5 sm:p-5 shadow-xl hover:border-purple-500/30 hover:shadow-[0_12px_32px_rgba(0,0,0,0.5)] transition-all duration-300">
       
       {/* ── CARD HEADER (Tournament/Date & Live Badge) ── */}
-      <div className="flex items-start justify-between gap-3 mb-4">
+      <div className="flex items-start justify-between gap-3 mb-3 sm:mb-4">
         <div>
-          <h4 className="text-[13px] font-black text-white tracking-tight leading-snug">
+          <h4 className="text-[12.5px] sm:text-[13px] font-black text-white tracking-tight leading-snug">
             {displayTournament}
           </h4>
-          <p className="text-[10.5px] font-medium text-slate-400 mt-0.5">
+          <p className="text-[10px] sm:text-[10.5px] font-medium text-slate-400 mt-0.5">
             {dateStr} · {timeStr}
           </p>
         </div>
@@ -155,16 +155,16 @@ export default function MatchCard({ match, tab }) {
         {/* Live / Status Pill from Image 1 */}
         <div>
           {effectiveStatus === 'live' && hasStarted ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-600/90 border border-red-500/40 text-[10.5px] font-black text-white shadow-[0_0_12px_rgba(239,68,68,0.4)]">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-600/90 border border-red-500/40 text-[10px] sm:text-[10.5px] font-black text-white shadow-[0_0_12px_rgba(239,68,68,0.4)]">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
               <span>{currentMinute ? `${currentMinute} Live` : 'Live'}</span>
             </span>
           ) : effectiveStatus === 'finished' ? (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-800 border border-white/10 text-[10.5px] font-bold text-slate-300">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-800 border border-white/10 text-[10px] sm:text-[10.5px] font-bold text-slate-300">
               FT
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-[10.5px] font-bold text-amber-300">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-[10px] sm:text-[10.5px] font-bold text-amber-300">
               <Clock className="w-3 h-3 text-amber-400" />
               <span>{timeStr}</span>
             </span>
@@ -174,7 +174,7 @@ export default function MatchCard({ match, tab }) {
 
       {/* ── CENTER SCOREBOARD (Circular Badges & Big Tabular Score) ── */}
       <div className="py-2">
-        <div className="flex items-center justify-between gap-4 px-2">
+        <div className="flex items-center justify-between gap-2 sm:gap-4 px-1 sm:px-2">
           
           {/* Home Team Badge */}
           <div className="flex flex-col items-center gap-2 flex-1">

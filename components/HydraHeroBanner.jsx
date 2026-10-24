@@ -52,20 +52,20 @@ export default function FootyHeroBanner({ featuredMatch }) {
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Hero Banner Grid */}
-      <div className="relative z-10 min-h-[220px] sm:min-h-[260px] md:min-h-[280px] p-6 sm:p-8 md:p-10 flex flex-col justify-between">
+      <div className="relative z-10 min-h-[190px] sm:min-h-[260px] md:min-h-[280px] p-4 sm:p-8 md:p-10 flex flex-col justify-between">
         
         {/* Top Header: Super Big Match badge */}
         <div className="flex flex-col items-center justify-center text-center space-y-1">
-          <span className="text-[13px] sm:text-[14px] font-black text-white tracking-wide drop-shadow-sm">
+          <span className="text-[12px] sm:text-[14px] font-black text-white tracking-wide drop-shadow-sm">
             Super Big Match
           </span>
-          <span className="text-[11px] font-bold text-slate-300 tracking-wider">
+          <span className="text-[10px] sm:text-[11px] font-bold text-slate-300 tracking-wider">
             {match.tournament || 'Serie A'}
           </span>
         </div>
 
         {/* Center: Home Player/Badge - BIG TITLE - Away Player/Badge */}
-        <div className="grid grid-cols-12 items-center my-3 sm:my-4 gap-2">
+        <div className="grid grid-cols-12 items-center my-2 sm:my-4 gap-1.5 sm:gap-2">
           
           {/* Home Team Badge / Visual (Left) */}
           <div className="col-span-3 sm:col-span-3 flex items-center justify-center sm:justify-start">
@@ -75,10 +75,10 @@ export default function FootyHeroBanner({ featuredMatch }) {
                   src={homeBadge}
                   alt={homeName}
                   onError={() => setHomeImgError(true)}
-                  className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain rounded-2xl bg-white/10 p-2 border border-white/20 backdrop-blur-md shadow-lg"
+                  className="w-12 h-12 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain rounded-2xl bg-white/10 p-1.5 sm:p-2 border border-white/20 backdrop-blur-md shadow-lg"
                 />
               ) : (
-                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-white font-black text-lg">
+                <div className="w-12 h-12 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-white font-black text-sm sm:text-lg">
                   {homeName.slice(0, 3).toUpperCase()}
                 </div>
               )}
@@ -86,22 +86,22 @@ export default function FootyHeroBanner({ featuredMatch }) {
           </div>
 
           {/* Center Matchup Headline: NAPOLI VS INTER MILAN */}
-          <div className="col-span-6 sm:col-span-6 flex flex-col items-center justify-center text-center">
-            <h2 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight uppercase leading-none drop-shadow-md flex flex-wrap items-center justify-center gap-2">
-              <span>{homeName}</span>
-              <span className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-red-600 text-white text-[10px] sm:text-xs font-black shadow-md mx-1">
+          <div className="col-span-6 sm:col-span-6 flex flex-col items-center justify-center text-center px-1">
+            <h2 className="text-base sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight uppercase leading-tight drop-shadow-md flex flex-wrap items-center justify-center gap-1 sm:gap-2">
+              <span className="truncate max-w-[120px] sm:max-w-none">{homeName}</span>
+              <span className="inline-flex items-center justify-center w-5 h-5 sm:w-8 sm:h-8 rounded-full bg-red-600 text-white text-[9px] sm:text-xs font-black shadow-md mx-0.5 shrink-0">
                 VS
               </span>
-              <span>{awayName}</span>
+              <span className="truncate max-w-[120px] sm:max-w-none">{awayName}</span>
             </h2>
 
             {/* Kickoff date & Stadium info */}
-            <p className="mt-3 text-[11px] sm:text-[12px] text-slate-300 font-semibold tracking-wide flex items-center justify-center gap-2">
+            <p className="mt-2 sm:mt-3 text-[10px] sm:text-[12px] text-slate-300 font-semibold tracking-wide flex items-center justify-center gap-1.5 flex-wrap">
               <span>{dateStr}</span>
               <span>·</span>
               <span>{timeStr}</span>
-              <span>·</span>
-              <span>Live at {venue}</span>
+              <span className="hidden sm:inline">·</span>
+              <span className="hidden sm:inline">Live at {venue}</span>
             </p>
           </div>
 
@@ -113,10 +113,10 @@ export default function FootyHeroBanner({ featuredMatch }) {
                   src={awayBadge}
                   alt={awayName}
                   onError={() => setAwayImgError(true)}
-                  className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain rounded-2xl bg-white/10 p-2 border border-white/20 backdrop-blur-md shadow-lg"
+                  className="w-12 h-12 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain rounded-2xl bg-white/10 p-1.5 sm:p-2 border border-white/20 backdrop-blur-md shadow-lg"
                 />
               ) : (
-                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-white font-black text-lg">
+                <div className="w-12 h-12 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-white font-black text-sm sm:text-lg">
                   {awayName.slice(0, 3).toUpperCase()}
                 </div>
               )}
