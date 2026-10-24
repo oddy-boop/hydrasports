@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Maximize, Minimize2, RefreshCw, AlertCircle, ShieldAlert, ShieldCheck, Shield, Cpu, Play, Pause, Volume2, Volume1, VolumeX, Sliders, ChevronDown, Check } from 'lucide-react';
+import { Maximize, Minimize2, RefreshCw, AlertCircle, ShieldAlert, Cpu, Play, Pause, Volume2, Volume1, VolumeX, Sliders, ChevronDown, Check } from 'lucide-react';
 import Hls from 'hls.js';
 
 export default function StreamPlayer({ streamUrl, channels, matchTitle, matchStatus, videoOnly = false }) {
@@ -20,11 +20,6 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
   const [selectedResolution, setSelectedResolution] = useState('auto');
   const [resDropdownOpen, setResDropdownOpen] = useState(false);
   const [isCssFullscreen, setIsCssFullscreen] = useState(false);
-
-  // Ad Shield Protection (Blocks 3rd party stream player popups & top-level redirects)
-  const [adShieldMode, setAdShieldMode] = useState('standard'); // 'strict' | 'standard' | 'off'
-  const [adShieldDropdownOpen, setAdShieldDropdownOpen] = useState(false);
-  const [blockedRedirectCount, setBlockedRedirectCount] = useState(0);
 
   const iframeRef = useRef(null);
   const videoRef = useRef(null);
@@ -72,47 +67,16 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
     };
   }, [isCssFullscreen]);
 
-  // Click outside to close quality & ad shield dropdowns
+  // Click outside to close quality dropdown
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (!e.target.closest('.player-dropdown-trigger')) {
         setResDropdownOpen(false);
-        setAdShieldDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
-
-  // Top-Level Window Protection: Intercept unwanted unloads caused by rogue third-party ad scripts
-  useEffect(() => {
-    if (isDirectHls || adShieldMode === 'off') return;
-
-    let isInternalClick = false;
-
-    const handleInternalClick = (e) => {
-      const interactive = e.target.closest('a, button, input, select');
-      if (interactive) {
-        isInternalClick = true;
-        setTimeout(() => { isInternalClick = false; }, 800);
-      }
-    };
-
-    const handleBeforeUnload = (e) => {
-      if (isInternalClick) return;
-      setBlockedRedirectCount((prev) => prev + 1);
-      e.preventDefault();
-      return (e.returnValue = 'Ad redirect blocked by HydraSports Ad Shield.');
-    };
-
-    document.addEventListener('click', handleInternalClick, true);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      document.removeEventListener('click', handleInternalClick, true);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [isDirectHls, adShieldMode]);
 
   const handleLoad = () => {
     setIsLoading(false);
@@ -515,14 +479,6 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
                 Retry Source
               </button>
             </div>
-            {adShieldMode === 'strict' && !isDirectHls && (
-              <button
-                onClick={() => setAdShieldMode('standard')}
-                className="mt-3 text-xs text-amber-400 hover:text-amber-300 font-semibold underline underline-offset-2 cursor-pointer"
-              >
-                Embed restricted? Switch Ad Shield to Balanced mode
-              </button>
-            )}
           </div>
         )}
 
@@ -542,14 +498,6 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
             >
               Switch Server
             </button>
-            {adShieldMode === 'strict' && (
-              <button
-                onClick={() => setAdShieldMode('standard')}
-                className="mt-2 text-xs text-amber-400 hover:text-amber-300 font-semibold underline underline-offset-2 cursor-pointer"
-              >
-                Stream blocked? Switch Ad Shield to Balanced mode
-              </button>
-            )}
           </div>
         )}
 
@@ -565,7 +513,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
           />
         ) : (
           <iframe
-            key={`${currentUrl}-${adShieldMode}`}
+            key={currentUrl}
             ref={iframeRef}
             src={currentUrl}
             className="absolute inset-0 block h-full w-full min-h-0 border-0 bg-black"
@@ -573,26 +521,9 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
             allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
             loading="eager"
             referrerPolicy="no-referrer-when-downgrade"
-            sandbox={
-              adShieldMode === 'strict'
-                ? 'allow-scripts allow-same-origin allow-presentation allow-forms'
-                : adShieldMode === 'standard'
-                ? 'allow-scripts allow-same-origin allow-presentation allow-forms allow-popups-to-escape-sandbox'
-                : undefined
-            }
             onLoad={handleLoad}
             onError={handleError}
           />
-        )}
-
-        {/* Floating Ad Shield Protected Badge */}
-        {!videoOnly && !isDirectHls && streamStatus === 'active' && adShieldMode !== 'off' && (
-          <div className="absolute top-3 right-3 z-20 flex items-center pointer-events-none transition-opacity duration-300">
-            <span className="flex items-center gap-1.5 rounded-full bg-emerald-950/85 border border-emerald-500/40 px-2.5 py-1 text-[10px] font-extrabold text-emerald-300 shadow-lg backdrop-blur-md">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Ad Shield Active</span>
-            </span>
-          </div>
         )}
 
         {/* Play Icon Center Overlay (When Paused) */}
@@ -713,10 +644,10 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
               <span className={`w-2 h-2 rounded-full ${isDirectHls ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-amber-400'} animate-pulse shrink-0`} />
               <div className="flex flex-col text-left min-w-0">
                 <span className={`text-[10px] font-black uppercase tracking-wider truncate flex items-center gap-1.5 ${isDirectHls ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  <span>{isDirectHls ? '⚡ Native 1-Click Stream (0 Ads)' : '🌐 Web Stream (Protected)'}</span>
+                  <span>{isDirectHls ? '⚡ Native 1-Click Stream' : '🌐 Web Stream'}</span>
                 </span>
                 <span className="text-[10px] text-slate-400 mt-0.5 leading-none block font-medium truncate">
-                  {isDirectHls ? 'Direct HLS feed — instant playback with zero ad traps' : 'Third-party embed with active redirect shield'}
+                  {isDirectHls ? 'Direct HLS feed — instant playback' : 'Third-party stream broadcast embed'}
                 </span>
               </div>
             </div>
@@ -727,10 +658,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
               <div className="relative player-dropdown-trigger">
                 <button
                   type="button"
-                  onClick={() => {
-                    setResDropdownOpen(!resDropdownOpen);
-                    setAdShieldDropdownOpen(false);
-                  }}
+                  onClick={() => setResDropdownOpen(!resDropdownOpen)}
                   className="rounded-lg bg-white/10 hover:bg-white/20 px-2.5 py-1.5 text-slate-200 hover:text-white transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold border border-white/10 shadow-sm cursor-pointer"
                   title="Select video resolution (Lower resolution saves data on slow internet)"
                 >
@@ -798,99 +726,6 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
                         ))}
                       </>
                     )}
-                  </div>
-                )}
-              </div>
-
-              {/* Ad Shield Control dropdown */}
-              <div className="relative player-dropdown-trigger">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAdShieldDropdownOpen(!adShieldDropdownOpen);
-                    setResDropdownOpen(false);
-                  }}
-                  className={`rounded-lg px-2.5 py-1.5 text-xs font-bold border transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-sm ${
-                    adShieldMode === 'strict'
-                      ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'
-                      : adShieldMode === 'standard'
-                      ? 'border-amber-500/40 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25'
-                      : 'border-white/10 bg-white/10 hover:bg-white/20 text-slate-400'
-                  }`}
-                  title="Ad Shield: Blocks external ad redirects and intrusive popups"
-                >
-                  <ShieldCheck className={`h-3.5 w-3.5 ${adShieldMode === 'strict' ? 'text-emerald-400' : adShieldMode === 'standard' ? 'text-amber-400' : 'text-slate-500'}`} />
-                  <span className="hidden sm:inline">
-                    {adShieldMode === 'strict' ? 'Ad Shield: Strict' : adShieldMode === 'standard' ? 'Ad Shield: Balanced' : 'Ad Shield: Off'}
-                  </span>
-                  <span className="sm:hidden">Shield</span>
-                  <ChevronDown className="h-3 w-3 opacity-70" />
-                </button>
-
-                {adShieldDropdownOpen && (
-                  <div className="absolute right-0 bottom-full mb-1.5 w-72 rounded-2xl bg-[#1c1a2d] border border-white/15 p-2 shadow-2xl z-50 animate-fade-in text-white space-y-1">
-                    <div className="px-2 py-1 border-b border-white/10 flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                        <span>Ad Shield Protection</span>
-                      </span>
-                      {blockedRedirectCount > 0 && (
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                          {blockedRedirectCount} blocked
-                        </span>
-                      )}
-                    </div>
-                    
-                    <button
-                      type="button"
-                      onClick={() => { setAdShieldMode('strict'); setAdShieldDropdownOpen(false); }}
-                      className={`w-full text-left p-2 rounded-xl text-xs font-bold transition-all flex items-start gap-2 cursor-pointer ${
-                        adShieldMode === 'strict' ? 'bg-emerald-600/30 border border-emerald-500/40 text-white' : 'hover:bg-white/5 text-slate-300'
-                      }`}
-                    >
-                      <Check className={`h-4 w-4 shrink-0 mt-0.5 ${adShieldMode === 'strict' ? 'text-emerald-400' : 'opacity-0'}`} />
-                      <div className="flex flex-col">
-                        <span className="font-bold flex items-center gap-1.5">
-                          <span>Strict Protection</span>
-                          <span className="text-[9px] px-1 rounded bg-emerald-500/20 text-emerald-300">Recommended</span>
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-normal mt-0.5">
-                          Blocks 100% of ad redirects & popup tabs. Keeps you on HydraSports when clicking play.
-                        </span>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => { setAdShieldMode('standard'); setAdShieldDropdownOpen(false); }}
-                      className={`w-full text-left p-2 rounded-xl text-xs font-bold transition-all flex items-start gap-2 cursor-pointer ${
-                        adShieldMode === 'standard' ? 'bg-amber-600/30 border border-amber-500/40 text-white' : 'hover:bg-white/5 text-slate-300'
-                      }`}
-                    >
-                      <Check className={`h-4 w-4 shrink-0 mt-0.5 ${adShieldMode === 'standard' ? 'text-amber-400' : 'opacity-0'}`} />
-                      <div className="flex flex-col">
-                        <span className="font-bold">Balanced</span>
-                        <span className="text-[10px] text-slate-400 font-normal mt-0.5">
-                          Blocks page redirects, but allows popups if a specific provider requires them.
-                        </span>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => { setAdShieldMode('off'); setAdShieldDropdownOpen(false); }}
-                      className={`w-full text-left p-2 rounded-xl text-xs font-bold transition-all flex items-start gap-2 cursor-pointer ${
-                        adShieldMode === 'off' ? 'bg-red-600/30 border border-red-500/40 text-white' : 'hover:bg-white/5 text-slate-300'
-                      }`}
-                    >
-                      <Check className={`h-4 w-4 shrink-0 mt-0.5 ${adShieldMode === 'off' ? 'text-red-400' : 'opacity-0'}`} />
-                      <div className="flex flex-col">
-                        <span className="font-bold text-red-400">Off (Unrestricted)</span>
-                        <span className="text-[10px] text-slate-400 font-normal mt-0.5">
-                          No iframe sandboxing. Enables all provider ads and redirects.
-                        </span>
-                      </div>
-                    </button>
                   </div>
                 )}
               </div>

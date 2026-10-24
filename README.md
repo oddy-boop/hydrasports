@@ -18,7 +18,7 @@ Designed for low latency and high quality, HydraSports resolves streaming server
 
 ## 🌟 Key Features
 
-* 📺 **Interactive Stream Player**: Auto-detects direct stream formats (HLS/m3u8/mp4) and uses `hls.js` for native low-latency playback, alongside regular streaming iframe nodes equipped with togglable **sandbox shields** to block intrusive pop-ups and ads.
+* 📺 **Interactive Stream Player**: Auto-detects direct stream formats (HLS/m3u8/mp4) and uses `hls.js` for native low-latency playback, alongside regular streaming web embeds for instant global sports coverage.
 * ⚡ **Multistream Arena**: Stream up to 4 matches at the same time in a responsive drag-to-resize viewport grid with isolated volume controls and reload capabilities.
 * 🕒 **Fast Live Kickoff Promotion**: Dynamic client-side match state elevation that promotes upcoming games to "Live Now" at their exact kickoff time, simulating realistic game timers, starting real-time score polling, and automatically swapping countdown panels with dynamic stream player modules without requiring a page reload.
 * 📅 **Match Lifecycle Management**: Split layout for **Live Now** (auto-refreshing score lists) and **Upcoming** fixtures (with real-time kickoff countdowns).
