@@ -650,29 +650,15 @@ function SlotCard({
   const hlsRef = useRef(null);
   const slotContainerRef = useRef(null);
 
-  // If slotData is empty, show empty placeholder card
-  if (!slotData) {
-    return (
-      <div 
-        onClick={onOpenDrawer}
-        className="w-full h-full min-h-[260px] rounded-2xl border-2 border-dashed border-white/10 hover:border-purple-500/40 bg-[#141221]/50 hover:bg-[#181627] flex flex-col items-center justify-center p-6 text-center cursor-pointer group transition-all duration-300"
-      >
-        <div className="h-12 w-12 rounded-2xl bg-purple-600/10 border border-purple-500/20 group-hover:scale-110 group-hover:bg-purple-600/25 flex items-center justify-center text-purple-400 transition-all shadow-inner mb-3">
-          <Plus className="h-5 w-5" />
-        </div>
-        <h3 className="text-sm font-extrabold text-white">Screen Slot {slotIndex + 1}</h3>
-        <p className="text-xs text-slate-400 mt-1 max-w-xs">
-          Click to mount a live fixture stream into this viewport.
-        </p>
-        <span className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 group-hover:bg-purple-600 text-[11px] font-bold text-slate-300 group-hover:text-white transition-all">
-          Browse Fixtures
-        </span>
-      </div>
-    );
-  }
-
   // Resolve streams for this fixture
   useEffect(() => {
+    if (!slotData?.id) {
+      setStreams([]);
+      setError(null);
+      setResolving(false);
+      return;
+    }
+
     let isCancelled = false;
     const fetchStreams = async () => {
       setResolving(true);
@@ -702,7 +688,7 @@ function SlotCard({
     return () => {
       isCancelled = true;
     };
-  }, [slotData.id]);
+  }, [slotData?.id]);
 
   const activeStream = streams[activeStreamIdx];
   const streamUrl = activeStream?.proxiedUrl || activeStream?.url;
@@ -715,7 +701,7 @@ function SlotCard({
 
   // Setup HLS / Video playback
   useEffect(() => {
-    if (!isDirectHls || !streamUrl || !videoRef.current) return;
+    if (!slotData || !isDirectHls || !streamUrl || !videoRef.current) return;
     const video = videoRef.current;
 
     if (hlsRef.current) {
@@ -758,14 +744,15 @@ function SlotCard({
         hlsRef.current = null;
       }
     };
-  }, [streamUrl, isDirectHls]);
+  }, [slotData, streamUrl, isDirectHls, isAudioFocused]);
 
   // Sync audio mute state based on audio focus
   useEffect(() => {
+    if (!slotData) return;
     if (videoRef.current) {
       videoRef.current.muted = !isAudioFocused;
     }
-  }, [isAudioFocused]);
+  }, [slotData, isAudioFocused]);
 
   // Apply Resolution / Low Data Mode change
   const applyResolution = (res) => {
@@ -803,12 +790,34 @@ function SlotCard({
 
   // Sync with global low-data mode
   useEffect(() => {
+    if (!slotData) return;
     if (lowDataGlobal) {
       applyResolution('360p');
     } else if (selectedResolution === '360p' && !lowDataGlobal) {
       applyResolution('auto');
     }
-  }, [lowDataGlobal]);
+  }, [slotData, lowDataGlobal]);
+
+  // If slotData is empty, show empty placeholder card AFTER ALL HOOKS
+  if (!slotData) {
+    return (
+      <div 
+        onClick={onOpenDrawer}
+        className="w-full h-full min-h-[260px] rounded-2xl border-2 border-dashed border-white/10 hover:border-purple-500/40 bg-[#141221]/50 hover:bg-[#181627] flex flex-col items-center justify-center p-6 text-center cursor-pointer group transition-all duration-300"
+      >
+        <div className="h-12 w-12 rounded-2xl bg-purple-600/10 border border-purple-500/20 group-hover:scale-110 group-hover:bg-purple-600/25 flex items-center justify-center text-purple-400 transition-all shadow-inner mb-3">
+          <Plus className="h-5 w-5" />
+        </div>
+        <h3 className="text-sm font-extrabold text-white">Screen Slot {slotIndex + 1}</h3>
+        <p className="text-xs text-slate-400 mt-1 max-w-xs">
+          Click to mount a live fixture stream into this viewport.
+        </p>
+        <span className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 group-hover:bg-purple-600 text-[11px] font-bold text-slate-300 group-hover:text-white transition-all">
+          Browse Fixtures
+        </span>
+      </div>
+    );
+  }
 
   const toggleSlotFullscreen = () => {
     if (!slotContainerRef.current) return;
