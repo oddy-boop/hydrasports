@@ -50,7 +50,7 @@ export default function FootyTopbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-[60] h-[68px] w-full px-3 sm:px-6 lg:px-8 flex items-center justify-between border-b border-white/[0.06] bg-[#141221] backdrop-blur-xl">
+      <header className="fixed top-0 left-0 right-0 z-[60] h-[68px] w-full px-3 sm:px-6 lg:px-8 flex items-center justify-between border-b border-white/[0.06] bg-[#141221] backdrop-blur-xl">
         {/* Left: Brand Logo (HydraSports) & Mobile Trigger */}
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <button

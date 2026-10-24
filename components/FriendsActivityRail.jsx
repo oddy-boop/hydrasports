@@ -132,7 +132,7 @@ export default function HydraSportsActivityRail() {
 
   return (
     <>
-      <aside className="w-[300px] xl:w-[320px] shrink-0 p-4 space-y-4 hidden lg:flex flex-col bg-[#141221] border-l border-white/[0.06] overflow-y-auto max-h-[calc(100vh-68px)] sticky top-[68px]">
+      <aside className="w-[300px] xl:w-[320px] shrink-0 p-4 space-y-4 hidden lg:flex flex-col bg-[#141221] border-l border-white/[0.06] overflow-y-auto fixed top-[68px] right-0 bottom-0 z-30">
         
         {/* ── CARD 1: League Standings ── */}
         <div className="rounded-2xl bg-[#1c1a2d] border border-white/[0.06] p-4 shadow-xl">

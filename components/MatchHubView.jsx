@@ -500,7 +500,7 @@ export default function MatchHubView({
   return (
     <div 
       ref={containerRef}
-      className={`min-h-screen w-full max-w-full overflow-x-hidden bg-[#0a0914] text-white flex flex-col font-sans selection:bg-purple-600 selection:text-white ${
+      className={`min-h-screen w-full max-w-full overflow-x-clip bg-[#0a0914] text-white flex flex-col font-sans selection:bg-purple-600 selection:text-white ${
         isCssFullscreen ? '!fixed !inset-0 !z-[999999] !w-screen !h-[100dvh] !overflow-y-auto' : ''
       }`}
     >
@@ -516,7 +516,7 @@ export default function MatchHubView({
       )}
 
       {/* ── 1. TOP HEADER ── */}
-      <header className="sticky top-0 z-40 h-[68px] w-full max-w-full bg-[#121020]/95 backdrop-blur-xl border-b border-white/[0.08] px-3 sm:px-6 flex items-center justify-between shadow-lg">
+      <header className="fixed top-0 left-0 right-0 z-40 h-[68px] w-full max-w-full bg-[#121020]/95 backdrop-blur-xl border-b border-white/[0.08] px-3 sm:px-6 flex items-center justify-between shadow-lg">
         {/* Left: Tournament Badge & Return link */}
         <div className="flex items-center gap-2 sm:gap-6 min-w-0">
           <Link
@@ -604,7 +604,7 @@ export default function MatchHubView({
       </header>
 
       {/* ── 2. MAIN BROADCAST CANVAS & TACTICAL RAIL ── */}
-      <main className="flex-1 w-full max-w-[1720px] mx-auto p-3 sm:p-5 flex flex-col xl:flex-row gap-5 items-start min-w-0">
+      <main className="flex-1 w-full max-w-[1720px] mx-auto pt-[80px] p-3 sm:p-5 flex flex-col xl:flex-row gap-5 items-start min-w-0">
         
         {/* Left / Center: Video Stream + Unobstructed Controls + Tactical Panels Below */}
         <div className="flex-1 flex flex-col gap-4 sm:gap-5 min-w-0 w-full">

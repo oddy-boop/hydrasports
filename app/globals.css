@@ -61,7 +61,7 @@ html {
   width: 100%;
   max-width: 100vw;
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: clip;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -71,7 +71,7 @@ body {
   width: 100%;
   max-width: 100vw;
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: clip;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-text-size-adjust: 100%;
 }
@@ -93,7 +93,7 @@ body {
   display: flex;
   min-height: calc(100vh - 68px);
   width: 100%;
-  padding-top: 0;
+  padding-top: 68px;
   padding-left: 240px;
   margin: 0;
   border-radius: 0;
@@ -141,6 +141,16 @@ body {
 @media (min-width: 768px) {
   .dashboard-content {
     padding: 24px 28px 80px;
+  }
+}
+@media (min-width: 1024px) {
+  .dashboard-content {
+    margin-right: 300px;
+  }
+}
+@media (min-width: 1280px) {
+  .dashboard-content {
+    margin-right: 320px;
   }
 }
 .hydra-hero-content {
@@ -533,7 +543,7 @@ body {
   .watch-page {
     width: 100%;
     max-width: 100vw;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
   .watch-content {
     width: 100%;

@@ -15,7 +15,7 @@ export default function FootyLayoutShell({ children }) {
 
   if (isFullScreenView) {
     return (
-      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#0d0c15] text-white flex flex-col">
+      <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[#0d0c15] text-white flex flex-col">
         {children}
       </div>
     );
