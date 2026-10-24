@@ -297,6 +297,49 @@ const KNOWN_PLAYER_PROFILES: Record<string, { birthDate: string; height: string;
   'unai núñez': { birthDate: 'Jan 30, 1997', height: '1.86 m (6\' 1")', weight: '80 kg (176 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
 
   // Premier League & European Superstars
+  // Napoli Players
+  'alex meret': { birthDate: 'Mar 22, 1997', height: '1.90 m (6\' 3")', weight: '82 kg (181 lbs)', nationality: 'Italy', flag: '🇮🇹', foot: 'Left' },
+  'romelu lukaku': { birthDate: 'May 13, 1993', height: '1.91 m (6\' 3")', weight: '93 kg (205 lbs)', nationality: 'Belgium', flag: '🇧🇪', foot: 'Left' },
+  'khvicha kvaratskhelia': { birthDate: 'Feb 12, 2001', height: '1.83 m (6\' 0")', weight: '76 kg (167 lbs)', nationality: 'Georgia', flag: '🇬🇪', foot: 'Both' },
+  'scott mctominay': { birthDate: 'Dec 8, 1996', height: '1.93 m (6\' 4")', weight: '88 kg (194 lbs)', nationality: 'Scotland', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', foot: 'Right' },
+  'giovanni di lorenzo': { birthDate: 'Aug 4, 1993', height: '1.83 m (6\' 0")', weight: '83 kg (183 lbs)', nationality: 'Italy', flag: '🇮🇹', foot: 'Right' },
+  'alessandro buongiorno': { birthDate: 'Jun 6, 1999', height: '1.90 m (6\' 3")', weight: '86 kg (189 lbs)', nationality: 'Italy', flag: '🇮🇹', foot: 'Left' },
+  'andre-frank zambo anguissa': { birthDate: 'Nov 16, 1995', height: '1.84 m (6\' 0")', weight: '78 kg (172 lbs)', nationality: 'Cameroon', flag: '🇨🇲', foot: 'Right' },
+  'frank anguissa': { birthDate: 'Nov 16, 1995', height: '1.84 m (6\' 0")', weight: '78 kg (172 lbs)', nationality: 'Cameroon', flag: '🇨🇲', foot: 'Right' },
+  'stanislav lobotka': { birthDate: 'Nov 25, 1994', height: '1.70 m (5\' 7")', weight: '68 kg (150 lbs)', nationality: 'Slovakia', flag: '🇸🇰', foot: 'Right' },
+  'matteo politano': { birthDate: 'Aug 3, 1993', height: '1.71 m (5\' 7")', weight: '67 kg (147 lbs)', nationality: 'Italy', flag: '🇮🇹', foot: 'Left' },
+  'giacomo raspadori': { birthDate: 'Feb 18, 2000', height: '1.72 m (5\' 8")', weight: '69 kg (152 lbs)', nationality: 'Italy', flag: '🇮🇹', foot: 'Both' },
+  'david neres': { birthDate: 'Mar 3, 1997', height: '1.75 m (5\' 9")', weight: '68 kg (150 lbs)', nationality: 'Brazil', flag: '🇧🇷', foot: 'Left' },
+  'mathias olivera': { birthDate: 'Oct 31, 1997', height: '1.83 m (6\' 0")', weight: '78 kg (172 lbs)', nationality: 'Uruguay', flag: '🇺🇾', foot: 'Left' },
+  'mathías olivera': { birthDate: 'Oct 31, 1997', height: '1.83 m (6\' 0")', weight: '78 kg (172 lbs)', nationality: 'Uruguay', flag: '🇺🇾', foot: 'Left' },
+  'amir rrahmani': { birthDate: 'Feb 24, 1994', height: '1.92 m (6\' 4")', weight: '87 kg (191 lbs)', nationality: 'Kosovo', flag: '🇽🇰', foot: 'Right' },
+  'leonardo spinazzola': { birthDate: 'Mar 25, 1993', height: '1.86 m (6\' 1")', weight: '75 kg (165 lbs)', nationality: 'Italy', flag: '🇮🇹', foot: 'Right' },
+  'billy gilmour': { birthDate: 'Jun 11, 2001', height: '1.75 m (5\' 9")', weight: '66 kg (145 lbs)', nationality: 'Scotland', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', foot: 'Right' },
+
+  // Roma Players
+  'paulo dybala': { birthDate: 'Nov 15, 1993', height: '1.77 m (5\' 10")', weight: '75 kg (165 lbs)', nationality: 'Argentina', flag: '🇦🇷', foot: 'Left' },
+  'artem dovbyk': { birthDate: 'Jun 21, 1997', height: '1.89 m (6\' 2")', weight: '84 kg (185 lbs)', nationality: 'Ukraine', flag: '🇺🇦', foot: 'Left' },
+  'lorenzo pellegrini': { birthDate: 'Jun 19, 1996', height: '1.86 m (6\' 1")', weight: '79 kg (174 lbs)', nationality: 'Italy', flag: '🇮🇹', foot: 'Right' },
+  'bryan cristante': { birthDate: 'Mar 3, 1995', height: '1.86 m (6\' 1")', weight: '80 kg (176 lbs)', nationality: 'Italy', flag: '🇮🇹', foot: 'Right' },
+  'manu kone': { birthDate: 'May 17, 2001', height: '1.85 m (6\' 1")', weight: '80 kg (176 lbs)', nationality: 'France', flag: '🇫🇷', foot: 'Right' },
+  'manu koné': { birthDate: 'May 17, 2001', height: '1.85 m (6\' 1")', weight: '80 kg (176 lbs)', nationality: 'France', flag: '🇫🇷', foot: 'Right' },
+  'leandro paredes': { birthDate: 'Jun 29, 1994', height: '1.80 m (5\' 11")', weight: '75 kg (165 lbs)', nationality: 'Argentina', flag: '🇦🇷', foot: 'Right' },
+  'gianluca mancini': { birthDate: 'Apr 17, 1996', height: '1.90 m (6\' 3")', weight: '85 kg (187 lbs)', nationality: 'Italy', flag: '🇮🇹', foot: 'Right' },
+  'evan ndicka': { birthDate: 'Aug 20, 1999', height: '1.92 m (6\' 4")', weight: '82 kg (180 lbs)', nationality: 'Ivory Coast', flag: '🇨🇮', foot: 'Left' },
+  'angelino': { birthDate: 'Jan 4, 1997', height: '1.71 m (5\' 7")', weight: '69 kg (152 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Left' },
+  'angeliño': { birthDate: 'Jan 4, 1997', height: '1.71 m (5\' 7")', weight: '69 kg (152 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Left' },
+  'zeki celik': { birthDate: 'Feb 17, 1997', height: '1.80 m (5\' 11")', weight: '78 kg (172 lbs)', nationality: 'Turkey', flag: '🇹🇷', foot: 'Right' },
+  'zeki çelik': { birthDate: 'Feb 17, 1997', height: '1.80 m (5\' 11")', weight: '78 kg (172 lbs)', nationality: 'Turkey', flag: '🇹🇷', foot: 'Right' },
+  'mile svilar': { birthDate: 'Aug 27, 1999', height: '1.88 m (6\' 2")', weight: '80 kg (176 lbs)', nationality: 'Serbia', flag: '🇷🇸', foot: 'Right' },
+  'stephan el shaarawy': { birthDate: 'Oct 27, 1992', height: '1.78 m (5\' 10")', weight: '72 kg (158 lbs)', nationality: 'Italy', flag: '🇮🇹', foot: 'Right' },
+  'mats hummels': { birthDate: 'Dec 16, 1988', height: '1.91 m (6\' 3")', weight: '92 kg (202 lbs)', nationality: 'Germany', flag: '🇩🇪', foot: 'Both' },
+  'alexis saelemaekers': { birthDate: 'Jun 27, 1999', height: '1.80 m (5\' 11")', weight: '72 kg (158 lbs)', nationality: 'Belgium', flag: '🇧🇪', foot: 'Right' },
+  'mario hermoso': { birthDate: 'Jun 18, 1995', height: '1.84 m (6\' 0")', weight: '75 kg (165 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Left' },
+  'nicolo pisilli': { birthDate: 'Sep 23, 2004', height: '1.78 m (5\' 10")', weight: '70 kg (154 lbs)', nationality: 'Italy', flag: '🇮🇹', foot: 'Right' },
+  'nicolò pisilli': { birthDate: 'Sep 23, 2004', height: '1.78 m (5\' 10")', weight: '70 kg (154 lbs)', nationality: 'Italy', flag: '🇮🇹', foot: 'Right' },
+  'tommaso baldanzi': { birthDate: 'Mar 23, 2003', height: '1.70 m (5\' 7")', weight: '66 kg (145 lbs)', nationality: 'Italy', flag: '🇮🇹', foot: 'Left' },
+
+  // General European Stars
   'nicolas jackson': { birthDate: 'Jun 20, 2001', height: '1.87 m (6\' 2")', weight: '78 kg (172 lbs)', nationality: 'Senegal', flag: '🇸🇳', foot: 'Right' },
   'erling haaland': { birthDate: 'Jul 21, 2000', height: '1.95 m (6\' 5")', weight: '88 kg (194 lbs)', nationality: 'Norway', flag: '🇳🇴', foot: 'Left' },
   'martin odegaard': { birthDate: 'Dec 17, 1998', height: '1.78 m (5\' 10")', weight: '68 kg (150 lbs)', nationality: 'Norway', flag: '🇳🇴', foot: 'Left' },
@@ -464,11 +507,12 @@ export function getPlayerMarketValue(
 }
 
 /**
- * Computes live match rating (scale 6.0 - 9.6) for a player.
- * Considers match events (goals, cards, assists) and key performer status.
+ * Computes live match rating (scale 5.0 - 9.2) for a player.
+ * Follows realistic football telemetry (FotMob / SofaScore standard).
+ * Considers match events (goals, cards, assists), real stats, and key performer status.
  */
 export function getPlayerMatchRating(
-  player: { name: string; positionGroup?: string; jersey?: string },
+  player: { name: string; positionGroup?: string; jersey?: string; starter?: boolean; realStats?: any },
   matchContext?: {
     bestPlayerName?: string;
     goalScorers?: string[];
@@ -481,49 +525,70 @@ export function getPlayerMatchRating(
   const norm = normalizePlayerName(player.name);
   const h = hashString(norm);
 
-  let rating = 6.8 + ((h % 15) / 10); // Base between 6.8 and 8.2
+  // Realistic match baseline (FotMob / SofaScore standard: 6.2 - 6.6 for average starters, 6.0 for subs)
+  const isStarter = player.starter !== false;
+  let rating = isStarter ? 6.3 + ((h % 5) / 10) : 6.0 + ((h % 4) / 10); // Base: 6.3 - 6.7 for starters, 6.0 - 6.3 for subs
+
+  const stats = player.realStats;
+  if (stats) {
+    if (stats.goals > 0) rating += stats.goals * 1.1;
+    if (stats.assists > 0) rating += stats.assists * 0.7;
+    if (stats.shotsOnTarget > 0) rating += Math.min(stats.shotsOnTarget, 4) * 0.2;
+    if (stats.saves > 0) rating += Math.min(stats.saves, 6) * 0.2;
+    if (stats.goalsConceded > 0 && (player.positionGroup === 'GK' || player.positionGroup === 'DF')) {
+      rating -= Math.min(stats.goalsConceded, 4) * 0.25;
+    }
+    if (stats.yellowCards > 0) rating -= 0.4;
+    if (stats.redCards > 0) rating -= 1.6;
+  }
 
   if (matchContext) {
     const { bestPlayerName, goalScorers, yellowCards, isHome, homeScore = 0, awayScore = 0 } = matchContext;
 
-    // Best player / Match MVP
+    // Goalscorer boost (if not already counted via realStats)
+    if (!stats?.goals && goalScorers && goalScorers.some(s => normalizePlayerName(s).includes(norm) || norm.includes(normalizePlayerName(s)))) {
+      rating += 1.1;
+    }
+
+    // Yellow card deduction (if not already counted via realStats)
+    if (!stats?.yellowCards && yellowCards && yellowCards.some(c => normalizePlayerName(c).includes(norm) || norm.includes(normalizePlayerName(c)))) {
+      rating -= 0.4;
+    }
+
+    // Best player / Match MVP (realistic 8.3 - 8.7!)
     if (bestPlayerName && normalizePlayerName(bestPlayerName).includes(norm)) {
-      rating = Math.max(rating, 8.8 + ((h % 8) / 10)); // 8.8 - 9.5
+      rating = Math.max(rating, 8.3 + ((h % 5) / 10));
     }
 
-    // Scored goal
-    if (goalScorers && goalScorers.some(s => normalizePlayerName(s).includes(norm) || norm.includes(normalizePlayerName(s)))) {
-      rating += 1.2;
-    }
-
-    // Yellow card
-    if (yellowCards && yellowCards.some(c => normalizePlayerName(c).includes(norm) || norm.includes(normalizePlayerName(c)))) {
-      rating -= 0.5;
+    // Clean sheet bonus for defenders / GK
+    const teamConceded = isHome ? awayScore : homeScore;
+    if (teamConceded === 0 && (player.positionGroup === 'GK' || player.positionGroup === 'DF')) {
+      rating += 0.3;
     }
 
     // Team winning boost
     const teamWon = isHome ? homeScore > awayScore : awayScore > homeScore;
-    if (teamWon) rating += 0.4;
+    if (teamWon) rating += 0.2;
     else if ((isHome && homeScore < awayScore) || (!isHome && awayScore < homeScore)) {
-      rating -= 0.3;
+      rating -= 0.2;
     }
   }
 
-  // Clamp rating between 5.8 and 9.7
-  rating = Math.min(9.7, Math.max(5.8, Math.round(rating * 10) / 10));
+  // Clamp rating between 4.8 (red card / terrible loss) and 9.4 (hat-trick / legendary display)
+  rating = Math.min(9.4, Math.max(4.8, Math.round(rating * 10) / 10));
 
   let colorClass = 'bg-emerald-600 text-white';
-  let label = 'Very Good';
-  if (rating >= 8.5) {
+  let label = 'Good';
+  if (rating >= 8.2) {
     colorClass = 'bg-emerald-500 text-white shadow-emerald-500/50';
     label = 'Masterclass';
-  } else if (rating >= 7.5) {
+  } else if (rating >= 7.3) {
     colorClass = 'bg-emerald-600 text-white';
-    label = 'Excellent';
-  } else if (rating >= 6.8) {
+    label = 'Very Good';
+  } else if (rating >= 6.7) {
     colorClass = 'bg-teal-600 text-white';
-    label = 'Good';
-  } else if (rating >= 6.2) {
+    label = 'Solid';
+  } else if (rating >= 6.0) {
     colorClass = 'bg-amber-600 text-white';
     label = 'Average';
   } else {

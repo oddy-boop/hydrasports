@@ -198,6 +198,28 @@ export default function MatchHubView({
       awayScore: match?.awayScore ?? hubData.score?.away ?? 0,
     });
     setSelectedPlayerDetails(details);
+
+    // If athlete ID is available, fetch exact real bio details from ESPN
+    if (p.id) {
+      fetch(`/api/player-profile?id=${encodeURIComponent(p.id)}&name=${encodeURIComponent(p.name)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.profile) {
+            setSelectedPlayerDetails(prev => {
+              if (!prev || prev.name !== p.name) return prev;
+              return {
+                ...prev,
+                age: data.profile.age ?? prev.age,
+                birthDate: data.profile.dateOfBirth ?? prev.birthDate,
+                height: data.profile.height ?? prev.height,
+                weight: data.profile.weight ?? prev.weight,
+                nationality: data.profile.citizenship ?? prev.nationality,
+              };
+            });
+          }
+        })
+        .catch(() => {});
+    }
   };
 
   useEffect(() => {
