@@ -31,6 +31,37 @@ export const TENNIS_STREAM_CHANNELS: { name: string; url: string; quality: strin
   },
 ];
 
+export const FOOTBALL_STREAM_CHANNELS: { name: string; url: string; quality: string }[] = [
+  {
+    name: 'CBS Sports Golazo HD (Direct 1-Click HLS)',
+    url: 'https://cbsn-us.cbsnstream.cbsnews.com/out/v1/55a8648e8f1345948956555146c827b5/master.m3u8',
+    quality: '1080p',
+  },
+  {
+    name: 'FIFA+ HD Live (Direct 1-Click HLS)',
+    url: 'https://amg01444-fifa-fifaplus4-samsunguk-h8vsm.amagi.tv/playlist/amg01444-fifa-fifaplus4-samsunguk/playlist.m3u8',
+    quality: '1080p',
+  },
+  {
+    name: 'beIN Sports Xtra (Direct 1-Click HLS)',
+    url: 'https://beinsportsxtra-rakuten.amagi.tv/playlist.m3u8',
+    quality: '720p',
+  },
+  {
+    name: 'Red Bull Sports Football (Direct 1-Click HLS)',
+    url: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8',
+    quality: '1080p',
+  },
+];
+
+export const BASKETBALL_STREAM_CHANNELS: { name: string; url: string; quality: string }[] = [
+  {
+    name: 'Hoops Action HD (Direct 1-Click HLS)',
+    url: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8',
+    quality: '1080p',
+  },
+];
+
 export class EspnScoreboardProvider implements StreamProvider {
   id = 'espn';
   name = 'ESPN Scoreboard';
@@ -235,6 +266,27 @@ export class EspnScoreboardProvider implements StreamProvider {
         name: ch.name,
         url: ch.url,
         provider: 'tennis-stream-server',
+        quality: ch.quality,
+      }));
+    }
+
+    const sport = (preFetchedMatch?.sport || '').toLowerCase();
+    const isFootball = sport === 'football' || matchId.includes('soccer') || matchId.includes('football');
+    if (isFootball) {
+      return FOOTBALL_STREAM_CHANNELS.map((ch, idx) => ({
+        name: ch.name,
+        url: ch.url,
+        provider: 'football-hls-server',
+        quality: ch.quality,
+      }));
+    }
+
+    const isBasketball = sport === 'basketball' || matchId.includes('nba') || matchId.includes('basketball');
+    if (isBasketball) {
+      return BASKETBALL_STREAM_CHANNELS.map((ch, idx) => ({
+        name: ch.name,
+        url: ch.url,
+        provider: 'basketball-hls-server',
         quality: ch.quality,
       }));
     }

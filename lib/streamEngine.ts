@@ -15,6 +15,7 @@ import { getCacheManager } from './cache/cacheManager';
 import { getExternalMatchStats, getScoreForMatch } from './providers/scoreProvider';
 import { teamsMatch } from './utils/matching';
 import { cleanTeamBadgeUrl, getTeamLeague } from './utils/teamLogos';
+import { extractDirectM3u8FromEmbed } from './utils/m3u8Extractor';
 
 const SECRET_KEY = process.env.STREAM_SECRET || 'default_stream_hmac_secret_key_123_abc';
 
@@ -365,8 +366,51 @@ export async function resolveAllStreams(
       throw new Error('No streams available from any provider');
     }
 
+    // Tier 2: Real-time M3U8 Stream Extractor for any embed channels
+    const embedServers = allServers.filter(s => 
+      !s.url.includes('.m3u8') && 
+      !s.url.includes('/hls/') && 
+      !s.url.includes('.mpd') &&
+      s.url.startsWith('http')
+    );
+
+    if (embedServers.length > 0) {
+      const extractionTasks = embedServers.map(async (server) => {
+        try {
+          const directHlsUrl = await extractDirectM3u8FromEmbed(server.url);
+          if (directHlsUrl && !allServers.some(s => s.url === directHlsUrl)) {
+            return {
+              name: `⚡ Direct 1-Click Stream (${server.quality || 'HD'})`,
+              url: directHlsUrl,
+              provider: 'hybrid-hls-extracted',
+              quality: server.quality || 'HD',
+            };
+          }
+        } catch {
+          // Graceful fallback to embed
+        }
+        return null;
+      });
+
+      const extractedResults = await Promise.allSettled(extractionTasks);
+      for (const res of extractedResults) {
+        if (res.status === 'fulfilled' && res.value) {
+          allServers.unshift(res.value);
+        }
+      }
+    }
+
+    // Rank 1: Direct HLS streams (containing .m3u8, .mpd, or /hls/) always prioritized first
+    // Rank 2: Web embed backups
+    const isDirect = (url: string) => url.includes('.m3u8') || url.includes('/hls/') || url.includes('.mpd');
     const qualityOrder: Record<string, number> = { 'FHD': 0, 'HD': 0, '1080p': 0, '720p': 1, 'SD': 2 };
-    allServers.sort((a, b) => (qualityOrder[a.quality || 'SD'] || 2) - (qualityOrder[b.quality || 'SD'] || 2));
+
+    allServers.sort((a, b) => {
+      const aDirect = isDirect(a.url) ? 0 : 1;
+      const bDirect = isDirect(b.url) ? 0 : 1;
+      if (aDirect !== bDirect) return aDirect - bDirect;
+      return (qualityOrder[a.quality || 'SD'] || 2) - (qualityOrder[b.quality || 'SD'] || 2);
+    });
 
     const seenUrls = new Set<string>();
     const uniqueServers: Channel[] = [];
@@ -375,9 +419,14 @@ export async function resolveAllStreams(
     for (const server of allServers) {
       if (!seenUrls.has(server.url)) {
         seenUrls.add(server.url);
+        const directHls = isDirect(server.url);
+        const serverLabel = directHls
+          ? `Server ${serverIndex++} (⚡ 1-Click HLS)`
+          : `Server ${serverIndex++} (Web Backup)`;
+
         uniqueServers.push({
           ...server,
-          name: `Server ${serverIndex++}`,
+          name: serverLabel,
           proxiedUrl: getStreamRedirectUrl(server.url),
         });
       }

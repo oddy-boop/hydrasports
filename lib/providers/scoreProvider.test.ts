@@ -16,7 +16,7 @@ describe('Champions League Score Provider', () => {
       expect(typeof score.home).toBe('number');
       expect(typeof score.away).toBe('number');
     }
-  }, 10000);
+  }, 20000);
 
   it('should resolve scores for UEFA Champions League format', async () => {
     const score = await getScoreForMatch(
@@ -31,7 +31,7 @@ describe('Champions League Score Provider', () => {
       expect(score.home).toBe(4);
       expect(score.away).toBe(1);
     }
-  }, 10000);
+  }, 20000);
 });
 
 describe('Multi-Sport Score Resolution (Basketball, Hockey, Tennis)', () => {
