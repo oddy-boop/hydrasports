@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Maximize, RefreshCw, AlertCircle, ShieldAlert, Cpu, Play, Pause, Volume2, Volume1, VolumeX, Sliders, ChevronDown, Check } from 'lucide-react';
+import Hls from 'hls.js';
 
 export default function StreamPlayer({ streamUrl, channels, matchTitle, matchStatus, videoOnly = false }) {
   const isUpcoming = matchStatus === 'upcoming';
@@ -11,7 +12,6 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
   const [loadTimeout, setLoadTimeout] = useState(null);
   
   // Custom video state hooks
-  const [hlsLoaded, setHlsLoaded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(true);
@@ -26,15 +26,27 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
   const hlsInstanceRef = useRef(null);
 
   const allChannels = channels && channels.length > 0 ? channels : [{ name: 'Stream 1', url: streamUrl, proxiedUrl: streamUrl }];
-  const currentUrl = allChannels[activeChannel]?.proxiedUrl || allChannels[activeChannel]?.url || streamUrl;
+  const activeCh = allChannels[activeChannel] || allChannels[0];
 
-  // Auto-detect direct stream sources like .m3u8, .mpd, .mp4
-  const isDirectHls = currentUrl && (
-    currentUrl.includes('.m3u8') || 
-    currentUrl.includes('.mpd') || 
-    currentUrl.includes('/hls/') || 
-    currentUrl.includes('.mp4')
+  const rawTargetUrl = activeCh?.url || streamUrl || '';
+  const proxiedTargetUrl = activeCh?.proxiedUrl || '';
+
+  // Auto-detect direct stream sources like .m3u8, .mpd, .mp4 checking both raw and proxied URLs
+  const isDirectHls = Boolean(
+    rawTargetUrl.includes('.m3u8') || 
+    rawTargetUrl.includes('.mpd') || 
+    rawTargetUrl.includes('/hls/') || 
+    rawTargetUrl.includes('.mp4') ||
+    proxiedTargetUrl.includes('.m3u8') ||
+    proxiedTargetUrl.includes('.mpd') ||
+    proxiedTargetUrl.includes('/hls/') ||
+    proxiedTargetUrl.includes('.mp4')
   );
+
+  // For direct HLS, use rawTargetUrl directly so Hls.js loads the master playlist and segments seamlessly
+  const currentUrl = isDirectHls
+    ? (rawTargetUrl || proxiedTargetUrl || streamUrl)
+    : (proxiedTargetUrl || rawTargetUrl || streamUrl);
 
   const handleLoad = () => {
     setIsLoading(false);
@@ -48,36 +60,9 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
     if (loadTimeout) clearTimeout(loadTimeout);
   };
 
-  // Dynamically load hls.js from CDN with fallback for cross-browser resilience
-  useEffect(() => {
-    if (!isDirectHls) return;
-    if (window.Hls) {
-      setHlsLoaded(true);
-      return;
-    }
-    const tryLoad = (src, fallbackSrc) => {
-      const script = document.createElement('script');
-      script.src = src;
-      script.async = true;
-      script.onload = () => setHlsLoaded(true);
-      script.onerror = () => {
-        if (fallbackSrc) {
-          tryLoad(fallbackSrc, null);
-        } else {
-          setStreamStatus('error');
-        }
-      };
-      document.body.appendChild(script);
-    };
-    tryLoad(
-      'https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js',
-      'https://unpkg.com/hls.js@1.5.15/dist/hls.min.js',
-    );
-  }, [isDirectHls]);
-
   // Video element binding effect
   useEffect(() => {
-    if (!isDirectHls || !hlsLoaded || !videoRef.current) return;
+    if (!isDirectHls || !videoRef.current) return;
 
     const video = videoRef.current;
     video.muted = true;
@@ -113,19 +98,20 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
         video.removeEventListener('loadedmetadata', onLoadedMetadata);
         video.removeEventListener('error', onNativeError);
       };
-    } else if (window.Hls) {
-      // Chrome/Firefox Hls.js setup
-      const hls = new window.Hls({
-        maxBufferSize: 20 * 1024 * 1024, // 20MB Max buffer
+    } else if (Hls && Hls.isSupported()) {
+      // Chrome/Firefox/Edge Hls.js setup
+      const hls = new Hls({
+        maxBufferSize: 25 * 1024 * 1024, // 25MB Max buffer
         maxBufferLength: 20, // 20s
         liveSyncDuration: 3, // Live delay
+        enableWorker: true,
       });
       hlsInstanceRef.current = hls;
 
       hls.loadSource(currentUrl);
       hls.attachMedia(video);
 
-      hls.on(window.Hls.Events.MANIFEST_PARSED, (event, data) => {
+      hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
         setIsLoading(false);
         setStreamStatus('active');
         if (data?.levels && data.levels.length > 0) {
@@ -142,14 +128,14 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
           .catch(() => setIsPlaying(false));
       });
 
-      hls.on(window.Hls.Events.ERROR, (event, data) => {
+      hls.on(Hls.Events.ERROR, (event, data) => {
         if (data.fatal) {
           switch (data.type) {
-            case window.Hls.ErrorTypes.NETWORK_ERROR:
+            case Hls.ErrorTypes.NETWORK_ERROR:
               console.log('Fatal network error, trying to recover HLS stream...');
               hls.startLoad();
               break;
-            case window.Hls.ErrorTypes.MEDIA_ERROR:
+            case Hls.ErrorTypes.MEDIA_ERROR:
               console.log('Fatal media error, attempting error recovery...');
               hls.recoverMediaError();
               break;
@@ -168,7 +154,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
         }
       };
     }
-  }, [currentUrl, isDirectHls, hlsLoaded]);
+  }, [currentUrl, isDirectHls]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -183,7 +169,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
     };
-  }, [isDirectHls, hlsLoaded]);
+  }, [isDirectHls]);
 
   useEffect(() => {
     if (!isDirectHls) return;

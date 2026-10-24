@@ -108,7 +108,147 @@ export default function MatchHubView({
   const currentTeamName = selectedTeamTab === 'home' ? hubData.homeName : hubData.awayName;
   const currentTeamBadge = selectedTeamTab === 'home' ? hubData.homeBadge : hubData.awayBadge;
 
-  // Group starters by line for pitch representation
+  // Real player face fetching
+  const [playerFaces, setPlayerFaces] = useState({});
+
+  useEffect(() => {
+    const candidateNames = [
+      ...currentStarters.map(p => p.name),
+      hubData.bestPlayer?.name,
+      ...(hubData.lineups?.home || []).map(p => p.name),
+      ...(hubData.lineups?.away || []).map(p => p.name),
+    ].filter(Boolean);
+
+    const uniqueNames = Array.from(new Set(candidateNames));
+    if (uniqueNames.length === 0) return;
+
+    fetch(`/api/player-face?names=${encodeURIComponent(uniqueNames.join(','))}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.faces) {
+          setPlayerFaces(prev => ({ ...prev, ...data.faces }));
+        }
+      })
+      .catch(() => {});
+  }, [currentStarters, hubData.bestPlayer?.name]);
+
+  // Helper to determine tactical depth (tier) and horizontal lateral position (x)
+  const getPlayerRoleScore = (p) => {
+    // 1. Explicit formationPlace from standard soccer lineup numbering (FIFA/ESPN)
+    // 1: GK
+    // 3: LB (-2), 6: CB-L (-1), 5: CB-R (1), 2: RB (2)
+    // 4: DM-L / LM (-1), 8: DM-R / RM (1)
+    // 11: AM-L / LW (-2), 10: AM / CAM (0), 7: AM-R / RW (2)
+    // 9: ST / CF (0)
+    const place = p.formationPlace;
+    if (typeof place === 'number' && place >= 1 && place <= 11) {
+      if (place === 1) return { tier: 0, x: 0 };
+      if (place === 3) return { tier: 1, x: -2 };
+      if (place === 6) return { tier: 1, x: -1 };
+      if (place === 5) return { tier: 1, x: 1 };
+      if (place === 2) return { tier: 1, x: 2 };
+      if (place === 4) return { tier: 2, x: -1 };
+      if (place === 8) return { tier: 2, x: 1 };
+      if (place === 11) return { tier: 3, x: -2 };
+      if (place === 10) return { tier: 3, x: 0 };
+      if (place === 7) return { tier: 3, x: 2 };
+      if (place === 9) return { tier: 4, x: 0 };
+    }
+
+    const pos = (p.position || '').toUpperCase().trim();
+    const grp = (p.positionGroup || '').toUpperCase().trim();
+    const text = `${pos} ${grp}`;
+
+    // GK
+    if (grp === 'GK' || pos === 'G' || pos === 'GK' || text.includes('GOAL')) {
+      return { tier: 0, x: 0 };
+    }
+
+    // Horizontal position X (-2: Left, -1: Center-Left, 0: Center, 1: Center-Right, 2: Right)
+    let x = 0;
+    if (
+      text.includes('LEFT') || pos.endsWith('-L') || pos.startsWith('L') ||
+      pos === 'LB' || pos === 'LWB' || pos === 'LM' || pos === 'LW' || pos === 'AML' || pos === 'LCB'
+    ) {
+      x = (pos === 'LB' || pos === 'LWB' || pos === 'LW' || text.includes('LEFT BACK') || text.includes('LEFT WING')) ? -2 : -1;
+    } else if (
+      text.includes('RIGHT') || pos.endsWith('-R') || pos.startsWith('R') ||
+      pos === 'RB' || pos === 'RWB' || pos === 'RM' || pos === 'RW' || pos === 'AMR' || pos === 'RCB'
+    ) {
+      x = (pos === 'RB' || pos === 'RWB' || pos === 'RW' || text.includes('RIGHT BACK') || text.includes('RIGHT WING')) ? 2 : 1;
+    }
+
+    // Vertical Tier:
+    // 1: Defenders
+    // 2: Defensive / Holding / Deep Midfielders
+    // 3: Attacking Midfielders / Wingers
+    // 4: Strikers / Forwards
+    let tier = 1;
+    if (grp === 'DF' || text.includes('DEF') || text.includes('BACK') || pos === 'CB' || pos === 'LB' || pos === 'RB' || pos.startsWith('CD')) {
+      tier = 1;
+    } else if (grp === 'FW' || pos === 'F' || pos === 'ST' || pos === 'CF' || text.includes('FORWARD') || text.includes('STRIKER')) {
+      tier = 4;
+    } else if (
+      text.includes('ATTACKING') || pos.startsWith('AM') || pos === 'LW' || pos === 'RW' ||
+      pos === 'CAM' || pos === 'AML' || pos === 'AMR'
+    ) {
+      tier = 3;
+    } else {
+      tier = 2; // Central/defensive midfielders (DM, CM, LM, RM)
+    }
+
+    return { tier, x };
+  };
+
+  // Dynamic tactical formation rows (e.g. 4-2-3-1, 4-3-3, 3-5-2)
+  const getFormationRows = (formationStr, starters) => {
+    if (!starters || starters.length === 0) return { gk: [], outfieldRows: [] };
+
+    // Identify Goalkeeper
+    const gkMatches = starters.filter(p => getPlayerRoleScore(p).tier === 0);
+    const actualGk = gkMatches.length > 0 ? gkMatches.slice(0, 1) : starters.slice(0, 1);
+    const outfield = starters.filter(p => p !== actualGk[0]).slice(0, 10);
+
+    const nums = (formationStr || '').match(/\d+/g)?.map(Number) || [];
+    const sum = nums.reduce((a, b) => a + b, 0);
+
+    // Sort outfield strictly by vertical tier (Defenders -> Midfielders -> Attackers)
+    // and horizontally left-to-right within each tier
+    const sortedOutfield = [...outfield].sort((a, b) => {
+      const sa = getPlayerRoleScore(a);
+      const sb = getPlayerRoleScore(b);
+      if (sa.tier !== sb.tier) return sa.tier - sb.tier;
+      return sa.x - sb.x;
+    });
+
+    if (sum === 10 && nums.length >= 2) {
+      let offset = 0;
+      const rows = [];
+      for (const count of nums) {
+        const rowPlayers = sortedOutfield.slice(offset, offset + count);
+        // Ensure within each row, players are arranged strictly Left to Right
+        rowPlayers.sort((a, b) => getPlayerRoleScore(a).x - getPlayerRoleScore(b).x);
+        rows.push(rowPlayers);
+        offset += count;
+      }
+      return {
+        gk: actualGk,
+        outfieldRows: [...rows].reverse(), // Top row = Attackers (e.g. Striker), bottom row = Defenders
+      };
+    }
+
+    // Default 4-3-3 fallback
+    const dfRow = sortedOutfield.slice(0, 4).sort((a, b) => getPlayerRoleScore(a).x - getPlayerRoleScore(b).x);
+    const mfRow = sortedOutfield.slice(4, 7).sort((a, b) => getPlayerRoleScore(a).x - getPlayerRoleScore(b).x);
+    const fwRow = sortedOutfield.slice(7, 10).sort((a, b) => getPlayerRoleScore(a).x - getPlayerRoleScore(b).x);
+
+    return {
+      gk: actualGk,
+      outfieldRows: [fwRow, mfRow, dfRow],
+    };
+  };
+
+  const { gk, outfieldRows } = getFormationRows(currentFormation, currentStarters);
   const gkList = currentStarters.filter(p => p.positionGroup === 'GK');
   const dfList = currentStarters.filter(p => p.positionGroup === 'DF');
   const mfList = currentStarters.filter(p => p.positionGroup === 'MF');
@@ -191,7 +331,7 @@ export default function MatchHubView({
           </Link>
         </nav>
 
-        {/* Right: User Profile & Actions */}
+        {/* Right: Actions */}
         <div className="flex items-center gap-3">
           <button
             onClick={toggleFullscreen}
@@ -200,19 +340,6 @@ export default function MatchHubView({
           >
             <Maximize2 className="h-4 w-4" />
           </button>
-
-          <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10">
-            <div className="h-6 w-6 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-[10px] font-black text-white">
-              {user?.avatar ? (
-                <img src={user.avatar} alt="" className="h-full w-full object-cover rounded-full" />
-              ) : (
-                <span>HS</span>
-              )}
-            </div>
-            <span className="text-xs font-bold text-slate-200 hidden sm:inline">
-              {user?.name || 'Hydra User'}
-            </span>
-          </div>
         </div>
       </header>
 
@@ -287,7 +414,12 @@ export default function MatchHubView({
                   }`}
                 >
                   <Users className="h-3.5 w-3.5" />
-                  <span>Formations & Lineups</span>
+                  <span>
+                    {hubData.sport === 'basketball' ? 'Starting 5 & Roster' :
+                     hubData.sport === 'hockey' ? 'Starting 6 & Lines' :
+                     hubData.sport === 'tennis' ? 'Head-to-Head Draw' :
+                     'Formations & Lineups'}
+                  </span>
                 </button>
 
                 <button
@@ -299,7 +431,12 @@ export default function MatchHubView({
                   }`}
                 >
                   <ArrowRightLeft className="h-3.5 w-3.5" />
-                  <span>Substitutions ({hubData.substitutions.length})</span>
+                  <span>
+                    {hubData.sport === 'basketball' ? `Rotations (${hubData.substitutions.length})` :
+                     hubData.sport === 'hockey' ? `Line Changes (${hubData.substitutions.length})` :
+                     hubData.sport === 'tennis' ? 'Match Progress' :
+                     `Substitutions (${hubData.substitutions.length})`}
+                  </span>
                 </button>
 
                 <button
@@ -311,7 +448,12 @@ export default function MatchHubView({
                   }`}
                 >
                   <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
-                  <span>Discipline ({hubData.cards.length})</span>
+                  <span>
+                    {hubData.sport === 'basketball' ? `Fouls (${hubData.cards.length})` :
+                     hubData.sport === 'hockey' ? `Penalties (${hubData.cards.length})` :
+                     hubData.sport === 'tennis' ? 'Serve & Faults' :
+                     `Discipline (${hubData.cards.length})`}
+                  </span>
                 </button>
 
                 <button
@@ -323,7 +465,12 @@ export default function MatchHubView({
                   }`}
                 >
                   <BarChart2 className="h-3.5 w-3.5" />
-                  <span>Detailed Statistics</span>
+                  <span>
+                    {hubData.sport === 'basketball' ? 'Game Statistics' :
+                     hubData.sport === 'hockey' ? 'Game Statistics' :
+                     hubData.sport === 'tennis' ? 'Match Statistics' :
+                     'Detailed Statistics'}
+                  </span>
                 </button>
 
                 <button
@@ -335,7 +482,12 @@ export default function MatchHubView({
                   }`}
                 >
                   <Activity className="h-3.5 w-3.5" />
-                  <span>Attack Zones & Keys</span>
+                  <span>
+                    {hubData.sport === 'basketball' ? 'Court Shot Zones' :
+                     hubData.sport === 'hockey' ? 'Rink Attack Zones' :
+                     hubData.sport === 'tennis' ? 'Court Placement' :
+                     'Attack Zones & Keys'}
+                  </span>
                 </button>
               </div>
 
@@ -349,7 +501,7 @@ export default function MatchHubView({
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <img src={hubData.homeBadge} alt="" className="h-3.5 w-3.5 rounded-full object-cover" />
+                  <img src={hubData.homeBadge} alt="" className="h-4 w-4 object-contain" />
                   <span className="truncate max-w-[100px]">{hubData.homeName}</span>
                 </button>
 
@@ -361,7 +513,7 @@ export default function MatchHubView({
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <img src={hubData.awayBadge} alt="" className="h-3.5 w-3.5 rounded-full object-cover" />
+                  <img src={hubData.awayBadge} alt="" className="h-4 w-4 object-contain" />
                   <span className="truncate max-w-[100px]">{hubData.awayName}</span>
                 </button>
               </div>
@@ -370,124 +522,398 @@ export default function MatchHubView({
             {/* TAB CONTENT 1: FORMATIONS & LINEUPS */}
             {tacticalTab === 'lineups' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-                {/* Visual Tactical Pitch (Left 6 Cols) */}
-                <div className="lg:col-span-6 rounded-2xl bg-gradient-to-b from-[#092e1e] to-[#041910] border border-emerald-500/30 p-4 relative shadow-inner overflow-hidden min-h-[380px] flex flex-col justify-between">
-                  {/* Pitch markings */}
-                  <div className="absolute inset-0 opacity-20 pointer-events-none">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-20 border-b border-x border-white rounded-b-2xl" />
-                    <div className="absolute top-1/2 left-0 right-0 h-px bg-white" />
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 border border-white rounded-full" />
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-40 h-20 border-t border-x border-white rounded-t-2xl" />
+                {/* Visual Tactical Pitch / Court (Left 6 Cols) */}
+                {hubData.sport === 'basketball' ? (
+                  <div className="lg:col-span-6 rounded-2xl bg-gradient-to-b from-[#251508] via-[#1c0f05] to-[#120a03] border border-amber-600/40 p-4 relative shadow-inner overflow-hidden min-h-[380px] flex flex-col justify-between">
+                    {/* Hardwood floor lines & markings */}
+                    <div className="absolute inset-0 opacity-25 pointer-events-none">
+                      <div className="absolute top-1/2 left-0 right-0 h-px bg-amber-400" />
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 border border-amber-400 rounded-full" />
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 border border-amber-400 rounded-full" />
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-32 border-b-2 border-x-2 border-amber-400/80 rounded-b-full" />
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-24 border-b border-x border-amber-400/90 bg-amber-900/10" />
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-48 h-32 border-t-2 border-x-2 border-amber-400/80 rounded-t-full" />
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-28 h-24 border-t border-x border-amber-400/90 bg-amber-900/10" />
+                    </div>
+
+                    <div className="relative z-10 flex items-center justify-between bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
+                      <div className="flex items-center gap-2">
+                        <img src={currentTeamBadge} alt="" className="h-5 w-5 rounded-full object-cover" />
+                        <span className="text-xs font-black text-white">{currentTeamName}</span>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-black uppercase tracking-wider">
+                        Starting 5 Lineup
+                      </span>
+                    </div>
+
+                    {/* Basketball 5 Players Court Placement */}
+                    <div className="relative z-10 flex-1 flex flex-col justify-around py-4">
+                      {/* PG */}
+                      <div className="flex items-center justify-center">
+                        {currentStarters.filter(p => p.positionGroup === 'PG').concat(currentStarters.slice(0, 1)).slice(0, 1).map((p, idx) => (
+                          <div key={idx} className="flex flex-col items-center group">
+                            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-amber-500 to-amber-700 border-2 border-amber-200 flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
+                              {p.jersey}
+                            </div>
+                            <span className="text-[10px] font-bold text-amber-200 mt-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-amber-500/30">
+                              PG · {p.name.split(' ').slice(-1)[0]}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Wings SF & SG */}
+                      <div className="flex items-center justify-around px-2">
+                        {currentStarters.filter(p => p.positionGroup === 'SF').concat(currentStarters.slice(2, 3)).slice(0, 1).map((p, idx) => (
+                          <div key={idx} className="flex flex-col items-center group">
+                            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-orange-500 to-amber-600 border-2 border-amber-200 flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
+                              {p.jersey}
+                            </div>
+                            <span className="text-[10px] font-bold text-amber-200 mt-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-amber-500/30">
+                              SF · {p.name.split(' ').slice(-1)[0]}
+                            </span>
+                          </div>
+                        ))}
+
+                        {currentStarters.filter(p => p.positionGroup === 'SG').concat(currentStarters.slice(1, 2)).slice(0, 1).map((p, idx) => (
+                          <div key={idx} className="flex flex-col items-center group">
+                            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-orange-500 to-amber-600 border-2 border-amber-200 flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
+                              {p.jersey}
+                            </div>
+                            <span className="text-[10px] font-bold text-amber-200 mt-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-amber-500/30">
+                              SG · {p.name.split(' ').slice(-1)[0]}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Frontcourt PF & C */}
+                      <div className="flex items-center justify-center gap-12">
+                        {currentStarters.filter(p => p.positionGroup === 'PF').concat(currentStarters.slice(3, 4)).slice(0, 1).map((p, idx) => (
+                          <div key={idx} className="flex flex-col items-center group">
+                            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-yellow-600 to-amber-700 border-2 border-amber-200 flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
+                              {p.jersey}
+                            </div>
+                            <span className="text-[10px] font-bold text-amber-200 mt-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-amber-500/30">
+                              PF · {p.name.split(' ').slice(-1)[0]}
+                            </span>
+                          </div>
+                        ))}
+
+                        {currentStarters.filter(p => p.positionGroup === 'C').concat(currentStarters.slice(4, 5)).slice(0, 1).map((p, idx) => (
+                          <div key={idx} className="flex flex-col items-center group">
+                            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-amber-600 to-red-700 border-2 border-amber-200 flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
+                              {p.jersey}
+                            </div>
+                            <span className="text-[10px] font-bold text-amber-200 mt-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-amber-500/30">
+                              C · {p.name.split(' ').slice(-1)[0]}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-
-                  {/* Pitch Top: Formation Header */}
-                  <div className="relative z-10 flex items-center justify-between bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
-                    <div className="flex items-center gap-2">
-                      <img src={currentTeamBadge} alt="" className="h-5 w-5 rounded-full object-cover" />
-                      <span className="text-xs font-black text-white">{currentTeamName}</span>
+                ) : hubData.sport === 'hockey' ? (
+                  <div className="lg:col-span-6 rounded-2xl bg-gradient-to-b from-[#0c2438] via-[#091a28] to-[#05111b] border border-cyan-400/40 p-4 relative shadow-inner overflow-hidden min-h-[380px] flex flex-col justify-between">
+                    {/* Ice rink markings */}
+                    <div className="absolute inset-0 opacity-30 pointer-events-none">
+                      <div className="absolute top-1/2 left-0 right-0 h-1 bg-rose-500" />
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 border-2 border-rose-500 rounded-full" />
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full" />
+                      <div className="absolute top-1/3 left-0 right-0 h-1 bg-blue-500" />
+                      <div className="absolute bottom-1/3 left-0 right-0 h-1 bg-blue-500" />
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-12 border-b-2 border-x-2 border-rose-500 bg-cyan-400/20 rounded-b-full" />
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-12 border-t-2 border-x-2 border-rose-500 bg-cyan-400/20 rounded-t-full" />
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-black uppercase">
-                      Formation {currentFormation}
-                    </span>
+
+                    <div className="relative z-10 flex items-center justify-between bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
+                      <div className="flex items-center gap-2">
+                        <img src={currentTeamBadge} alt="" className="h-5 w-5 rounded-full object-cover" />
+                        <span className="text-xs font-black text-white">{currentTeamName}</span>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[11px] font-black uppercase tracking-wider">
+                        Starting 6 On-Ice Unit
+                      </span>
+                    </div>
+
+                    <div className="relative z-10 flex-1 flex flex-col justify-around py-4">
+                      {/* Forwards */}
+                      <div className="flex items-center justify-around">
+                        <div className="flex flex-col items-center group">
+                          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 border-2 border-white flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
+                            {(currentStarters.find(p => p.positionGroup === 'LW') || currentStarters[1])?.jersey || '18'}
+                          </div>
+                          <span className="text-[10px] font-bold text-cyan-200 mt-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-cyan-500/30">
+                            LW · {((currentStarters.find(p => p.positionGroup === 'LW') || currentStarters[1])?.name || 'Left Wing').split(' ').slice(-1)[0]}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col items-center group">
+                          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-cyan-400 to-indigo-600 border-2 border-white flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
+                            {(currentStarters.find(p => p.positionGroup === 'C') || currentStarters[0])?.jersey || '97'}
+                          </div>
+                          <span className="text-[10px] font-bold text-cyan-200 mt-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-cyan-500/30">
+                            C · {((currentStarters.find(p => p.positionGroup === 'C') || currentStarters[0])?.name || 'Center').split(' ').slice(-1)[0]}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col items-center group">
+                          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 border-2 border-white flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
+                            {(currentStarters.find(p => p.positionGroup === 'RW') || currentStarters[2])?.jersey || '88'}
+                          </div>
+                          <span className="text-[10px] font-bold text-cyan-200 mt-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-cyan-500/30">
+                            RW · {((currentStarters.find(p => p.positionGroup === 'RW') || currentStarters[2])?.name || 'Right Wing').split(' ').slice(-1)[0]}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Defense */}
+                      <div className="flex items-center justify-around px-8">
+                        <div className="flex flex-col items-center group">
+                          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-700 border-2 border-white flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
+                            {(currentStarters.find(p => p.positionGroup === 'LD') || currentStarters[3])?.jersey || '4'}
+                          </div>
+                          <span className="text-[10px] font-bold text-blue-200 mt-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-blue-500/30">
+                            LD · {((currentStarters.find(p => p.positionGroup === 'LD') || currentStarters[3])?.name || 'Left Defense').split(' ').slice(-1)[0]}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col items-center group">
+                          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-700 border-2 border-white flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
+                            {(currentStarters.find(p => p.positionGroup === 'RD') || currentStarters[4])?.jersey || '8'}
+                          </div>
+                          <span className="text-[10px] font-bold text-blue-200 mt-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-blue-500/30">
+                            RD · {((currentStarters.find(p => p.positionGroup === 'RD') || currentStarters[4])?.name || 'Right Defense').split(' ').slice(-1)[0]}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Goalie */}
+                      <div className="flex items-center justify-center">
+                        <div className="flex flex-col items-center group">
+                          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-teal-400 to-emerald-600 border-2 border-white flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
+                            {(currentStarters.find(p => p.positionGroup === 'G') || currentStarters[5])?.jersey || '31'}
+                          </div>
+                          <span className="text-[10px] font-bold text-emerald-200 mt-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-emerald-500/30">
+                            G · {((currentStarters.find(p => p.positionGroup === 'G') || currentStarters[5])?.name || 'Goaltender').split(' ').slice(-1)[0]}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-
-                  {/* Pitch Rows: Attackers (FW), Midfielders (MF), Defenders (DF), Goalkeeper (GK) */}
-                  <div className="relative z-10 flex-1 flex flex-col justify-around py-4 gap-2">
-                    {/* Forwards Line */}
-                    <div className="flex items-center justify-around">
-                      {(fwList.length > 0 ? fwList : currentStarters.slice(8, 11)).map((p, idx) => (
-                        <div key={idx} className="flex flex-col items-center group">
-                          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-amber-500 to-rose-600 border-2 border-white flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
-                            {p.jersey}
-                          </div>
-                          <span className="text-[10px] font-bold text-white mt-1 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm truncate max-w-[80px]">
-                            {p.name.split(' ').slice(-1)[0]}
-                          </span>
-                        </div>
-                      ))}
+                ) : hubData.sport === 'tennis' ? (
+                  <div className="lg:col-span-6 rounded-2xl bg-gradient-to-b from-[#0a291b] via-[#071d13] to-[#04120b] border border-emerald-500/40 p-4 relative shadow-inner overflow-hidden min-h-[380px] flex flex-col justify-between">
+                    <div className="absolute inset-0 opacity-25 pointer-events-none">
+                      <div className="absolute inset-4 border-2 border-white" />
+                      <div className="absolute top-4 bottom-4 left-10 border-l border-white" />
+                      <div className="absolute top-4 bottom-4 right-10 border-r border-white" />
+                      <div className="absolute top-1/2 left-2 right-2 h-1 bg-white/90 shadow" />
+                      <div className="absolute top-1/3 left-10 right-10 h-px bg-white" />
+                      <div className="absolute bottom-1/3 left-10 right-10 h-px bg-white" />
+                      <div className="absolute top-1/3 bottom-1/3 left-1/2 -translate-x-1/2 w-px bg-white" />
                     </div>
 
-                    {/* Midfielders Line */}
-                    <div className="flex items-center justify-around">
-                      {(mfList.length > 0 ? mfList : currentStarters.slice(4, 8)).map((p, idx) => (
-                        <div key={idx} className="flex flex-col items-center group">
-                          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-600 border-2 border-white flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
-                            {p.jersey}
-                          </div>
-                          <span className="text-[10px] font-bold text-white mt-1 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm truncate max-w-[80px]">
-                            {p.name.split(' ').slice(-1)[0]}
-                          </span>
-                        </div>
-                      ))}
+                    <div className="relative z-10 flex items-center justify-between bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
+                      <div className="flex items-center gap-2">
+                        <img src={hubData.homeBadge} alt="" className="h-5 w-5 rounded-full object-cover" />
+                        <span className="text-xs font-black text-white">Championship Singles</span>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-black uppercase tracking-wider">
+                        Center Court
+                      </span>
                     </div>
 
-                    {/* Defenders Line */}
-                    <div className="flex items-center justify-around">
-                      {(dfList.length > 0 ? dfList : currentStarters.slice(1, 4)).map((p, idx) => (
-                        <div key={idx} className="flex flex-col items-center group">
-                          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-600 border-2 border-white flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
-                            {p.jersey}
+                    <div className="relative z-10 flex-1 flex flex-col justify-between py-6">
+                      <div className="flex items-center justify-center">
+                        <div className="flex flex-col items-center group">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 border-2 border-white flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
+                            2
                           </div>
-                          <span className="text-[10px] font-bold text-white mt-1 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm truncate max-w-[80px]">
-                            {p.name.split(' ').slice(-1)[0]}
+                          <span className="text-xs font-black text-blue-200 mt-1 px-2 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-blue-500/30">
+                            {hubData.awayName}
                           </span>
+                          <span className="text-[10px] text-slate-300 font-semibold">Receiver</span>
                         </div>
-                      ))}
-                    </div>
+                      </div>
 
-                    {/* Goalkeeper Line */}
-                    <div className="flex items-center justify-center">
-                      {(gkList.length > 0 ? gkList : currentStarters.slice(0, 1)).map((p, idx) => (
-                        <div key={idx} className="flex flex-col items-center group">
-                          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-600 border-2 border-white flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
-                            {p.jersey}
+                      <div className="text-center">
+                        <span className="px-3 py-0.5 rounded-full bg-white/10 text-[10px] font-mono font-bold text-slate-300 uppercase tracking-widest border border-white/20">
+                          NET
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-center">
+                        <div className="flex flex-col items-center group">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 border-2 border-white flex items-center justify-center text-xs font-black text-white shadow-lg group-hover:scale-110 transition-transform">
+                            1
                           </div>
-                          <span className="text-[10px] font-bold text-white mt-1 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm truncate max-w-[80px]">
-                            {p.name.split(' ').slice(-1)[0]}
+                          <span className="text-xs font-black text-emerald-200 mt-1 px-2 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-emerald-500/30">
+                            {hubData.homeName}
                           </span>
+                          <span className="text-[10px] text-slate-300 font-semibold">Server</span>
                         </div>
-                      ))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="lg:col-span-6 rounded-2xl bg-gradient-to-b from-[#092e1e] to-[#041910] border border-emerald-500/30 p-4 relative shadow-inner overflow-hidden min-h-[380px] flex flex-col justify-between">
+                    {/* Pitch markings */}
+                    <div className="absolute inset-0 opacity-20 pointer-events-none">
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-20 border-b border-x border-white rounded-b-2xl" />
+                      <div className="absolute top-1/2 left-0 right-0 h-px bg-white" />
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 border border-white rounded-full" />
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-40 h-20 border-t border-x border-white rounded-t-2xl" />
+                    </div>
 
-                {/* Starting XI List (Right 6 Cols) */}
+                    {/* Pitch Top: Formation Header */}
+                    <div className="relative z-10 flex items-center justify-between bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
+                      <div className="flex items-center gap-2">
+                        <img src={currentTeamBadge} alt="" className="h-5 w-5 rounded-full object-cover" />
+                        <span className="text-xs font-black text-white">{currentTeamName}</span>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-black uppercase">
+                        Formation {currentFormation}
+                      </span>
+                    </div>
+
+                    {/* Dynamic Pitch Rows accurately arranged by formation (e.g. 4-2-3-1, 4-3-3, 3-5-2) */}
+                    <div className="relative z-10 flex-1 flex flex-col justify-around py-3 gap-2">
+                      {outfieldRows.map((rowPlayers, rIdx) => (
+                        <div key={rIdx} className="flex items-center justify-around w-full px-2">
+                          {rowPlayers.map((p, pIdx) => {
+                            const cleanName = p.name?.toLowerCase().trim();
+                            const faceUrl = playerFaces[cleanName] || p.avatar;
+                            return (
+                              <div key={p.id || pIdx} title={`${p.name} #${p.jersey} (${p.position})`} className="flex flex-col items-center group relative cursor-pointer">
+                                <div className="relative h-10 w-10 sm:h-11 sm:w-11 rounded-full border-2 border-white/85 bg-gradient-to-tr from-[#1a103c] via-[#2d1b69] to-[#4c1d95] flex items-center justify-center shadow-lg group-hover:scale-115 group-hover:border-purple-400 group-hover:shadow-[0_0_15px_rgba(168,85,247,0.5)] transition-all duration-300">
+                                  {faceUrl ? (
+                                    <img
+                                      src={faceUrl}
+                                      alt={p.name}
+                                      className="h-full w-full rounded-full object-cover object-top"
+                                      loading="lazy"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                      }}
+                                    />
+                                  ) : null}
+                                  <span className="text-[11px] font-black text-white absolute inset-0 flex items-center justify-center -z-0">
+                                    {p.jersey}
+                                  </span>
+
+                                  {/* Small Jersey Number Badge */}
+                                  <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-purple-600 border border-white text-[8.5px] font-black text-white flex items-center justify-center shadow">
+                                    {p.jersey}
+                                  </span>
+                                </div>
+
+                                <span className="text-[9.5px] font-bold text-white mt-1 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md truncate max-w-[95px] border border-white/10 shadow text-center flex items-center justify-center gap-1">
+                                  <span>{p.name.split(' ').slice(-1)[0]}</span>
+                                  {p.position && (
+                                    <span className="text-[7.5px] text-purple-300 font-black uppercase opacity-90">{p.position}</span>
+                                  )}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+
+                      {/* Goalkeeper */}
+                      <div className="flex items-center justify-center w-full">
+                        {gk.map((p, idx) => {
+                          const cleanName = p.name?.toLowerCase().trim();
+                          const faceUrl = playerFaces[cleanName] || p.avatar;
+                          return (
+                            <div key={p.id || idx} title={`${p.name} #${p.jersey} (Goalkeeper)`} className="flex flex-col items-center group relative cursor-pointer">
+                              <div className="relative h-10 w-10 sm:h-11 sm:w-11 rounded-full border-2 border-emerald-300 bg-gradient-to-tr from-[#064e3b] to-[#047857] flex items-center justify-center shadow-lg group-hover:scale-115 group-hover:border-emerald-200 transition-all duration-300">
+                                {faceUrl ? (
+                                  <img
+                                    src={faceUrl}
+                                    alt={p.name}
+                                    className="h-full w-full rounded-full object-cover object-top"
+                                    loading="lazy"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                  />
+                                ) : null}
+                                <span className="text-[11px] font-black text-white absolute inset-0 flex items-center justify-center -z-0">
+                                  {p.jersey}
+                                </span>
+
+                                <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-emerald-600 border border-white text-[8.5px] font-black text-white flex items-center justify-center shadow">
+                                  {p.jersey}
+                                </span>
+                              </div>
+
+                              <span className="text-[9.5px] font-bold text-emerald-200 mt-1 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md truncate max-w-[95px] border border-emerald-500/30 shadow text-center flex items-center justify-center gap-1">
+                                <span>{p.name.split(' ').slice(-1)[0]}</span>
+                                <span className="text-[7.5px] text-emerald-400 font-black uppercase opacity-90">GK</span>
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Starting Roster (Right 6 Cols) */}
                 <div className="lg:col-span-6 flex flex-col gap-2">
                   <div className="flex items-center justify-between pb-2 border-b border-white/10">
                     <h3 className="text-xs font-black uppercase tracking-wider text-slate-300">
-                      Starting XI Roster ({currentStarters.length} Players)
+                      {hubData.sport === 'basketball' ? `Starting 5 Roster (${currentStarters.length} Players)` :
+                       hubData.sport === 'hockey' ? `Starting 6 Unit (${currentStarters.length} Players)` :
+                       hubData.sport === 'tennis' ? `Competitor Profiles (${currentStarters.length} Players)` :
+                       `Starting XI Roster (${currentStarters.length} Players)`}
                     </h3>
                     <span className="text-[11px] text-slate-400 font-semibold">{currentTeamName}</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto max-h-[340px] pr-1">
-                    {currentStarters.map((player, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/5 hover:border-purple-500/30 transition-all"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="h-6 w-6 rounded-md bg-white/10 flex items-center justify-center text-xs font-extrabold text-purple-300 shrink-0">
-                            {player.jersey}
-                          </span>
-                          <span className="text-xs font-bold text-white truncate">
-                            {player.name}
+                    {currentStarters.map((player, idx) => {
+                      const cleanName = player.name?.toLowerCase().trim();
+                      const faceUrl = playerFaces[cleanName] || player.avatar;
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/5 hover:border-purple-500/30 transition-all"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="relative h-7 w-7 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center shrink-0">
+                              {faceUrl ? (
+                                <img
+                                  src={faceUrl}
+                                  alt={player.name}
+                                  className="h-full w-full object-cover object-top"
+                                  loading="lazy"
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              ) : null}
+                              <span className="text-[10px] font-black text-purple-300 absolute inset-0 flex items-center justify-center -z-0">
+                                {player.jersey}
+                              </span>
+                            </div>
+                            <span className="text-xs font-bold text-white truncate">
+                              {player.name}
+                            </span>
+                          </div>
+
+                          <span className={`text-[10px] font-black px-1.5 py-0.5 rounded uppercase shrink-0 ${
+                            player.positionGroup === 'GK' || player.positionGroup === 'G'
+                              ? 'bg-emerald-500/20 text-emerald-300'
+                              : player.positionGroup === 'DF' || player.positionGroup === 'LD' || player.positionGroup === 'RD' || player.positionGroup === 'PF'
+                              ? 'bg-blue-500/20 text-blue-300'
+                              : player.positionGroup === 'MF' || player.positionGroup === 'PG' || player.positionGroup === 'SG' || player.positionGroup === 'C'
+                              ? 'bg-purple-500/20 text-purple-300'
+                              : 'bg-rose-500/20 text-rose-300'
+                          }`}>
+                            {player.position}
                           </span>
                         </div>
-
-                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded uppercase shrink-0 ${
-                          player.positionGroup === 'GK'
-                            ? 'bg-emerald-500/20 text-emerald-300'
-                            : player.positionGroup === 'DF'
-                            ? 'bg-blue-500/20 text-blue-300'
-                            : player.positionGroup === 'MF'
-                            ? 'bg-purple-500/20 text-purple-300'
-                            : 'bg-rose-500/20 text-rose-300'
-                        }`}>
-                          {player.position}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -500,7 +926,10 @@ export default function MatchHubView({
                 <div className="lg:col-span-6 flex flex-col gap-2.5">
                   <div className="flex items-center justify-between pb-2 border-b border-white/10">
                     <h3 className="text-xs font-black uppercase tracking-wider text-slate-300">
-                      In-Game Substitutions Timeline
+                      {hubData.sport === 'basketball' ? 'In-Game Rotations Timeline' :
+                       hubData.sport === 'hockey' ? 'On-Ice Line Changes' :
+                       hubData.sport === 'tennis' ? 'Match Progress' :
+                       'In-Game Substitutions Timeline'}
                     </h3>
                     <span className="text-[11px] text-purple-400 font-bold">{hubData.substitutions.length} recorded</span>
                   </div>
@@ -537,8 +966,10 @@ export default function MatchHubView({
                   ) : (
                     <div className="p-8 text-center bg-white/5 rounded-2xl border border-white/5">
                       <ArrowRightLeft className="h-6 w-6 text-slate-500 mx-auto mb-2" />
-                      <p className="text-xs font-bold text-slate-300">No substitutions made yet</p>
-                      <p className="text-[11px] text-slate-500">Live roster changes will be tracked in real-time as tactical swaps occur.</p>
+                      <p className="text-xs font-bold text-slate-300">
+                        {hubData.sport === 'basketball' ? 'No rotation changes made yet' : 'No substitutions made yet'}
+                      </p>
+                      <p className="text-[11px] text-slate-500">Live roster updates will be tracked in real-time as tactical swaps occur.</p>
                     </div>
                   )}
                 </div>
@@ -547,7 +978,7 @@ export default function MatchHubView({
                 <div className="lg:col-span-6 flex flex-col gap-2.5">
                   <div className="flex items-center justify-between pb-2 border-b border-white/10">
                     <h3 className="text-xs font-black uppercase tracking-wider text-slate-300">
-                      {currentTeamName} Substitute Bench ({currentSubstitutes.length})
+                      {currentTeamName} {hubData.sport === 'basketball' ? 'Bench Reserves' : hubData.sport === 'hockey' ? 'On-Deck Lines' : 'Substitute Bench'} ({currentSubstitutes.length})
                     </h3>
                     <span className="text-[11px] text-slate-400">Available Reserves</span>
                   </div>
@@ -591,28 +1022,32 @@ export default function MatchHubView({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 block mb-1">
-                      {hubData.homeName} Yellows
+                      {hubData.homeName} {hubData.sport === 'basketball' ? 'Personal Fouls' : hubData.sport === 'hockey' ? 'Minor Pens' : hubData.sport === 'tennis' ? 'Double Faults' : 'Yellows'}
                     </span>
-                    <span className="text-2xl font-black text-amber-300">{hubData.discipline.yellowCards.home}</span>
+                    <span className="text-2xl font-black text-amber-300">
+                      {hubData.sport === 'basketball' ? hubData.fouls.home : hubData.discipline.yellowCards.home}
+                    </span>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-center">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-400 block mb-1">
-                      {hubData.homeName} Reds
+                      {hubData.homeName} {hubData.sport === 'basketball' ? 'Tech Fouls' : hubData.sport === 'hockey' ? 'Major / PIM' : hubData.sport === 'tennis' ? 'Unforced Errors' : 'Reds'}
                     </span>
                     <span className="text-2xl font-black text-rose-300">{hubData.discipline.redCards.home}</span>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 block mb-1">
-                      {hubData.awayName} Yellows
+                      {hubData.awayName} {hubData.sport === 'basketball' ? 'Personal Fouls' : hubData.sport === 'hockey' ? 'Minor Pens' : hubData.sport === 'tennis' ? 'Double Faults' : 'Yellows'}
                     </span>
-                    <span className="text-2xl font-black text-amber-300">{hubData.discipline.yellowCards.away}</span>
+                    <span className="text-2xl font-black text-amber-300">
+                      {hubData.sport === 'basketball' ? hubData.fouls.away : hubData.discipline.yellowCards.away}
+                    </span>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-center">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-400 block mb-1">
-                      {hubData.awayName} Reds
+                      {hubData.awayName} {hubData.sport === 'basketball' ? 'Tech Fouls' : hubData.sport === 'hockey' ? 'Major / PIM' : hubData.sport === 'tennis' ? 'Unforced Errors' : 'Reds'}
                     </span>
                     <span className="text-2xl font-black text-rose-300">{hubData.discipline.redCards.away}</span>
                   </div>
@@ -621,7 +1056,10 @@ export default function MatchHubView({
                 {/* Card Events Timeline */}
                 <div className="flex flex-col gap-2 pt-2">
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-300 pb-2 border-b border-white/10">
-                    Disciplinary Events ({hubData.cards.length})
+                    {hubData.sport === 'basketball' ? `Fouls & Violations (${hubData.cards.length})` :
+                     hubData.sport === 'hockey' ? `Penalties & Infractions (${hubData.cards.length})` :
+                     hubData.sport === 'tennis' ? `Service & Point Faults (${hubData.cards.length})` :
+                     `Disciplinary Events (${hubData.cards.length})`}
                   </h3>
 
                   {hubData.cards.length > 0 ? (
@@ -654,7 +1092,11 @@ export default function MatchHubView({
                     <div className="p-8 text-center bg-white/5 rounded-2xl border border-white/5">
                       <Shield className="h-6 w-6 text-emerald-400 mx-auto mb-2" />
                       <p className="text-xs font-bold text-white">Clean Discipline Record</p>
-                      <p className="text-[11px] text-slate-400">No cards issued in this fixture yet.</p>
+                      <p className="text-[11px] text-slate-400">
+                        {hubData.sport === 'basketball' ? 'No personal or technical fouls flagged yet.' :
+                         hubData.sport === 'hockey' ? 'No penalty minutes assessed yet.' :
+                         'No disciplinary incidents reported in this fixture yet.'}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -669,109 +1111,69 @@ export default function MatchHubView({
                     <img src={hubData.homeBadge} alt="" className="h-4 w-4 rounded-full object-cover" />
                     <span className="text-emerald-400">{hubData.homeName}</span>
                   </div>
-                  <span className="text-slate-400 uppercase tracking-widest text-[11px]">Match Telemetry</span>
+                  <span className="text-slate-400 uppercase tracking-widest text-[11px]">
+                    {hubData.sport.toUpperCase()} TELEMETRY
+                  </span>
                   <div className="flex items-center gap-2">
                     <span className="text-blue-400">{hubData.awayName}</span>
                     <img src={hubData.awayBadge} alt="" className="h-4 w-4 rounded-full object-cover" />
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  {/* Possession */}
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-1">
-                      <span className="text-emerald-400">{hubData.possession.home}%</span>
-                      <span className="text-slate-300 font-semibold">Ball Possession</span>
-                      <span className="text-blue-400">{hubData.possession.away}%</span>
-                    </div>
-                    <div className="h-2 w-full bg-[#1c1a2e] rounded-full flex overflow-hidden p-0.5">
-                      <div className="bg-emerald-500 h-full rounded-l-full" style={{ width: `${hubData.possession.home}%` }} />
-                      <div className="bg-blue-500 h-full rounded-r-full" style={{ width: `${hubData.possession.away}%` }} />
-                    </div>
-                  </div>
+                <div className="space-y-3.5">
+                  {hubData.sportMetrics && hubData.sportMetrics.length > 0 ? (
+                    hubData.sportMetrics.map((metric, idx) => (
+                      <div key={idx}>
+                        <div className="flex justify-between text-xs font-bold mb-1">
+                          <span className="text-emerald-400 font-mono">{metric.home}</span>
+                          <span className="text-slate-300 font-semibold">{metric.label}</span>
+                          <span className="text-blue-400 font-mono">{metric.away}</span>
+                        </div>
+                        <div className="h-2 w-full bg-[#1c1a2e] rounded-full flex overflow-hidden p-0.5">
+                          <div
+                            className="bg-emerald-500 h-full rounded-l-full transition-all duration-300"
+                            style={{ width: `${metric.homePct ?? 50}%` }}
+                          />
+                          <div
+                            className="bg-blue-500 h-full rounded-r-full transition-all duration-300"
+                            style={{ width: `${metric.awayPct ?? 50}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      <div>
+                        <div className="flex justify-between text-xs font-bold mb-1">
+                          <span className="text-emerald-400">{hubData.possession.home}%</span>
+                          <span className="text-slate-300 font-semibold">Ball Possession</span>
+                          <span className="text-blue-400">{hubData.possession.away}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-[#1c1a2e] rounded-full flex overflow-hidden p-0.5">
+                          <div className="bg-emerald-500 h-full rounded-l-full" style={{ width: `${hubData.possession.home}%` }} />
+                          <div className="bg-blue-500 h-full rounded-r-full" style={{ width: `${hubData.possession.away}%` }} />
+                        </div>
+                      </div>
 
-                  {/* Shots on Target */}
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-1">
-                      <span className="text-emerald-400">{hubData.shotsOnTarget.home}</span>
-                      <span className="text-slate-300 font-semibold">Shots on Target</span>
-                      <span className="text-blue-400">{hubData.shotsOnTarget.away}</span>
-                    </div>
-                    <div className="h-2 w-full bg-[#1c1a2e] rounded-full flex overflow-hidden p-0.5">
-                      <div
-                        className="bg-emerald-500 h-full rounded-l-full"
-                        style={{ width: `${Math.round((hubData.shotsOnTarget.home / (hubData.shotsOnTarget.home + hubData.shotsOnTarget.away || 1)) * 100)}%` }}
-                      />
-                      <div
-                        className="bg-blue-500 h-full rounded-r-full"
-                        style={{ width: `${Math.round((hubData.shotsOnTarget.away / (hubData.shotsOnTarget.home + hubData.shotsOnTarget.away || 1)) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Total Shots */}
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-1">
-                      <span className="text-emerald-400">{hubData.totalShots.home}</span>
-                      <span className="text-slate-300 font-semibold">Total Shots</span>
-                      <span className="text-blue-400">{hubData.totalShots.away}</span>
-                    </div>
-                    <div className="h-2 w-full bg-[#1c1a2e] rounded-full flex overflow-hidden p-0.5">
-                      <div
-                        className="bg-emerald-500 h-full rounded-l-full"
-                        style={{ width: `${Math.round((hubData.totalShots.home / (hubData.totalShots.home + hubData.totalShots.away || 1)) * 100)}%` }}
-                      />
-                      <div
-                        className="bg-blue-500 h-full rounded-r-full"
-                        style={{ width: `${Math.round((hubData.totalShots.away / (hubData.totalShots.home + hubData.totalShots.away || 1)) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Fouls */}
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-1">
-                      <span className="text-emerald-400">{hubData.fouls.home}</span>
-                      <span className="text-slate-300 font-semibold">Fouls Committed</span>
-                      <span className="text-blue-400">{hubData.fouls.away}</span>
-                    </div>
-                    <div className="h-2 w-full bg-[#1c1a2e] rounded-full flex overflow-hidden p-0.5">
-                      <div className="bg-emerald-500 h-full rounded-l-full" style={{ width: `${hubData.fouls.home}%` }} />
-                      <div className="bg-blue-500 h-full rounded-r-full" style={{ width: `${hubData.fouls.away}%` }} />
-                    </div>
-                  </div>
-
-                  {/* Corner Kicks */}
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-1">
-                      <span className="text-emerald-400">{hubData.corners.home}</span>
-                      <span className="text-slate-300 font-semibold">Corner Kicks</span>
-                      <span className="text-blue-400">{hubData.corners.away}</span>
-                    </div>
-                    <div className="h-2 w-full bg-[#1c1a2e] rounded-full flex overflow-hidden p-0.5">
-                      <div
-                        className="bg-emerald-500 h-full rounded-l-full"
-                        style={{ width: `${Math.round((hubData.corners.home / (hubData.corners.home + hubData.corners.away || 1)) * 100)}%` }}
-                      />
-                      <div
-                        className="bg-blue-500 h-full rounded-r-full"
-                        style={{ width: `${Math.round((hubData.corners.away / (hubData.corners.home + hubData.corners.away || 1)) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Pass Accuracy */}
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-1">
-                      <span className="text-emerald-400">{hubData.passAccuracy.home}%</span>
-                      <span className="text-slate-300 font-semibold">Passing Accuracy</span>
-                      <span className="text-blue-400">{hubData.passAccuracy.away}%</span>
-                    </div>
-                    <div className="h-2 w-full bg-[#1c1a2e] rounded-full flex overflow-hidden p-0.5">
-                      <div className="bg-emerald-500 h-full rounded-l-full" style={{ width: `${hubData.passAccuracy.home}%` }} />
-                      <div className="bg-blue-500 h-full rounded-r-full" style={{ width: `${hubData.passAccuracy.away}%` }} />
-                    </div>
-                  </div>
+                      <div>
+                        <div className="flex justify-between text-xs font-bold mb-1">
+                          <span className="text-emerald-400">{hubData.shotsOnTarget.home}</span>
+                          <span className="text-slate-300 font-semibold">Shots on Target</span>
+                          <span className="text-blue-400">{hubData.shotsOnTarget.away}</span>
+                        </div>
+                        <div className="h-2 w-full bg-[#1c1a2e] rounded-full flex overflow-hidden p-0.5">
+                          <div
+                            className="bg-emerald-500 h-full rounded-l-full"
+                            style={{ width: `${Math.round((hubData.shotsOnTarget.home / (hubData.shotsOnTarget.home + hubData.shotsOnTarget.away || 1)) * 100)}%` }}
+                          />
+                          <div
+                            className="bg-blue-500 h-full rounded-r-full"
+                            style={{ width: `${Math.round((hubData.shotsOnTarget.away / (hubData.shotsOnTarget.home + hubData.shotsOnTarget.away || 1)) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -783,29 +1185,38 @@ export default function MatchHubView({
                 <div className="lg:col-span-6 rounded-2xl bg-white/5 border border-white/5 p-4 flex flex-col justify-between">
                   <div>
                     <h3 className="text-xs font-black uppercase tracking-wider text-slate-300 mb-1">
-                      Pitch Attack Channels
+                      {hubData.sport === 'basketball' ? 'Court Shot Distribution' :
+                       hubData.sport === 'hockey' ? 'Offensive Zone Generation' :
+                       hubData.sport === 'tennis' ? 'Court Shot Placement' :
+                       'Pitch Attack Channels'}
                     </h3>
                     <p className="text-xs text-slate-400 mb-4">{hubData.attackZones.description}</p>
 
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div className="bg-black/30 p-3 rounded-xl border border-white/5">
-                        <span className="text-[10px] text-slate-400 font-extrabold uppercase block mb-1">Left Flank</span>
+                        <span className="text-[10px] text-slate-400 font-extrabold uppercase block mb-1">
+                          {hubData.attackZones.leftLabel || 'Left'}
+                        </span>
                         <span className="text-lg font-black text-purple-400">{hubData.attackZones.left}%</span>
                       </div>
                       <div className="bg-black/30 p-3 rounded-xl border border-white/5">
-                        <span className="text-[10px] text-slate-400 font-extrabold uppercase block mb-1">Center Channel</span>
+                        <span className="text-[10px] text-slate-400 font-extrabold uppercase block mb-1">
+                          {hubData.attackZones.centerLabel || 'Center'}
+                        </span>
                         <span className="text-lg font-black text-emerald-400">{hubData.attackZones.center}%</span>
                       </div>
                       <div className="bg-black/30 p-3 rounded-xl border border-white/5">
-                        <span className="text-[10px] text-slate-400 font-extrabold uppercase block mb-1">Right Flank</span>
+                        <span className="text-[10px] text-slate-400 font-extrabold uppercase block mb-1">
+                          {hubData.attackZones.rightLabel || 'Right'}
+                        </span>
                         <span className="text-lg font-black text-blue-400">{hubData.attackZones.right}%</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-bold">
-                    <span className="text-emerald-400">{hubData.homeName}: {hubData.attackZones.homePercentage}% territory</span>
-                    <span className="text-blue-400">{hubData.awayName}: {hubData.attackZones.awayPercentage}% territory</span>
+                    <span className="text-emerald-400">{hubData.homeName}: {hubData.attackZones.homePercentage}% dominance</span>
+                    <span className="text-blue-400">{hubData.awayName}: {hubData.attackZones.awayPercentage}% dominance</span>
                   </div>
                 </div>
 
@@ -870,11 +1281,11 @@ export default function MatchHubView({
             <div className="py-2 flex items-center justify-between px-2">
               {/* Home Team */}
               <div className="flex flex-col items-center gap-1.5">
-                <div className="h-12 w-12 rounded-full p-1 bg-white/10 border border-white/20 flex items-center justify-center shadow-lg">
+                <div className="h-12 w-12 rounded-2xl p-1 bg-white/10 border border-white/20 flex items-center justify-center shadow-lg overflow-hidden">
                   <img
                     src={hubData.homeBadge}
                     alt={hubData.homeName}
-                    className="h-10 w-10 rounded-full object-cover"
+                    className="max-h-10 max-w-10 object-contain drop-shadow"
                   />
                 </div>
                 <span className="text-[11px] font-bold text-white text-center truncate max-w-[80px]">
@@ -891,11 +1302,11 @@ export default function MatchHubView({
 
               {/* Away Team */}
               <div className="flex flex-col items-center gap-1.5">
-                <div className="h-12 w-12 rounded-full p-1 bg-white/10 border border-white/20 flex items-center justify-center shadow-lg">
+                <div className="h-12 w-12 rounded-2xl p-1 bg-white/10 border border-white/20 flex items-center justify-center shadow-lg overflow-hidden">
                   <img
                     src={hubData.awayBadge}
                     alt={hubData.awayName}
-                    className="h-10 w-10 rounded-full object-cover"
+                    className="max-h-10 max-w-10 object-contain drop-shadow"
                   />
                 </div>
                 <span className="text-[11px] font-bold text-white text-center truncate max-w-[80px]">
@@ -961,23 +1372,65 @@ export default function MatchHubView({
               </div>
             </div>
 
-            {/* Bottom: Player Name & Team Badge */}
-            <div className="relative z-10 pt-8 flex items-center justify-between">
-              <div>
-                <h3 className="text-base sm:text-lg font-black text-white leading-tight">
-                  {hubData.bestPlayer.name}
-                </h3>
-                <span className="text-xs text-purple-200 font-medium">#{hubData.bestPlayer.jersey} · {hubData.bestPlayer.teamName}</span>
-              </div>
+            {/* Bottom: Player Avatar & Jersey Badge + Name & Team Badge */}
+            {(() => {
+              const cleanBestName = hubData.bestPlayer?.name?.toLowerCase().trim();
+              const bestFaceUrl = playerFaces[cleanBestName] || hubData.bestPlayer?.avatar;
+              return (
+                <div className="relative z-10 pt-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {/* Player Face Photo with Jersey Number Badge overlay */}
+                    <div className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-2xl border-2 border-white/80 bg-black/40 shadow-xl overflow-visible shrink-0">
+                      <div className="h-full w-full rounded-2xl overflow-hidden bg-gradient-to-tr from-purple-900 to-indigo-950 flex items-center justify-center">
+                        {bestFaceUrl ? (
+                          <img
+                            src={bestFaceUrl}
+                            alt={hubData.bestPlayer.name}
+                            className="h-full w-full object-cover object-top"
+                            loading="lazy"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : null}
+                        <span className="text-sm font-black text-purple-300 absolute inset-0 flex items-center justify-center -z-0">
+                          #{hubData.bestPlayer.jersey}
+                        </span>
+                      </div>
 
-              <div className="h-9 w-9 rounded-full bg-white/20 p-1 flex items-center justify-center shrink-0 border border-white/30">
-                <img
-                  src={hubData.bestPlayer.teamBadge}
-                  alt=""
-                  className="h-7 w-7 rounded-full object-cover"
-                />
-              </div>
-            </div>
+                      {/* Small Jersey Number Badge */}
+                      <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 min-w-[20px] rounded-lg bg-amber-400 text-slate-950 border border-white text-[9.5px] font-black flex items-center justify-center shadow-lg">
+                        #{hubData.bestPlayer.jersey}
+                      </span>
+                    </div>
+
+                    {/* Name, Jersey Chip and Team */}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-1.5 py-0.5 rounded bg-black/40 text-amber-300 font-mono text-[10px] font-black border border-white/15">
+                          #{hubData.bestPlayer.jersey}
+                        </span>
+                        <h3 className="text-base sm:text-lg font-black text-white leading-tight truncate">
+                          {hubData.bestPlayer.name}
+                        </h3>
+                      </div>
+                      <span className="text-xs text-purple-200 font-medium block truncate mt-0.5">
+                        {hubData.bestPlayer.teamName}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Team Badge */}
+                  <div className="h-10 w-10 rounded-2xl bg-white/20 p-1 flex items-center justify-center shrink-0 border border-white/30 overflow-hidden shadow-lg">
+                    <img
+                      src={hubData.bestPlayer.teamBadge}
+                      alt=""
+                      className="max-h-8 max-w-8 object-contain drop-shadow"
+                    />
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* CARD 3: Match Minute & Timeline Progress */}

@@ -25,7 +25,7 @@ export async function GET(
       matchStatus: match.status,
       streams: resolved.channels || [],
       defaultUrl: resolved.proxiedUrl,
-      isDirectHls: resolved.proxiedUrl.includes('.m3u8') || resolved.proxiedUrl.includes('.mpd') || resolved.proxiedUrl.includes('.mp4')
+      isDirectHls: (resolved.url && (resolved.url.includes('.m3u8') || resolved.url.includes('.mpd') || resolved.url.includes('.mp4'))) || resolved.proxiedUrl.includes('.m3u8')
     }, {
       headers: {
         'Cache-Control': 'no-store, max-age=0',

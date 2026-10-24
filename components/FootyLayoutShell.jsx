@@ -11,7 +11,7 @@ export default function FootyLayoutShell({ children }) {
 
   // Watch Match Page & Multi-stream page take the FULL UI!
   // No sidebar, no right activity rail.
-  const isFullScreenView = pathname.startsWith('/watch/') || pathname === '/multistream' || pathname.startsWith('/auth') || pathname.startsWith('/login') || pathname.startsWith('/register');
+  const isFullScreenView = pathname.startsWith('/watch/') || pathname === '/multistream';
 
   if (isFullScreenView) {
     return (
@@ -21,7 +21,7 @@ export default function FootyLayoutShell({ children }) {
     );
   }
 
-  // Dashboard pages (home `/`, `/api-hub`, etc.) get the 3-column platform layout
+  // Dashboard pages (home `/`, `/schedule`, `/multistream`, etc.) get the 3-column platform layout
   return (
     <>
       <FootyTopbar />

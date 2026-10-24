@@ -14,6 +14,7 @@ import { EspnScoreboardProvider } from './providers/espnScoreboardProvider';
 import { getCacheManager } from './cache/cacheManager';
 import { getExternalMatchStats, getScoreForMatch } from './providers/scoreProvider';
 import { teamsMatch } from './utils/matching';
+import { cleanTeamBadgeUrl, getTeamLeague } from './utils/teamLogos';
 
 const SECRET_KEY = process.env.STREAM_SECRET || 'default_stream_hmac_secret_key_123_abc';
 
@@ -66,10 +67,81 @@ const providers = [
 
 export async function getMatchDetails(matchId: string): Promise<Match | null> {
   const matches = await getMatches();
-  const listedMatch = matches.find(match => match.id === matchId);
+  const listedMatch = matches.find(match => match.id === matchId || match.id.toLowerCase() === matchId.toLowerCase());
   if (listedMatch) return listedMatch;
 
-  return getWatchFootyMatchDetails(matchId);
+  // Try directly from StreamedPkProvider in case of partial cached batch
+  const streamed = providers.find(p => p.id === 'streamed') as StreamedPkProvider;
+  if (streamed) {
+    try {
+      const streamedMatches = await streamed.fetchMatches();
+      const sMatch = streamedMatches.find(m => m.id === matchId || m.id.toLowerCase() === matchId.toLowerCase());
+      if (sMatch) return sMatch;
+    } catch {}
+  }
+
+  // Try directly from EspnScoreboardProvider for tennis, basketball, hockey, or ESPN matches
+  const espn = providers.find(p => p.id === 'espn') as EspnScoreboardProvider;
+  if (espn) {
+    try {
+      const espnMatches = await espn.fetchMatches();
+      const eMatch = espnMatches.find(m => m.id === matchId || m.id.toLowerCase() === matchId.toLowerCase());
+      if (eMatch) return eMatch;
+    } catch {}
+  }
+
+  const footyMatch = await getWatchFootyMatchDetails(matchId);
+  if (footyMatch) return footyMatch;
+
+  // Synthesize match structure from slug if match was routed directly
+  if (matchId.includes('-vs-')) {
+    const cleanSlug = matchId.replace(/-\d+$/, '');
+    const parts = cleanSlug.split('-vs-');
+    if (parts.length === 2) {
+      const formatName = (s: string) => s.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      const homeName = formatName(parts[0]);
+      const awayName = formatName(parts[1]);
+      const title = `${homeName} vs ${awayName}`;
+
+      let sport = 'football';
+      const lowerSlug = matchId.toLowerCase();
+      if (lowerSlug.includes('phoenix') || lowerSlug.includes('36ers') || lowerSlug.includes('nba') || lowerSlug.includes('basket') || lowerSlug.includes('kings') || lowerSlug.includes('taipans') || lowerSlug.includes('breakers') || lowerSlug.includes('jackjumpers') || lowerSlug.includes('wildcats')) {
+        sport = 'basketball';
+      } else if (lowerSlug.includes('hockey') || lowerSlug.includes('nhl') || lowerSlug.includes('penguins') || lowerSlug.includes('bruins') || lowerSlug.includes('leafs') || lowerSlug.includes('rangers')) {
+        sport = 'hockey';
+      } else if (lowerSlug.includes('tennis') || lowerSlug.includes('atp') || lowerSlug.includes('wta')) {
+        sport = 'tennis';
+      }
+
+      return {
+        id: matchId,
+        title,
+        sport,
+        status: 'live',
+        timestamp: Date.now(),
+        tournament: sport === 'basketball' ? 'NBL' : 'Match Broadcast',
+        country: 'Global',
+        priority: 10,
+        homeTeam: { name: homeName, badge: cleanTeamBadgeUrl(null, homeName, sport) },
+        awayTeam: { name: awayName, badge: cleanTeamBadgeUrl(null, awayName, sport) },
+        leagueLogo: '',
+        poster: '',
+        venue: '',
+        note: '',
+        provider: 'HydraSport',
+        upstreamCategory: sport.charAt(0).toUpperCase() + sport.slice(1),
+        popular: false,
+        sources: [],
+        fallbackChannels: [],
+        homeScore: null,
+        awayScore: null,
+        currentMinute: 'Live',
+        currentMinuteNumber: 0,
+      };
+    }
+  }
+
+  return null;
 }
 
 export function getStreamRedirectUrl(originalUrl: string): string {
@@ -86,12 +158,14 @@ export async function getMatches(): Promise<Match[]> {
   const cache = getCacheManager();
   return cache.swr('all_matches', async () => {
     let matches: Match[] = [];
-    const watchFooty = providers.find(p => p.id === 'watchfooty') as WatchFootyProvider;
-    if (watchFooty) matches.push(...await watchFooty.fetchMatches());
-    const fallbackMatches = await Promise.all(
-      providers.filter(p => p.id !== 'watchfooty').map(provider => provider.fetchMatches()),
+    const providerResults = await Promise.allSettled(
+      providers.map(p => p.fetchMatches())
     );
-    matches.push(...fallbackMatches.flat());
+    for (const res of providerResults) {
+      if (res.status === 'fulfilled' && Array.isArray(res.value)) {
+        matches.push(...res.value);
+      }
+    }
 
     // Deduplicate and merge matches from different providers (Streamed, WatchFooty, ESPN)
     const mergedList: Match[] = [];
@@ -118,8 +192,16 @@ export async function getMatches(): Promise<Match[]> {
           ? 'finished'
           : 'upcoming';
 
+        const rawT = existing.tournament || match.tournament || '';
+        const resolvedTournament = (
+          !rawT || rawT.toLowerCase() === 'football' || rawT.toLowerCase() === 'match broadcast'
+        )
+          ? (getTeamLeague(existing.homeTeam.name || match.homeTeam.name) || getTeamLeague(existing.awayTeam.name || match.awayTeam.name) || rawT || 'League Match')
+          : rawT;
+
         mergedList[existingIdx] = {
           ...existing,
+          tournament: resolvedTournament,
           timestamp: finalTimestamp,
           homeScore: isFuture ? null : (existing.homeScore ?? match.homeScore),
           awayScore: isFuture ? null : (existing.awayScore ?? match.awayScore),
@@ -127,11 +209,11 @@ export async function getMatches(): Promise<Match[]> {
           status: resolvedStatus,
           homeTeam: {
             name: existing.homeTeam.name || match.homeTeam.name,
-            badge: existing.homeTeam.badge || match.homeTeam.badge,
+            badge: cleanTeamBadgeUrl(match.homeTeam.badge || existing.homeTeam.badge, existing.homeTeam.name || match.homeTeam.name, match.sport || existing.sport),
           },
           awayTeam: {
             name: existing.awayTeam.name || match.awayTeam.name,
-            badge: existing.awayTeam.badge || match.awayTeam.badge,
+            badge: cleanTeamBadgeUrl(match.awayTeam.badge || existing.awayTeam.badge, existing.awayTeam.name || match.awayTeam.name, match.sport || existing.sport),
           },
           sources: existing.sources.length > 0 ? existing.sources : match.sources,
           fallbackChannels: existing.fallbackChannels.length > 0 ? existing.fallbackChannels : match.fallbackChannels,
@@ -139,14 +221,34 @@ export async function getMatches(): Promise<Match[]> {
       } else {
         const now = Date.now();
         const isFuture = Boolean(match.timestamp && match.timestamp > now + 60000);
-        mergedList.push(isFuture ? {
+        const rawT = match.tournament || '';
+        const resolvedTournament = (
+          !rawT || rawT.toLowerCase() === 'football' || rawT.toLowerCase() === 'match broadcast'
+        )
+          ? (getTeamLeague(match.homeTeam.name) || getTeamLeague(match.awayTeam.name) || rawT || 'League Match')
+          : rawT;
+
+        const baseMatch = {
           ...match,
+          tournament: resolvedTournament,
+          homeTeam: {
+            ...match.homeTeam,
+            badge: cleanTeamBadgeUrl(match.homeTeam.badge, match.homeTeam.name, match.sport),
+          },
+          awayTeam: {
+            ...match.awayTeam,
+            badge: cleanTeamBadgeUrl(match.awayTeam.badge, match.awayTeam.name, match.sport),
+          },
+        };
+
+        mergedList.push(isFuture ? {
+          ...baseMatch,
           status: 'upcoming',
           homeScore: null,
           awayScore: null,
           currentMinute: '',
           currentMinuteNumber: 0,
-        } : match);
+        } : baseMatch);
       }
     }
 
@@ -169,9 +271,8 @@ export async function getMatches(): Promise<Match[]> {
         // If score is already populated, no need to re-fetch
         if (match.homeScore !== null && match.awayScore !== null) return match;
 
-        // Enrich matches that are live, finished, or scheduled for today
-        const isToday = Math.abs(now - match.timestamp) < 24 * 3600 * 1000;
-        if (match.status !== 'live' && match.status !== 'finished' && !isToday) return match;
+        // Only query external score provider for live or finished matches without score
+        if (match.status !== 'live' && match.status !== 'finished') return match;
 
         const eventId = match.id.match(/(\d+)$/)?.[1];
         const score = await getScoreForMatch(
@@ -197,6 +298,14 @@ export async function getMatches(): Promise<Match[]> {
           homeScore: score.home,
           awayScore: score.away,
           currentMinute: score.currentMinute || match.currentMinute,
+          homeTeam: {
+            ...match.homeTeam,
+            badge: cleanTeamBadgeUrl(match.homeTeam?.badge, match.homeTeam?.name, match.sport),
+          },
+          awayTeam: {
+            ...match.awayTeam,
+            badge: cleanTeamBadgeUrl(match.awayTeam?.badge, match.awayTeam?.name, match.sport),
+          },
         };
       }));
       return enriched;

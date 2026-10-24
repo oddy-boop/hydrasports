@@ -193,6 +193,7 @@ export function getEspnSportConfigs(sport: string, tournament: string): { sport:
 
   if (normSport === 'basketball' || normSport === 'nba') {
     return [
+      { sport: 'basketball', league: 'nbl' },
       { sport: 'basketball', league: 'nba' },
       { sport: 'basketball', league: 'mens-college-basketball' },
       { sport: 'basketball', league: 'womens-college-basketball' },
@@ -584,7 +585,22 @@ export interface ExternalMatchStats {
 function normalizeEspnCommentary(summary: any): any[] {
   const events = Array.isArray(summary.keyEvents) ? summary.keyEvents : [];
   const commentary = Array.isArray(summary.commentary) ? summary.commentary : [];
-  return [...events, ...commentary]
+
+  const normalizedEvents = events.map((item: any) => ({
+    type: item.type?.text || item.type?.type || 'keyEvent',
+    minute: item.clock?.displayValue || item.time?.displayValue || '',
+    text: item.text || item.shortText || item.description || '',
+    team: item.team?.displayName || '',
+    participants: (item.participants || item.athletes || []).map((participant: any, index: number) => ({
+      name: participant.athlete?.displayName || participant.displayName || '',
+      role: participant.role || (
+        /substitution/i.test(item.type?.text || '') ? (index === 0 ? 'in' : 'out') :
+        (/goal|penalty/i.test(item.type?.text || '') ? (index === 0 ? 'scorer' : 'assist') : '')
+      ),
+    })),
+  }));
+
+  const normalizedCommentary = commentary
     .map((item: any) => ({
       type: item.type?.text || item.type?.type || 'commentary',
       minute: item.clock?.displayValue || item.time?.displayValue || '',
@@ -592,13 +608,25 @@ function normalizeEspnCommentary(summary: any): any[] {
       team: item.team?.displayName || '',
       participants: (item.participants || item.athletes || []).map((participant: any, index: number) => ({
         name: participant.athlete?.displayName || participant.displayName || '',
-        role: participant.role || (
-          /substitution/i.test(item.type?.text || '') ? (index === 0 ? 'in' : 'out') :
-          (/goal|penalty/i.test(item.type?.text || '') ? (index === 0 ? 'scorer' : 'assist') : '')
-        ),
+        role: participant.role || '',
       })),
     }))
-    .filter((item: any) => item.text || item.type !== 'commentary');
+    .filter((commItem: any) => {
+      const commType = commItem.type.toLowerCase();
+      const commText = commItem.text.toLowerCase();
+      const isKeyType = commType.includes('goal') || commText.includes('goal!') ||
+                        commType.includes('card') || commText.includes('card') ||
+                        commType.includes('sub') || commText.includes('substitution');
+      // If structured keyEvents already has this key event at the same minute, discard redundant unstructured commentary copy
+      if (isKeyType && normalizedEvents.length > 0) {
+        return !normalizedEvents.some((evt: any) => evt.minute === commItem.minute);
+      }
+      return Boolean(commItem.text);
+    });
+
+  return [...normalizedEvents, ...normalizedCommentary].filter(
+    (item: any) => item.text || item.type !== 'commentary'
+  );
 }
 
 async function getEspnEvent(
@@ -645,9 +673,18 @@ export async function getExternalMatchStats(
       `${ESPN_API}/${config.sport}/${config.league}/summary?event=${event.id}`,
       TIMEOUT_MS,
     ) as any;
+
+    let rosters = summary.rosters || [];
+    if (!rosters.length && Array.isArray(summary.boxscore?.players)) {
+      rosters = summary.boxscore.players.map((p: any) => ({
+        team: p.team,
+        roster: p.statistics?.[0]?.athletes || [],
+      }));
+    }
+
     const stats = {
       boxscore: summary.boxscore || null,
-      rosters: summary.rosters || [],
+      rosters,
       commentary: normalizeEspnCommentary(summary),
     };
     summaryCache.set(event.id, { expiresAt: Date.now() + EVENTS_CACHE_TTL, stats });

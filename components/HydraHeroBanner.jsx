@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Play, Calendar, MapPin, Zap } from 'lucide-react';
+import { cleanTeamBadgeUrl } from '@/lib/utils/teamLogos';
 
 export default function FootyHeroBanner({ featuredMatch }) {
   const [homeImgError, setHomeImgError] = useState(false);
@@ -22,8 +23,8 @@ export default function FootyHeroBanner({ featuredMatch }) {
 
   const homeName = match.homeTeam?.name || 'Napoli';
   const awayName = match.awayTeam?.name || 'Inter Milan';
-  const homeBadge = match.homeTeam?.badge || 'https://a.espncdn.com/i/teamlogos/soccer/500/114.png';
-  const awayBadge = match.awayTeam?.badge || 'https://a.espncdn.com/i/teamlogos/soccer/500/110.png';
+  const homeBadge = cleanTeamBadgeUrl(match.homeTeam?.badge, homeName);
+  const awayBadge = cleanTeamBadgeUrl(match.awayTeam?.badge, awayName);
   const venue = match.venue || 'Giuseppe Meazza';
 
   const dateStr = new Date(match.timestamp || Date.now()).toLocaleDateString([], {

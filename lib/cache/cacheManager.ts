@@ -39,7 +39,8 @@ class InMemoryCacheManager implements CacheManager {
     let promise = this.inflight.get(key);
     if (!promise) {
       promise = fetcher().then(data => {
-        this.set(key, data, ttlSeconds);
+        const effectiveTtl = (Array.isArray(data) && data.length === 0) ? 2 : ttlSeconds;
+        this.set(key, data, effectiveTtl);
         this.inflight.delete(key);
         return data;
       }).catch(err => {
@@ -49,7 +50,7 @@ class InMemoryCacheManager implements CacheManager {
       this.inflight.set(key, promise);
     }
 
-    if (cached) {
+    if (cached && (!Array.isArray(cached.value) || cached.value.length > 0)) {
       promise.catch(err => logger.error(`SWR background refresh failed for memory key: ${key}`, err));
       return cached.value as T;
     }

@@ -200,24 +200,6 @@ export default function FootyTopbar() {
             </div>
           )}
         </div>
-
-        {/* User Profile Avatar */}
-        <Link
-          href="/auth"
-          className="flex items-center gap-2 p-1 pl-1.5 rounded-full hover:bg-white/[0.08] border border-white/[0.08] transition-all group"
-          title={user?.name ? `Logged in as ${user.name}` : 'Sign in / Register'}
-        >
-          <span className="hidden sm:inline-block text-xs font-semibold text-slate-300 group-hover:text-white pr-1">
-            {user?.name || 'Miguel Fox'}
-          </span>
-          <div className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/20 bg-slate-800 flex items-center justify-center">
-            {user?.avatar ? (
-              <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
-            ) : (
-              <User className="w-4 h-4 text-slate-300" />
-            )}
-          </div>
-        </Link>
       </div>
     </header>
   );

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useHydraSports } from './HydraContext';
-import { ChevronDown, Trophy, Globe, Flame, X, Layers, Calendar, Star, Zap, Tv, Radio } from 'lucide-react';
+import { ChevronDown, Trophy, Globe, Flame, X, Layers, Calendar, Star, Tv, Radio } from 'lucide-react';
 
 export const REGIONAL_LEAGUES = [
   { id: 'Champions League', name: 'Champions League', icon: '⚽', color: '#3b82f6', category: 'regional' },
@@ -100,7 +100,6 @@ export default function FootySidebar() {
                 { href: '/schedule', label: 'Kickoff Schedule', icon: Calendar, highlight: pathname === '/schedule' },
                 { href: '/favourites', label: 'Pinned Clubs', icon: Star, highlight: pathname === '/favourites' },
                 { href: '/competitions', label: 'Competitions', icon: Trophy, highlight: pathname === '/competitions' },
-                { href: '/api-hub', label: 'Stream API Hub', icon: Zap, highlight: pathname === '/api-hub' },
               ].map((item) => {
                 const IconComponent = item.icon;
                 return (

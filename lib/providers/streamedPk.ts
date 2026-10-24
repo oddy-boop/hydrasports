@@ -3,13 +3,14 @@ import { StreamProvider } from './types';
 import { fetchWithTimeout } from './baseProvider';
 import { getCountryForLeague, getLeaguePriority, teamsMatch } from '../utils/matching';
 import { getCacheManager } from '../cache/cacheManager';
+import { cleanTeamBadgeUrl, getTeamLeague } from '../utils/teamLogos';
 import logger from '../logger';
 
 const STREAMED_API = 'https://streamed.pk/api/matches';
 const STREAMED_SPORTS = ['football', 'basketball', 'tennis', 'hockey', 'baseball'];
 const STREAMED_STREAM = 'https://streamed.pk/api/stream';
-const TIMEOUT_MS = 4000;
-const SHORT_TIMEOUT = 2500;
+const TIMEOUT_MS = 7000;
+const SHORT_TIMEOUT = 4000;
 
 function getCompetition(match: StreamedRawMatch): string {
   const sourceText = (match.sources || []).map(source => source.id).join(' ').toLowerCase();
@@ -24,9 +25,34 @@ function getCompetition(match: StreamedRawMatch): string {
     ['champions-league', 'Champions League'],
     ['europa-league', 'Europa League'],
     ['mls', 'MLS'],
+    ['allsvenskan', 'Allsvenskan'],
+    ['championship', 'Championship'],
+    ['2-bundesliga', '2. Bundesliga'],
+    ['segunda', 'La Liga 2'],
+    ['serie-b', 'Serie B'],
+    ['primeira-liga', 'Primeira Liga'],
+    ['super-lig', 'Süper Lig'],
+    ['pro-league', 'Belgian Pro League'],
+    ['scottish', 'Scottish Premiership'],
   ];
 
-  return competitions.find(([needle]) => sourceText.includes(needle))?.[1] || match.category || 'Football';
+  const matched = competitions.find(([needle]) => sourceText.includes(needle))?.[1];
+  if (matched) return matched;
+
+  // Detect league from participating team names
+  const homeName = match.teams?.home?.name || '';
+  const awayName = match.teams?.away?.name || '';
+  const homeLeague = getTeamLeague(homeName);
+  if (homeLeague) return homeLeague;
+  const awayLeague = getTeamLeague(awayName);
+  if (awayLeague) return awayLeague;
+
+  const rawCat = match.category || '';
+  if (rawCat && rawCat.toLowerCase() !== 'football') {
+    return rawCat.charAt(0).toUpperCase() + rawCat.slice(1);
+  }
+
+  return 'League Match';
 }
 
 interface StreamedRawMatch {
@@ -93,8 +119,8 @@ export class StreamedPkProvider implements StreamProvider {
         tournament,
         country: getCountryForLeague(tournament),
         priority: getLeaguePriority(tournament),
-        homeTeam: { name: homeTeam, badge: badgeUrl(match.teams?.home?.badge) },
-        awayTeam: { name: awayTeam, badge: badgeUrl(match.teams?.away?.badge) },
+        homeTeam: { name: homeTeam, badge: cleanTeamBadgeUrl(badgeUrl(match.teams?.home?.badge), homeTeam, sport) },
+        awayTeam: { name: awayTeam, badge: cleanTeamBadgeUrl(badgeUrl(match.teams?.away?.badge), awayTeam, sport) },
         leagueLogo: '',
         poster: match.poster ? `https://streamed.pk${match.poster}` : '',
         venue: '',

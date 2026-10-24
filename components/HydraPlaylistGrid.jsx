@@ -4,16 +4,18 @@ import React from 'react';
 import Link from 'next/link';
 import { Play, Radio, Flame, Shield } from 'lucide-react';
 import { useHydraSports } from './HydraContext';
+import { cleanTeamBadgeUrl } from '@/lib/utils/teamLogos';
 
 function TeamBadge({ team, name }) {
   const [err, setErr] = React.useState(false);
-  if (team?.badge && !err) {
+  const badgeSrc = cleanTeamBadgeUrl(team?.badge, name || team?.name || '');
+  if (badgeSrc && !err) {
     return (
       <img
-        src={team.badge}
+        src={badgeSrc}
         alt={name || team?.name}
         onError={() => setErr(true)}
-        className="w-8 h-8 rounded-lg object-contain bg-white p-1 ring-1 ring-slate-200 shadow-xs"
+        className="w-8 h-8 rounded-lg object-contain bg-white/10 p-1 ring-1 ring-white/15 shadow-xs"
       />
     );
   }

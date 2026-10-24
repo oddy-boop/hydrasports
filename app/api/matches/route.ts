@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMatches } from '@/lib/streamEngine';
 
-export const revalidate = 10; // short revalidation for live match updates
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
   try {
     const allMatches = await getMatches();
+    console.log('[API /api/matches] allMatches count:', allMatches.length);
     
     // Sort matches: live first, then priority, then timestamp
     const sorted = [...allMatches].sort((a, b) => {

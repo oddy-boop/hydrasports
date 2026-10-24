@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Hls from 'hls.js';
 import {
   Layers,
   ArrowLeft,
@@ -645,6 +646,7 @@ function SlotCard({
   const [selectedResolution, setSelectedResolution] = useState('auto'); // 'auto' | '1080p' | '720p' | '480p' | '360p'
   const [resDropdownOpen, setResDropdownOpen] = useState(false);
   const [serverDropdownOpen, setServerDropdownOpen] = useState(false);
+  const [isDirectHlsFromApi, setIsDirectHlsFromApi] = useState(false);
 
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
@@ -656,6 +658,7 @@ function SlotCard({
       setStreams([]);
       setError(null);
       setResolving(false);
+      setIsDirectHlsFromApi(false);
       return;
     }
 
@@ -672,6 +675,9 @@ function SlotCard({
         if (data.streams && data.streams.length > 0) {
           setStreams(data.streams);
           setActiveStreamIdx(0);
+          if (data.isDirectHls) {
+            setIsDirectHlsFromApi(true);
+          }
         } else if (data.error) {
           setError(data.error);
         } else {
@@ -690,14 +696,41 @@ function SlotCard({
     };
   }, [slotData?.id]);
 
-  const activeStream = streams[activeStreamIdx];
-  const streamUrl = activeStream?.proxiedUrl || activeStream?.url;
-  const isDirectHls = streamUrl && (
-    streamUrl.includes('.m3u8') ||
-    streamUrl.includes('.mpd') ||
-    streamUrl.includes('/hls/') ||
-    streamUrl.includes('.mp4')
+  const activeStream = streams[activeStreamIdx] || streams[0];
+  const rawTargetUrl = activeStream?.url || '';
+  const proxiedTargetUrl = activeStream?.proxiedUrl || '';
+
+  // Decode u parameter if proxiedUrl exists (since /api/stream-redirect encodes the destination)
+  let decodedFromProxy = '';
+  if (proxiedTargetUrl && proxiedTargetUrl.includes('/api/stream-redirect?u=')) {
+    try {
+      const matchU = proxiedTargetUrl.match(/[?&]u=([^&]+)/);
+      if (matchU && matchU[1]) {
+        decodedFromProxy = atob(matchU[1].replace(/-/g, '+').replace(/_/g, '/'));
+      }
+    } catch (e) {}
+  }
+
+  const effectiveRawUrl = rawTargetUrl || decodedFromProxy || '';
+
+  const isDirectHls = Boolean(
+    isDirectHlsFromApi ||
+    effectiveRawUrl.includes('.m3u8') ||
+    effectiveRawUrl.includes('.mpd') ||
+    effectiveRawUrl.includes('/hls/') ||
+    effectiveRawUrl.includes('.mp4') ||
+    effectiveRawUrl.includes('playlist') ||
+    effectiveRawUrl.includes('manifest') ||
+    rawTargetUrl.includes('.m3u8') ||
+    rawTargetUrl.includes('.mpd') ||
+    rawTargetUrl.includes('/hls/') ||
+    rawTargetUrl.includes('.mp4') ||
+    proxiedTargetUrl.includes('.m3u8')
   );
+
+  const streamUrl = isDirectHls
+    ? (effectiveRawUrl || rawTargetUrl || proxiedTargetUrl)
+    : (proxiedTargetUrl || rawTargetUrl);
 
   // Setup HLS / Video playback
   useEffect(() => {
@@ -713,18 +746,25 @@ function SlotCard({
 
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = streamUrl;
-      video.play().catch(() => {});
-    } else if (window.Hls) {
-      const hls = new window.Hls({
-        maxBufferSize: 15 * 1024 * 1024,
-        maxBufferLength: 15,
+      const onLoadedMetadata = () => {
+        video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      };
+      video.addEventListener('loadedmetadata', onLoadedMetadata);
+      return () => {
+        video.removeEventListener('loadedmetadata', onLoadedMetadata);
+      };
+    } else if (Hls && Hls.isSupported()) {
+      const hls = new Hls({
+        maxBufferSize: 25 * 1024 * 1024,
+        maxBufferLength: 20,
         liveSyncDuration: 3,
+        enableWorker: true,
       });
       hlsRef.current = hls;
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
 
-      hls.on(window.Hls.Events.MANIFEST_PARSED, (e, data) => {
+      hls.on(Hls.Events.MANIFEST_PARSED, (e, data) => {
         if (data?.levels && data.levels.length > 0) {
           const lvls = data.levels.map((lvl, index) => ({
             index,
@@ -734,7 +774,23 @@ function SlotCard({
           }));
           setHlsLevels(lvls);
         }
-        video.play().catch(() => {});
+        video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      });
+
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls.recoverMediaError();
+              break;
+            default:
+              hls.destroy();
+              break;
+          }
+        }
       });
     }
 
@@ -744,13 +800,16 @@ function SlotCard({
         hlsRef.current = null;
       }
     };
-  }, [slotData, streamUrl, isDirectHls, isAudioFocused]);
+  }, [slotData?.id, streamUrl, isDirectHls]);
 
   // Sync audio mute state based on audio focus
   useEffect(() => {
     if (!slotData) return;
     if (videoRef.current) {
       videoRef.current.muted = !isAudioFocused;
+      if (isAudioFocused && videoRef.current.paused) {
+        videoRef.current.play().catch(() => {});
+      }
     }
   }, [slotData, isAudioFocused]);
 
@@ -829,9 +888,13 @@ function SlotCard({
   };
 
   const reloadStream = () => {
-    const current = activeStreamIdx;
-    setActiveStreamIdx(-1);
-    setTimeout(() => setActiveStreamIdx(current), 100);
+    if (isDirectHls && hlsRef.current) {
+      hlsRef.current.startLoad();
+    } else {
+      const current = activeStreamIdx;
+      setActiveStreamIdx(-1);
+      setTimeout(() => setActiveStreamIdx(current), 100);
+    }
   };
 
   return (
@@ -1064,13 +1127,18 @@ function SlotCard({
         ) : isDirectHls ? (
           <video
             ref={videoRef}
-            className="absolute inset-0 h-full w-full object-contain cursor-pointer"
+            className="absolute inset-0 h-full w-full object-contain cursor-pointer bg-black"
             playsInline
+            autoPlay
+            muted={!isAudioFocused}
             onClick={() => {
               if (videoRef.current) {
-                if (videoRef.current.paused) videoRef.current.play();
-                else videoRef.current.pause();
-                setIsPlaying(!videoRef.current.paused);
+                if (videoRef.current.paused) {
+                  videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+                } else {
+                  videoRef.current.pause();
+                  setIsPlaying(false);
+                }
               }
             }}
           />

@@ -4,18 +4,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Play, Clock, Star, MapPin } from 'lucide-react';
 import { isTeamFavorited, toggleFavoriteTeam } from '@/lib/utils/favorites';
+import { cleanTeamBadgeUrl, getTeamLeague } from '@/lib/utils/teamLogos';
 
 function CircularTeamBadge({ team, size = 'w-12 h-12 sm:w-14 sm:h-14' }) {
   const [imgError, setImgError] = useState(false);
-  const hasBadge = team?.badge && !imgError;
+  const badgeSrc = cleanTeamBadgeUrl(team?.badge, team?.name || '');
+  const hasBadge = badgeSrc && !imgError;
   const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(team?.name || 'T')}&background=ffffff&color=1e1b4b&size=128&bold=true&format=png`;
 
   return (
-    <div className={`${size} rounded-full bg-white p-2 flex items-center justify-center shadow-md ring-2 ring-white/10 group-hover:scale-105 transition-transform duration-300 shrink-0`}>
+    <div className={`${size} rounded-2xl bg-white/10 backdrop-blur-md p-1.5 flex items-center justify-center shadow-md ring-1 ring-white/15 group-hover:scale-105 transition-transform duration-300 shrink-0 overflow-hidden`}>
       <img
-        src={hasBadge ? team.badge : fallbackUrl}
+        src={hasBadge ? badgeSrc : fallbackUrl}
         alt={team?.name || 'Team'}
-        className="w-full h-full object-contain"
+        className="max-h-full max-w-full object-contain drop-shadow"
         loading="lazy"
         onError={() => setImgError(true)}
       />
@@ -121,7 +123,20 @@ export default function MatchCard({ match, tab }) {
     minute: '2-digit',
   });
 
-  const venueName = venue || (tournament ? `${tournament} Arena` : 'San Siro Stadium');
+  const rawTourn = (tournament || '').trim();
+  const displayTournament = (
+    !rawTourn || 
+    rawTourn.toLowerCase() === 'football' || 
+    rawTourn.toLowerCase() === 'match broadcast'
+  )
+    ? (getTeamLeague(homeTeam?.name) || getTeamLeague(awayTeam?.name) || 'League Match')
+    : rawTourn;
+
+  const venueName = venue || (
+    displayTournament.toLowerCase() === 'league match'
+      ? `${homeTeam?.name || 'Home'} Arena`
+      : `${displayTournament} Arena`
+  );
 
   return (
     <div className="group relative flex flex-col justify-between rounded-[22px] bg-[#1c1a2d] border border-white/[0.06] p-5 shadow-xl hover:border-purple-500/30 hover:shadow-[0_12px_32px_rgba(0,0,0,0.5)] transition-all duration-300">
@@ -130,7 +145,7 @@ export default function MatchCard({ match, tab }) {
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <h4 className="text-[13px] font-black text-white tracking-tight leading-snug">
-            {tournament || 'SerieA Match'}
+            {displayTournament}
           </h4>
           <p className="text-[10.5px] font-medium text-slate-400 mt-0.5">
             {dateStr} · {timeStr}
