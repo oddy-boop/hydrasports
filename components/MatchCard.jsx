@@ -36,21 +36,17 @@ export default function MatchCard({ match, tab }) {
     awayScore,
   } = match;
 
+  const isKickoffInFuture = Boolean(timestamp && timestamp > Date.now());
+  const effectiveStatus = isKickoffInFuture ? 'upcoming' : status;
+
   const [liveData, setLiveData] = useState(null);
   const [homeFav, setHomeFav] = useState(false);
   const [awayFav, setAwayFav] = useState(false);
   const [countdownText, setCountdownText] = useState('');
-  const [hasStarted, setHasStarted] = useState(() => {
-    return status === 'live' || status === 'finished' || (timestamp ? timestamp <= Date.now() : true);
-  });
+  const [hasStarted, setHasStarted] = useState(() => !isKickoffInFuture);
   const polling = useRef(null);
 
   useEffect(() => {
-    if (status === 'live' || status === 'finished') {
-      setHasStarted(true);
-      return;
-    }
-
     const updateCountdown = () => {
       const now = Date.now();
       const diff = (timestamp || now) - now;
@@ -68,18 +64,17 @@ export default function MatchCard({ match, tab }) {
 
       if (days > 0) {
         setCountdownText(`${days}d ${hours}h ${minutes}m`);
+      } else if (hours > 0) {
+        setCountdownText(`${hours}h ${minutes}m ${seconds}s`);
       } else {
-        const hh = String(hours).padStart(2, '0');
-        const mm = String(minutes).padStart(2, '0');
-        const ss = String(seconds).padStart(2, '0');
-        setCountdownText(`${hh}:${mm}:${ss}`);
+        setCountdownText(`${minutes}m ${seconds}s`);
       }
     };
 
     updateCountdown();
     const timer = setInterval(updateCountdown, 1000);
     return () => clearInterval(timer);
-  }, [timestamp, status]);
+  }, [timestamp]);
 
   useEffect(() => {
     const checkFavs = () => {
@@ -144,18 +139,18 @@ export default function MatchCard({ match, tab }) {
 
         {/* Live / Status Pill from Image 1 */}
         <div>
-          {status === 'live' ? (
+          {effectiveStatus === 'live' && hasStarted ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-600/90 border border-red-500/40 text-[10.5px] font-black text-white shadow-[0_0_12px_rgba(239,68,68,0.4)]">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
               <span>{currentMinute ? `${currentMinute} Live` : 'Live'}</span>
             </span>
-          ) : status === 'finished' ? (
+          ) : effectiveStatus === 'finished' ? (
             <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-800 border border-white/10 text-[10.5px] font-bold text-slate-300">
               FT
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/10 text-[10px] font-bold text-slate-300">
-              <Clock className="w-3 h-3 text-slate-400" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-[10.5px] font-bold text-amber-300">
+              <Clock className="w-3 h-3 text-amber-400" />
               <span>{timeStr}</span>
             </span>
           )}
@@ -176,7 +171,7 @@ export default function MatchCard({ match, tab }) {
 
           {/* Big Center Score */}
           <div className="flex flex-col items-center justify-center shrink-0 min-w-[70px]">
-            {status === 'live' || status === 'finished' || (displayHomeScore != null && displayAwayScore != null) ? (
+            {hasStarted && (effectiveStatus === 'live' || effectiveStatus === 'finished') && (displayHomeScore != null && displayAwayScore != null) ? (
               <span className="text-2xl sm:text-3xl font-black text-white tracking-wider tabular-nums">
                 {displayHomeScore ?? 0} : {displayAwayScore ?? 0}
               </span>
@@ -206,14 +201,13 @@ export default function MatchCard({ match, tab }) {
       {/* ── ACTION BUTTON: Watch Now vs Live Countdown (Image 1) ── */}
       <div className="mt-4 pt-3 border-t border-white/[0.06]">
         {!hasStarted && countdownText ? (
-          <Link
-            href={`/watch/${id}?tab=${tab || 'upcoming'}`}
-            className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[#232039] hover:bg-[#2b2746] border border-amber-500/30 text-amber-300 font-extrabold text-xs uppercase tracking-wider transition-all duration-200 shadow-inner group/timer cursor-pointer"
+          <div
+            className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[#232039] border border-amber-500/30 text-amber-300 font-extrabold text-xs uppercase tracking-wider transition-all duration-200 shadow-inner"
           >
             <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-            <span>Starts in {countdownText}</span>
-          </Link>
-        ) : status === 'finished' ? (
+            <span>Kickoff in {countdownText}</span>
+          </div>
+        ) : effectiveStatus === 'finished' ? (
           <Link
             href={`/watch/${id}?tab=${tab || 'finished'}`}
             className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-white/[0.06] hover:bg-white/10 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all duration-200"

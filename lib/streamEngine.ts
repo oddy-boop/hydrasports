@@ -106,12 +106,25 @@ export async function getMatches(): Promise<Match[]> {
       if (existingIdx !== -1) {
         // Merge match info: preserve stream sources from streaming provider, incorporate scores/badges from ESPN
         const existing = mergedList[existingIdx];
+        const now = Date.now();
+        const finalTimestamp = existing.timestamp || match.timestamp;
+        const isFuture = Boolean(finalTimestamp && finalTimestamp > now + 60000);
+        
+        const resolvedStatus = isFuture
+          ? 'upcoming'
+          : (match.status === 'live' || existing.status === 'live')
+          ? 'live'
+          : (match.status === 'finished' || existing.status === 'finished')
+          ? 'finished'
+          : 'upcoming';
+
         mergedList[existingIdx] = {
           ...existing,
-          homeScore: existing.homeScore ?? match.homeScore,
-          awayScore: existing.awayScore ?? match.awayScore,
-          currentMinute: existing.currentMinute || match.currentMinute,
-          status: (match.status === 'live' || existing.status === 'live') ? 'live' : (match.status === 'finished' ? 'finished' : existing.status),
+          timestamp: finalTimestamp,
+          homeScore: isFuture ? null : (existing.homeScore ?? match.homeScore),
+          awayScore: isFuture ? null : (existing.awayScore ?? match.awayScore),
+          currentMinute: isFuture ? '' : (existing.currentMinute || match.currentMinute),
+          status: resolvedStatus,
           homeTeam: {
             name: existing.homeTeam.name || match.homeTeam.name,
             badge: existing.homeTeam.badge || match.homeTeam.badge,
@@ -124,17 +137,40 @@ export async function getMatches(): Promise<Match[]> {
           fallbackChannels: existing.fallbackChannels.length > 0 ? existing.fallbackChannels : match.fallbackChannels,
         };
       } else {
-        mergedList.push(match);
+        const now = Date.now();
+        const isFuture = Boolean(match.timestamp && match.timestamp > now + 60000);
+        mergedList.push(isFuture ? {
+          ...match,
+          status: 'upcoming',
+          homeScore: null,
+          awayScore: null,
+          currentMinute: '',
+          currentMinuteNumber: 0,
+        } : match);
       }
     }
 
     if (mergedList.length > 0) {
       const enriched = await Promise.all(mergedList.map(async match => {
+        const now = Date.now();
+        const isFuture = Boolean(match.timestamp && match.timestamp > now + 60000);
+
+        if (isFuture) {
+          return {
+            ...match,
+            status: 'upcoming' as const,
+            homeScore: null,
+            awayScore: null,
+            currentMinute: '',
+            currentMinuteNumber: 0,
+          };
+        }
+
         // If score is already populated, no need to re-fetch
         if (match.homeScore !== null && match.awayScore !== null) return match;
 
         // Enrich matches that are live, finished, or scheduled for today
-        const isToday = Math.abs(Date.now() - match.timestamp) < 24 * 3600 * 1000;
+        const isToday = Math.abs(now - match.timestamp) < 24 * 3600 * 1000;
         if (match.status !== 'live' && match.status !== 'finished' && !isToday) return match;
 
         const eventId = match.id.match(/(\d+)$/)?.[1];

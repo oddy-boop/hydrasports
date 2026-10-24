@@ -259,6 +259,15 @@ async function getStreamedScore(
       return null;
     }
 
+    const now = Date.now();
+    if (timestamp && timestamp > now + 60000) {
+      return {
+        home: null,
+        away: null,
+        currentMinute: '',
+      };
+    }
+
     const home = Number(match.homeScore ?? match.score?.home ?? match.scores?.home);
     const away = Number(match.awayScore ?? match.score?.away ?? match.scores?.away);
     const score: MatchScore = {
@@ -468,11 +477,24 @@ async function getEspnScore(
     }
 
     if (event) {
+      const state = (event.status?.type?.state || '').toLowerCase();
+      // If match is scheduled in the future / pre-game, it has not kicked off yet
+      if (state === 'pre') {
+        return {
+          home: null,
+          away: null,
+          currentMinute: '',
+        };
+      }
+
       const competitors = event.competitions?.[0]?.competitors || [];
       const scores = extractScoreForTitle(title, competitors);
-      const currentMinute = event.competitions?.[0]?.status?.displayClock ||
-        event.status?.type?.shortDetail ||
-        event.status?.type?.detail || '';
+      const isPost = state === 'post';
+      const currentMinute = isPost
+        ? 'FT'
+        : (event.competitions?.[0]?.status?.displayClock ||
+           event.status?.type?.shortDetail ||
+           event.status?.type?.detail || '');
 
       return {
         home: scores.home,
