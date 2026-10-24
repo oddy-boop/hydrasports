@@ -1,5 +1,5 @@
 export default function robots() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sports.skullmux.com';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hydrasports.selamate.com';
 
   return {
     rules: [

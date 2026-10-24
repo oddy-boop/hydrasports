@@ -3,7 +3,7 @@ import { getMatches } from '@/lib/streamEngine';
 export const revalidate = 300; // Refresh sitemap cache every 5 minutes
 
 export default async function sitemap() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sports.skullmux.com';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hydrasports.selamate.com';
   const now = new Date();
 
   // Static core routes with priorities

@@ -4,7 +4,7 @@ import { MiniPlayerProvider } from '@/components/MiniPlayerProvider';
 import { AuthProvider } from '@/components/AuthContext';
 import FootyLayoutShell from '@/components/FootyLayoutShell';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sports.skullmux.com';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hydrasports.selamate.com';
 
 export const metadata = {
   metadataBase: new URL(siteUrl),
@@ -23,7 +23,7 @@ export const metadata = {
     'free sports streams',
     'multistream arena',
     'hydrasports',
-    'skullmux',
+    'selamate',
   ],
   authors: [{ name: 'HydraSports' }],
   creator: 'HydraSports',
