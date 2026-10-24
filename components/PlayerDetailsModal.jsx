@@ -123,30 +123,33 @@ export default function PlayerDetailsModal({ player, onClose }) {
             </div>
           </div>
 
-          {/* Match Rating Card */}
-          <div className="relative rounded-2xl bg-gradient-to-br from-emerald-500/15 via-[#1b1930] to-[#121022] border border-emerald-500/30 p-4 shadow-lg overflow-hidden flex flex-col justify-between">
+          {/* Match Rating Card (Flashscore Official Formula & Scale) */}
+          <div className="relative rounded-2xl bg-gradient-to-br from-[#1b1930] to-[#121022] border border-white/10 p-4 shadow-lg overflow-hidden flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <div className="h-7 w-7 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center text-slate-300">
                   <Activity className="h-4 w-4" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300/90">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">
                   Match Rating
                 </span>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[10px] font-black text-emerald-300 uppercase">
-                {player.rating >= 8.5 ? 'Masterclass' : player.rating >= 7.5 ? 'Excellent' : 'Good'}
-              </span>
+              <span className="text-[10px] font-bold text-slate-400">Flashscore</span>
             </div>
 
-            <div className="my-2.5 flex items-baseline gap-2">
-              <div className="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tight">
+            <div className="my-2.5 flex items-center gap-2.5">
+              <div className={`px-2.5 py-1 rounded-lg text-xl sm:text-2xl font-black shadow-md ${player.ratingColor || 'bg-[#008744] text-white'}`}>
                 {player.rating.toFixed(1)}
               </div>
-              <span className="text-xs text-slate-400 font-bold">/ 10.0</span>
+              <div className="flex flex-col">
+                <span className="text-xs font-black text-white">
+                  {player.rating >= 8.0 ? 'Top Performer' : player.rating >= 7.0 ? 'Good' : player.rating >= 6.0 ? 'Average' : 'Below Average'}
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">Flashscore Scale / 10.0</span>
+              </div>
             </div>
 
-            <div className="pt-2 border-t border-emerald-500/20 flex items-center justify-between text-[10px] text-slate-400">
+            <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400">
               <span>Status:</span>
               <span className="font-semibold text-slate-200">{player.status} ({player.minutesPlayed}&apos;)</span>
             </div>

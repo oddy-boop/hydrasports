@@ -507,9 +507,22 @@ export function getPlayerMarketValue(
 }
 
 /**
- * Computes live match rating (scale 5.0 - 9.2) for a player.
- * Follows realistic football telemetry (FotMob / SofaScore standard).
- * Considers match events (goals, cards, assists), real stats, and key performer status.
+ * Computes live match rating (scale 4.0 - 9.8) for a player using Flashscore / Opta formula:
+ * - Kickoff baseline rating: 6.0 flat (or 6.0 - 6.3 based on early active involvement).
+ * - Goal: +0.9 (penalty: +0.7)
+ * - Assist: +0.6
+ * - Key Pass / Shot on Target / GK Save: +0.2 each
+ * - Clean sheet (GK/DF): +0.3
+ * - Goals conceded (GK/DF): -0.25 per goal
+ * - Yellow Card: -0.4
+ * - Red Card: -1.8 (drops player into < 5.5 range)
+ * - Winning team match finish: +0.2; Losing team: -0.2
+ * - Match MVP / Best Player: 8.0 - 8.6
+ *
+ * Flashscore Visual Colors:
+ * - >= 7.0: Flashscore Green (#008744 / bg-[#008744] text-white font-bold)
+ * - 6.0 - 6.9: Flashscore Yellow/Amber (#FFB800 / bg-[#ffb800] text-slate-950 font-black)
+ * - < 6.0: Flashscore Red (#DC2626 / bg-[#dc2626] text-white font-bold)
  */
 export function getPlayerMatchRating(
   player: { name: string; positionGroup?: string; jersey?: string; starter?: boolean; realStats?: any },
@@ -521,25 +534,25 @@ export function getPlayerMatchRating(
     homeScore?: number;
     awayScore?: number;
   }
-): { rating: number; colorClass: string; label: string } {
+): { rating: number; colorClass: string; label: string; tier: 'green' | 'yellow' | 'red' } {
   const norm = normalizePlayerName(player.name);
   const h = hashString(norm);
 
-  // Realistic match baseline (FotMob / SofaScore standard: 6.2 - 6.6 for average starters, 6.0 for subs)
+  // Flashscore baseline: Starters begin at 6.0 + minor variance (6.0 - 6.3), subs at 6.0 flat
   const isStarter = player.starter !== false;
-  let rating = isStarter ? 6.3 + ((h % 5) / 10) : 6.0 + ((h % 4) / 10); // Base: 6.3 - 6.7 for starters, 6.0 - 6.3 for subs
+  let rating = isStarter ? 6.0 + ((h % 4) / 10) : 6.0;
 
   const stats = player.realStats;
   if (stats) {
-    if (stats.goals > 0) rating += stats.goals * 1.1;
-    if (stats.assists > 0) rating += stats.assists * 0.7;
+    if (stats.goals > 0) rating += stats.goals * 0.9;
+    if (stats.assists > 0) rating += stats.assists * 0.6;
     if (stats.shotsOnTarget > 0) rating += Math.min(stats.shotsOnTarget, 4) * 0.2;
     if (stats.saves > 0) rating += Math.min(stats.saves, 6) * 0.2;
     if (stats.goalsConceded > 0 && (player.positionGroup === 'GK' || player.positionGroup === 'DF')) {
       rating -= Math.min(stats.goalsConceded, 4) * 0.25;
     }
     if (stats.yellowCards > 0) rating -= 0.4;
-    if (stats.redCards > 0) rating -= 1.6;
+    if (stats.redCards > 0) rating -= 1.8;
   }
 
   if (matchContext) {
@@ -547,7 +560,7 @@ export function getPlayerMatchRating(
 
     // Goalscorer boost (if not already counted via realStats)
     if (!stats?.goals && goalScorers && goalScorers.some(s => normalizePlayerName(s).includes(norm) || norm.includes(normalizePlayerName(s)))) {
-      rating += 1.1;
+      rating += 0.9;
     }
 
     // Yellow card deduction (if not already counted via realStats)
@@ -555,48 +568,56 @@ export function getPlayerMatchRating(
       rating -= 0.4;
     }
 
-    // Best player / Match MVP (realistic 8.3 - 8.7!)
+    // Best player / Match MVP in Flashscore is 8.0 - 8.6 (rarely > 8.8 unless 3+ goals)
     if (bestPlayerName && normalizePlayerName(bestPlayerName).includes(norm)) {
-      rating = Math.max(rating, 8.3 + ((h % 5) / 10));
+      rating = Math.max(rating, 8.1 + ((h % 5) / 10));
     }
 
     // Clean sheet bonus for defenders / GK
     const teamConceded = isHome ? awayScore : homeScore;
     if (teamConceded === 0 && (player.positionGroup === 'GK' || player.positionGroup === 'DF')) {
       rating += 0.3;
+    } else if (teamConceded > 0 && (player.positionGroup === 'GK' || player.positionGroup === 'DF')) {
+      rating -= Math.min(teamConceded, 4) * 0.2;
     }
 
-    // Team winning boost
+    // Team winning / losing adjustments in Flashscore
     const teamWon = isHome ? homeScore > awayScore : awayScore > homeScore;
+    const teamLost = isHome ? homeScore < awayScore : awayScore < homeScore;
     if (teamWon) rating += 0.2;
-    else if ((isHome && homeScore < awayScore) || (!isHome && awayScore < homeScore)) {
-      rating -= 0.2;
-    }
+    else if (teamLost) rating -= 0.2;
   }
 
-  // Clamp rating between 4.8 (red card / terrible loss) and 9.4 (hat-trick / legendary display)
-  rating = Math.min(9.4, Math.max(4.8, Math.round(rating * 10) / 10));
+  // Flashscore bounds: 4.0 (disastrous/red card) to 9.8 (world-class hat-trick)
+  rating = Math.min(9.8, Math.max(4.0, Math.round(rating * 10) / 10));
 
-  let colorClass = 'bg-emerald-600 text-white';
+  // Flashscore Visual Color Palette:
+  // >= 7.0: Flashscore Green (#008744)
+  // 6.0 - 6.9: Flashscore Yellow/Amber (#FFB800) with dark text
+  // < 6.0: Flashscore Red (#DC2626)
+  let colorClass = 'bg-[#008744] text-white font-bold';
   let label = 'Good';
-  if (rating >= 8.2) {
-    colorClass = 'bg-emerald-500 text-white shadow-emerald-500/50';
-    label = 'Masterclass';
-  } else if (rating >= 7.3) {
-    colorClass = 'bg-emerald-600 text-white';
-    label = 'Very Good';
-  } else if (rating >= 6.7) {
-    colorClass = 'bg-teal-600 text-white';
-    label = 'Solid';
+  let tier: 'green' | 'yellow' | 'red' = 'green';
+
+  if (rating >= 8.0) {
+    colorClass = 'bg-[#008744] text-white font-black ring-1 ring-white/40 shadow-[0_0_10px_rgba(0,135,68,0.5)]';
+    label = 'Top Performer';
+    tier = 'green';
+  } else if (rating >= 7.0) {
+    colorClass = 'bg-[#008744] text-white font-bold';
+    label = 'Good';
+    tier = 'green';
   } else if (rating >= 6.0) {
-    colorClass = 'bg-amber-600 text-white';
+    colorClass = 'bg-[#ffb800] text-slate-950 font-black';
     label = 'Average';
+    tier = 'yellow';
   } else {
-    colorClass = 'bg-rose-600 text-white';
+    colorClass = 'bg-[#dc2626] text-white font-bold';
     label = 'Below Average';
+    tier = 'red';
   }
 
-  return { rating, colorClass, label };
+  return { rating, colorClass, label, tier };
 }
 
 /**

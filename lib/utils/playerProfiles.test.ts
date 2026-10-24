@@ -31,24 +31,35 @@ describe('playerProfiles utility', () => {
     expect(unknown.valueFormatted).toMatch(/^€\d+\.\d{2}M$/);
   });
 
-  it('computes realistic Sofascore-style match ratings with context boosts', () => {
+  it('computes realistic Flashscore-style match ratings with baseline 6.0 and context boosts', () => {
     const base = getPlayerMatchRating({ name: 'Viktor Gyökeres' });
-    expect(base.rating).toBeGreaterThanOrEqual(5.8);
-    expect(base.rating).toBeLessThanOrEqual(9.7);
+    expect(base.rating).toBeGreaterThanOrEqual(6.0);
+    expect(base.rating).toBeLessThanOrEqual(6.5);
+    expect(base.colorClass).toContain('bg-[#ffb800]'); // Flashscore yellow for average starter
 
-    // Goal scorer should receive higher rating
+    // Goal scorer should receive higher rating and enter green tier
     const scorer = getPlayerMatchRating(
       { name: 'Viktor Gyökeres' },
       { goalScorers: ['Viktor Gyökeres'], homeScore: 2, awayScore: 0, isHome: true }
     );
     expect(scorer.rating).toBeGreaterThan(base.rating);
+    expect(scorer.rating).toBeGreaterThanOrEqual(7.0);
+    expect(scorer.colorClass).toContain('bg-[#008744]'); // Flashscore green
 
-    // Player with yellow card receives rating adjustment
+    // Player with yellow card receives rating deduction
     const carded = getPlayerMatchRating(
       { name: 'Viktor Gyökeres' },
       { yellowCards: ['Viktor Gyökeres'] }
     );
     expect(carded.rating).toBeLessThan(base.rating);
+
+    // Red card should drop rating into poor red tier
+    const redCarded = getPlayerMatchRating({
+      name: 'Viktor Gyökeres',
+      realStats: { redCards: 1, yellowCards: 0, goals: 0, assists: 0 },
+    });
+    expect(redCarded.rating).toBeLessThan(6.0);
+    expect(redCarded.colorClass).toContain('bg-[#dc2626]'); // Flashscore red
   });
 
   it('constructs a complete PlayerFullDetails object with valid stats and physical info', () => {
