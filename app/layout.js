@@ -13,15 +13,15 @@ export const viewport = { width: 'device-width', initialScale: 1, maximumScale: 
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="scroll-smooth" suppressHydrationWarning>
+    <html lang="en" className="dark scroll-smooth bg-[#12111c] text-white" style={{ colorScheme: 'dark' }} suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="light" />
-        <meta name="theme-color" content="#10b981" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="theme-color" content="#12111c" />
         <script dangerouslySetInnerHTML={{ __html: `
           try {
-            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('dark');
             if (
               window.location.hostname === 'localhost' &&
               'serviceWorker' in navigator
@@ -33,7 +33,7 @@ export default function RootLayout({ children }) {
           } catch (_) {}
         ` }} />
       </head>
-      <body className="app-shell" suppressHydrationWarning>
+      <body className="app-shell bg-[#12111c] text-white" suppressHydrationWarning>
         <AuthProvider>
           <HydraProvider>
             <MiniPlayerProvider>

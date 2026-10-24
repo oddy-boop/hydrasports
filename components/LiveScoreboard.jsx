@@ -30,28 +30,28 @@ export default function LiveScoreboard({ matchId, initial, isFinal = false, spor
   }, [data.status, refresh]);
 
   return (
-    <div className="relative overflow-hidden rounded-[26px] border border-slate-200/90 bg-white/95 backdrop-blur-xl px-6 py-6 shadow-md transition-all duration-300">
+    <div className="relative overflow-hidden rounded-[26px] border border-white/10 bg-[#181627] backdrop-blur-xl px-6 py-6 shadow-2xl text-white transition-all duration-300">
       {/* Stadium subtle field ambiance */}
-      <div className="absolute top-0 right-1/4 w-[280px] h-[280px] bg-emerald-500/8 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 w-[280px] h-[280px] bg-teal-500/5 blur-3xl pointer-events-none" />
+      <div className="absolute top-0 right-1/4 w-[280px] h-[280px] bg-purple-500/10 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-1/4 w-[280px] h-[280px] bg-indigo-500/10 blur-3xl pointer-events-none" />
 
       {/* Top Header: Tournament & Live Pulse */}
-      <div className="relative z-10 flex items-center justify-between pb-4 border-b border-slate-100">
+      <div className="relative z-10 flex items-center justify-between pb-4 border-b border-white/10">
         <div className="flex items-center gap-2">
           {data.leagueLogo && (
             <img src={data.leagueLogo} alt="" className="h-4.5 w-4.5 rounded-full object-contain" />
           )}
-          <span className="text-xs font-black uppercase tracking-wider text-slate-700">
+          <span className="text-xs font-black uppercase tracking-wider text-slate-300">
             {data.tournament || 'Football Competition'}
           </span>
         </div>
 
         <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
           isFinal
-            ? 'bg-slate-100 text-slate-700 border-slate-200'
-            : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+            ? 'bg-white/5 text-slate-300 border-white/10'
+            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
         }`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${isFinal ? 'bg-slate-500' : 'bg-emerald-600 animate-ping'}`} />
+          <span className={`w-1.5 h-1.5 rounded-full ${isFinal ? 'bg-slate-400' : 'bg-emerald-400 animate-ping'}`} />
           <span>{isFinal ? 'FINAL SCORE' : 'LIVE BROADCAST'}</span>
         </div>
       </div>
@@ -64,23 +64,23 @@ export default function LiveScoreboard({ matchId, initial, isFinal = false, spor
               <img
                 src={data.homeBadge}
                 alt=""
-                className="h-16 w-16 rounded-xl object-contain bg-white p-2 ring-2 ring-slate-200 shadow-sm"
+                className="h-16 w-16 rounded-xl object-contain bg-white p-2 ring-2 ring-white/10 shadow-md"
                 onError={() => setHomeBadgeError(true)}
               />
             ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-slate-100 border border-slate-200 px-2 text-center text-slate-700 text-xl font-black leading-none">
+              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-[#131120] border border-white/10 px-2 text-center text-slate-200 text-xl font-black leading-none">
                 {data.homeName?.substring(0, 2).toUpperCase()}
               </div>
             )}
-            <span className="text-base font-black text-slate-900 text-center md:text-right truncate max-w-[200px]">
+            <span className="text-base font-black text-white text-center md:text-right truncate max-w-[200px]">
               {data.homeName}
             </span>
           </div>
         </div>
 
         {/* Score Center Board */}
-        <div className="flex items-center gap-6 shrink-0 bg-slate-50/90 border border-slate-200/90 rounded-2xl px-6 py-3.5 shadow-inner">
-          <span className="text-4xl sm:text-5xl font-black tabular-nums text-slate-900 tracking-tight">
+        <div className="flex items-center gap-6 shrink-0 bg-[#131120] border border-white/10 rounded-2xl px-6 py-3.5 shadow-xl">
+          <span className="text-4xl sm:text-5xl font-black tabular-nums text-white tracking-tight">
             {data.homeScore ?? '—'}
           </span>
 
@@ -89,17 +89,17 @@ export default function LiveScoreboard({ matchId, initial, isFinal = false, spor
               {isFinal ? 'Final' : sport === 'football' ? 'Match Minute' : 'Game Status'}
             </span>
             {isFinal ? (
-              <span className="text-sm font-black uppercase tracking-widest text-slate-700">FT</span>
+              <span className="text-sm font-black uppercase tracking-widest text-slate-300">FT</span>
               ) : sport === 'football' ? (
               <LiveMinute apiMinute={data.currentMinute} apiMinuteNumber={data.currentMinuteNumber} />
               ) : (
-                <span className="max-w-[120px] text-center text-xs font-black uppercase tracking-wide text-slate-700">
+                <span className="max-w-[120px] text-center text-xs font-black uppercase tracking-wide text-slate-300">
                   {data.currentMinute || 'LIVE'}
                 </span>
               )}
           </div>
 
-          <span className="text-4xl sm:text-5xl font-black tabular-nums text-slate-900 tracking-tight">
+          <span className="text-4xl sm:text-5xl font-black tabular-nums text-white tracking-tight">
             {data.awayScore ?? '—'}
           </span>
         </div>
@@ -111,15 +111,15 @@ export default function LiveScoreboard({ matchId, initial, isFinal = false, spor
               <img
                 src={data.awayBadge}
                 alt=""
-                className="h-16 w-16 rounded-xl object-contain bg-white p-2 ring-2 ring-slate-200 shadow-sm"
+                className="h-16 w-16 rounded-xl object-contain bg-white p-2 ring-2 ring-white/10 shadow-md"
                 onError={() => setAwayBadgeError(true)}
               />
             ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-slate-100 border border-slate-200 px-2 text-center text-slate-700 text-xl font-black leading-none">
+              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-[#131120] border border-white/10 px-2 text-center text-slate-200 text-xl font-black leading-none">
                 {data.awayName?.substring(0, 2).toUpperCase()}
               </div>
             )}
-            <span className="text-base font-black text-slate-900 text-center md:text-left truncate max-w-[200px]">
+            <span className="text-base font-black text-white text-center md:text-left truncate max-w-[200px]">
               {data.awayName}
             </span>
           </div>
@@ -127,12 +127,12 @@ export default function LiveScoreboard({ matchId, initial, isFinal = false, spor
       </div>
 
       {/* Info footer */}
-      <div className="relative z-10 mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs font-bold text-slate-500 border-t border-slate-100 pt-3">
-        <span className="bg-slate-100 border border-slate-200 px-3 py-1 rounded-full text-slate-700">
+      <div className="relative z-10 mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs font-bold text-slate-400 border-t border-white/10 pt-3">
+        <span className="bg-white/5 border border-white/10 px-3 py-1 rounded-full text-slate-300">
           {data.dateStr} &middot; {data.timeStr}
         </span>
         {data.venue && data.venue !== 'N/A' && (
-          <span className="bg-slate-100 border border-slate-200 px-3 py-1 rounded-full text-slate-700">
+          <span className="bg-white/5 border border-white/10 px-3 py-1 rounded-full text-slate-300">
             🏟️ {data.venue}
           </span>
         )}

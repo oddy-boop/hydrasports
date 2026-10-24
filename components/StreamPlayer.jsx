@@ -345,12 +345,12 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
 
       {/* Ad Redirect Recovery Banner */}
       {!videoOnly && adRedirectDetected && !isDirectHls && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm shadow-sm animate-fade-in">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-[#211b10] px-4 py-3 text-sm shadow-xl animate-fade-in">
           <div className="flex items-start gap-2.5">
-            <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <ShieldAlert className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold text-amber-900 text-xs">Ad redirect detected</p>
-              <p className="text-amber-700 text-xs mt-0.5 font-medium">
+              <p className="font-bold text-amber-300 text-xs">Ad redirect detected</p>
+              <p className="text-amber-200/80 text-xs mt-0.5 font-medium">
                 A stream ad briefly hijacked your browser. Enable <strong>Ad-Shield</strong> to block this — note it may break some streams.
               </p>
             </div>
@@ -366,7 +366,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
             <button
               type="button"
               onClick={() => setAdRedirectDetected(false)}
-              className="rounded-lg border border-amber-300 bg-white hover:bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 transition-colors cursor-pointer"
+              className="rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-300 transition-colors cursor-pointer"
             >
               Dismiss
             </button>

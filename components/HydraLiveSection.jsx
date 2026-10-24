@@ -5,25 +5,7 @@ import Link from 'next/link';
 import { Play, Radio, Calendar, Trophy, ChevronRight, Star, Layers, Check } from 'lucide-react';
 import { useHydraSports } from './HydraContext';
 import { matchBelongsToLeague, COMPETITIONS_LIST, POPULAR_TEAMS } from './leagueMatcher';
-
-function TeamBadge({ team, name }) {
-  const [err, setErr] = useState(false);
-  if (team?.badge && !err) {
-    return (
-      <img
-        src={team.badge}
-        alt={name || team?.name}
-        onError={() => setErr(true)}
-        className="w-7 h-7 rounded-lg object-contain bg-white p-1 ring-1 ring-slate-200"
-      />
-    );
-  }
-  return (
-    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-100 to-teal-200 text-emerald-800 text-[10px] font-black flex items-center justify-center shrink-0 border border-emerald-300 leading-none">
-      {(name || team?.name || 'T').substring(0, 2).toUpperCase()}
-    </div>
-  );
-}
+import MatchCard from './MatchCard';
 
 export default function HydraSportsSection({ matches = [], teamFilter = '' }) {
   const {
@@ -32,7 +14,6 @@ export default function HydraSportsSection({ matches = [], teamFilter = '' }) {
     selectLeague,
     activeMenu,
     selectMenu,
-    playMatch,
     favouriteTeams,
     toggleFavourite,
     menuTrigger,
@@ -131,18 +112,18 @@ export default function HydraSportsSection({ matches = [], teamFilter = '' }) {
   }, [matches, searchQuery, selectedLeague, filterTab, activeMenu, favouriteTeams, teamFilter, sortBy]);
 
   return (
-    <section ref={sectionRef} className="mt-10 mb-8 scroll-mt-24">
+    <section ref={sectionRef} className="mt-4 mb-8 scroll-mt-24 text-white">
       {/* Competitions Shelf (visible when Competitions is selected or user chooses) */}
       {activeMenu === 'competitions' && (
-        <div className="mb-8 p-5 rounded-[24px] bg-gradient-to-br from-white via-slate-50 to-emerald-50/40 border border-emerald-200/80 shadow-xs">
+        <div className="mb-8 p-5 rounded-[24px] bg-[#181627] border border-white/10 shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-emerald-600" />
-              <h4 className="text-base font-black text-slate-900">
+              <Trophy className="w-5 h-5 text-purple-400" />
+              <h4 className="text-base font-extrabold text-white">
                 Competitions & Leagues
               </h4>
             </div>
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-xs font-semibold text-slate-400">
               Select a competition to filter live feeds
             </span>
           </div>
@@ -159,13 +140,13 @@ export default function HydraSportsSection({ matches = [], teamFilter = '' }) {
                   onClick={() => selectLeague(comp.id)}
                   className={`p-3 rounded-2xl border text-left transition-all duration-200 cursor-pointer ${
                     isSelected
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.02]'
-                      : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800 hover:border-emerald-400/60 shadow-2xs'
+                      ? 'bg-purple-600 text-white border-purple-500 shadow-lg shadow-purple-600/30 scale-[1.02]'
+                      : 'bg-[#1e1c32] hover:bg-[#25233e] border-white/10 text-slate-200 hover:border-purple-500/40'
                   }`}
                 >
                   <div className="text-xl mb-1">{comp.flag}</div>
                   <div className="text-xs font-extrabold truncate">{comp.name}</div>
-                  <div className={`text-[10px] mt-0.5 font-bold ${isSelected ? 'text-emerald-100' : 'text-slate-400'}`}>
+                  <div className={`text-[10px] mt-0.5 font-bold ${isSelected ? 'text-purple-200' : 'text-slate-400'}`}>
                     {count} {count === 1 ? 'match' : 'matches'}
                   </div>
                 </button>
@@ -177,11 +158,11 @@ export default function HydraSportsSection({ matches = [], teamFilter = '' }) {
 
       {/* Favourite Teams Quick Selector (visible when Favourites is active) */}
       {activeMenu === 'favourites' && (
-        <div className="mb-6 p-5 rounded-[24px] bg-white border border-amber-200/80 shadow-xs">
+        <div className="mb-6 p-5 rounded-[24px] bg-[#181627] border border-amber-500/30 shadow-xl">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-              <h4 className="text-sm font-black text-slate-900">
+              <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+              <h4 className="text-sm font-extrabold text-white">
                 Your Pinned Clubs ({favouriteTeams.length})
               </h4>
             </div>
@@ -201,11 +182,11 @@ export default function HydraSportsSection({ matches = [], teamFilter = '' }) {
                   onClick={() => toggleFavourite(team)}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                     isFav
-                      ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs'
-                      : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-xs'
+                      : 'bg-[#1e1c32] hover:bg-[#26243d] text-slate-300 border border-white/10'
                   }`}
                 >
-                  <Star className={`w-3 h-3 ${isFav ? 'text-amber-500 fill-amber-500' : 'text-slate-400'}`} />
+                  <Star className={`w-3 h-3 ${isFav ? 'text-amber-400 fill-amber-400' : 'text-slate-500'}`} />
                   <span>{team}</span>
                 </button>
               );
@@ -214,12 +195,12 @@ export default function HydraSportsSection({ matches = [], teamFilter = '' }) {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header with Title and Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <h3 className="text-lg font-black text-slate-900 tracking-tight">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
               {activeMenu === 'live'
                 ? 'Live Matches'
                 : activeMenu === 'schedule'
@@ -234,12 +215,12 @@ export default function HydraSportsSection({ matches = [], teamFilter = '' }) {
             </h3>
 
             {selectedLeague !== 'All' && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-black bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300">
+              <span className="inline-flex items-center gap-1 text-[11px] font-black bg-purple-600/30 text-purple-300 px-2.5 py-0.5 rounded-full border border-purple-500/30">
                 <span>{selectedLeague}</span>
                 <button
                   type="button"
                   onClick={() => selectLeague('All')}
-                  className="hover:text-emerald-950 font-black ml-0.5 cursor-pointer"
+                  className="hover:text-white font-black ml-0.5 cursor-pointer"
                   title="Clear filter"
                 >
                   ×
@@ -247,28 +228,28 @@ export default function HydraSportsSection({ matches = [], teamFilter = '' }) {
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            Live scores and streams aggregated across multiple sports
+          <p className="text-xs text-slate-400 mt-1 font-medium">
+            Live scores and streams aggregated across real verified providers
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-          <label className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600">
-            <span>Sort</span>
+          <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#1c1a2d] px-3 py-1.5 text-[11px] font-bold text-slate-300">
+            <span className="text-slate-400">Sort</span>
             <select
               value={sortBy}
               onChange={(event) => setSortBy(event.target.value)}
-              className="cursor-pointer bg-transparent font-black text-slate-800 outline-none"
+              className="cursor-pointer bg-transparent font-extrabold text-white outline-none"
               aria-label="Sort matches"
             >
-              <option value="priority">Live priority</option>
-              <option value="kickoff">Kickoff time</option>
-              <option value="competition">Competition</option>
-              <option value="sport">Sport</option>
+              <option value="priority" className="bg-[#1c1a2d] text-white">Live priority</option>
+              <option value="kickoff" className="bg-[#1c1a2d] text-white">Kickoff time</option>
+              <option value="competition" className="bg-[#1c1a2d] text-white">Competition</option>
+              <option value="sport" className="bg-[#1c1a2d] text-white">Sport</option>
             </select>
           </label>
 
-          <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 p-1">
+          <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-[#161426] p-1">
             {['all', 'live', 'upcoming', 'finished'].map((t) => (
               <button
                 key={t}
@@ -280,10 +261,10 @@ export default function HydraSportsSection({ matches = [], teamFilter = '' }) {
                   else if (t === 'finished') selectMenu('results');
                   else selectMenu('explore');
                 }}
-                className={`px-3 py-1 rounded-full text-[11px] font-extrabold capitalize transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-lg text-[11px] font-extrabold capitalize transition-all cursor-pointer ${
                   filterTab === t
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
                 {t === 'all' ? 'All Matches' : t === 'finished' ? 'Past Results' : t}
@@ -293,10 +274,10 @@ export default function HydraSportsSection({ matches = [], teamFilter = '' }) {
         </div>
       </div>
 
-      {/* Match Stream Cards Grid */}
+      {/* Match Cards 2-Column Grid (Image 1 Layout) */}
       {filteredMatches.length === 0 ? (
-        <div className="p-8 text-center rounded-[24px] bg-white border border-slate-200">
-          <p className="text-xs font-bold text-slate-500">
+        <div className="p-8 text-center rounded-[24px] bg-[#181627] border border-white/10">
+          <p className="text-xs font-bold text-slate-400">
             {activeMenu === 'favourites'
               ? 'No scheduled matches found for your favourite teams. Add more teams above to track them!'
               : selectedLeague !== 'All'
@@ -310,125 +291,17 @@ export default function HydraSportsSection({ matches = [], teamFilter = '' }) {
                 selectLeague('All');
                 selectMenu('explore');
               }}
-              className="mt-3 px-4 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-bold shadow-xs hover:bg-emerald-700 transition-all cursor-pointer"
+              className="mt-3 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition-all cursor-pointer"
             >
               Show All Fixtures
             </button>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          {filteredMatches.map((match) => {
-            const isLive = match.status === 'live';
-            const timeStr = isLive
-              ? (match.currentMinute ? `${match.currentMinute}'` : 'LIVE')
-              : new Date(match.timestamp).toLocaleString([], {
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                });
-
-            const homeIsFav = favouriteTeams.some((f) => f.toLowerCase() === (match.homeTeam?.name || '').toLowerCase());
-            const awayIsFav = favouriteTeams.some((f) => f.toLowerCase() === (match.awayTeam?.name || '').toLowerCase());
-
-            return (
-              <div
-                key={match.id}
-                className="group relative rounded-[22px] bg-white hover:bg-slate-50/80 border border-slate-200/90 hover:border-emerald-500/40 p-4 shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 flex flex-col justify-between"
-              >
-                {/* Top: Tournament & Live indicator */}
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-[10px] font-bold text-slate-500 truncate max-w-[170px]">
-                    {match.tournament || 'Live Tournament'}
-                  </span>
-                  {isLive ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-black tracking-wide">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
-                      {timeStr}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                      {timeStr}
-                    </span>
-                  )}
-                </div>
-
-                {/* Teams & Scores */}
-                <div className="space-y-2 py-1">
-                  {/* Home team */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <TeamBadge team={match.homeTeam} name={match.homeTeam?.name} />
-                      <Link href={`/teams/${encodeURIComponent(match.homeTeam?.name || 'Home Team')}`} onClick={(e) => e.stopPropagation()} className="text-[12.5px] font-bold text-slate-800 truncate hover:text-emerald-700">
-                        {match.homeTeam?.name || 'Home Team'}
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleFavourite(match.homeTeam?.name);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-slate-400 hover:text-amber-500"
-                        title={homeIsFav ? 'Remove from favourites' : 'Star team'}
-                      >
-                        <Star className={`w-3 h-3 ${homeIsFav ? 'text-amber-500 fill-amber-500 !opacity-100' : ''}`} />
-                      </button>
-                    </div>
-                    {isLive && match.homeScore !== null && (
-                      <span className="text-sm font-black text-slate-900 pl-2 tabular-nums">
-                        {match.homeScore}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Away team */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <TeamBadge team={match.awayTeam} name={match.awayTeam?.name} />
-                      <Link href={`/teams/${encodeURIComponent(match.awayTeam?.name || 'Away Team')}`} onClick={(e) => e.stopPropagation()} className="text-[12.5px] font-bold text-slate-800 truncate hover:text-emerald-700">
-                        {match.awayTeam?.name || 'Away Team'}
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleFavourite(match.awayTeam?.name);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-slate-400 hover:text-amber-500"
-                        title={awayIsFav ? 'Remove from favourites' : 'Star team'}
-                      >
-                        <Star className={`w-3 h-3 ${awayIsFav ? 'text-amber-500 fill-amber-500 !opacity-100' : ''}`} />
-                      </button>
-                    </div>
-                    {isLive && match.awayScore !== null && (
-                      <span className="text-sm font-black text-slate-900 pl-2 tabular-nums">
-                        {match.awayScore}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Footer action: Watch Match button that takes the user to /watch/[id] */}
-                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-500 font-semibold">
-                    {match.sources?.length ? `${match.sources.length} active feeds` : 'Stream Ready'}
-                  </span>
-
-                  <Link
-                    href={`/watch/${match.id}`}
-                    onClick={() => playMatch(match)}
-                    className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-700 hover:text-emerald-800 group-hover:translate-x-0.5 transition-all"
-                  >
-                    <span>Watch Match</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredMatches.map((match) => (
+            <MatchCard key={match.id} match={match} />
+          ))}
         </div>
       )}
     </section>

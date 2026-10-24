@@ -4,9 +4,9 @@
 
 /* === Tailwind v4 Theme Configuration === */
 @theme {
-  --color-background: #f8fafc;
-  --color-surface: #ffffff;
-  --color-border: #e2e8f0;
+  --color-background: #12111c;
+  --color-surface: #181627;
+  --color-border: #28253e;
 
   /* Custom intermediate color shades missing from default palette */
   --color-zinc-150: #e8e8ec;
@@ -36,15 +36,15 @@
 
 /* === CSS Custom Properties for theming === */
 :root {
-  color-scheme: light;
-  --background: 210 40% 98%;
-  --foreground: 222 47% 11%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --border: 214 32% 91%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --accent: 158 64% 40%;
+  color-scheme: dark;
+  --background: 260 25% 9%;
+  --foreground: 210 40% 98%;
+  --card: 260 25% 12%;
+  --card-foreground: 210 40% 98%;
+  --border: 260 20% 18%;
+  --muted: 260 20% 15%;
+  --muted-foreground: 220 15% 65%;
+  --accent: 265 89% 66%;
   --accent-foreground: 0 0% 100%;
 }
 
@@ -237,7 +237,8 @@ body {
   transform: translateY(-1px);
 }
 .mini-player-header {
-  background: linear-gradient(90deg, #f0fdf4, #ffffff);
+  background: #181627;
+  color: #f8fafc;
 }
 .mini-player-footer {
   display: flex;
@@ -250,13 +251,13 @@ body {
   height: 2rem;
   flex: 0 0 auto;
   border-radius: .65rem;
-  color: #334155;
-  background: #f1f5f9;
+  color: #cbd5e1;
+  background: #232038;
   transition: background 160ms ease, color 160ms ease;
 }
 .mini-player-footer-action:hover {
-  color: #047857;
-  background: #d1fae5;
+  color: #ffffff;
+  background: #7c3aed;
 }
 .mini-player-footer-close:hover {
   color: #b91c1c;
@@ -309,35 +310,38 @@ body {
   max-width: 1440px;
   margin: 0 auto;
   padding: 0 1rem;
-  background: #f8fafc;
+  background: #0d0c15;
+  color: #f8fafc;
 }
 .watch-toolbar {
   min-height: 64px;
   padding: .75rem 1.1rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 18px;
-  background: rgba(255,255,255,.92);
-  box-shadow: 0 8px 24px rgba(15,23,42,.05);
+  background: #181627;
+  color: #f8fafc;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 .watch-back {
-  border: 1px solid #dbe4e8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   padding: .5rem .7rem;
-  color: #475569;
+  color: #cbd5e1;
+  background: #181627;
   font-size: .72rem;
   font-weight: 800;
   transition: all 180ms ease;
 }
 .watch-back:hover {
-  color: #047857;
-  background: #ecfdf5;
-  border-color: #a7f3d0;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 .watch-eyebrow {
   display: flex;
   align-items: center;
   gap: .35rem;
-  color: #059669;
+  color: #a855f7;
   font-size: .58rem;
   font-weight: 900;
   letter-spacing: .14em;
@@ -347,15 +351,15 @@ body {
   width: .4rem;
   height: .4rem;
   border-radius: .15rem;
-  background: #10b981;
+  background: #8b5cf6;
   transform: rotate(45deg);
 }
 .watch-divider {
-  color: #cbd5e1;
+  color: #475569;
 }
 .watch-toolbar-title {
   max-width: min(42vw, 520px);
-  color: #0f172a;
+  color: #ffffff;
   font-size: .85rem;
   font-weight: 900;
 }
@@ -363,11 +367,11 @@ body {
   display: inline-flex;
   align-items: center;
   gap: .35rem;
-  border: 1px solid #a7f3d0;
+  border: 1px solid rgba(239, 68, 68, 0.4);
   border-radius: 999px;
   padding: .35rem .55rem;
-  color: #047857;
-  background: #ecfdf5;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.15);
   font-size: .62rem;
   font-weight: 900;
 }
@@ -375,10 +379,10 @@ body {
   width: .4rem;
   height: .4rem;
   border-radius: 999px;
-  background: #10b981;
+  background: #ef4444;
 }
 .watch-live-pill b {
-  color: #047857;
+  color: #ffffff;
   font-weight: 900;
 }
 .watch-action {
@@ -414,16 +418,17 @@ body {
   gap: .6rem;
   align-content: center;
   padding: 1rem;
-  border: 1px solid #dce8e4;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 18px;
-  background: linear-gradient(145deg, #ecfdf5, #ffffff);
+  background: #181627;
+  color: #f8fafc;
 }
 .watch-match-meta div {
   display: flex;
   flex-direction: column;
   gap: .15rem;
   padding-bottom: .55rem;
-  border-bottom: 1px solid #d9f3e6;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 .watch-match-meta div:last-child {
   padding-bottom: 0;
@@ -438,7 +443,7 @@ body {
 }
 .watch-match-meta strong {
   overflow: hidden;
-  color: #0f172a;
+  color: #f8fafc;
   font-size: .72rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -449,12 +454,14 @@ body {
   text-align: center;
 }
 .watch-notice-amber {
-  border: 1px solid #fde68a;
-  background: #fffbeb;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.1);
+  color: #fde68a;
 }
 .watch-notice-green {
-  border: 1px solid #a7f3d0;
-  background: #ecfdf5;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.1);
+  color: #a7f3d0;
 }
 .watch-player-card {
   display: contents;
@@ -640,6 +647,10 @@ body {
 .now-dock-inner {
   pointer-events: auto;
   position: relative;
+  background: rgba(24, 22, 39, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.5);
+  color: #f8fafc;
 }
 .now-dock-inner::before {
   content: '';
@@ -647,19 +658,19 @@ body {
   inset: 0.35rem 25%;
   z-index: -1;
   border-radius: 999px;
-  background: rgba(16, 185, 129, 0.12);
+  background: rgba(139, 92, 246, 0.15);
   filter: blur(24px);
 }
 .now-dock-icon {
-  background: linear-gradient(145deg, #d1fae5, #ecfdf5);
-  border: 1px solid #a7f3d0;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+  background: linear-gradient(145deg, #272343, #1f1d36);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1);
 }
 .now-dock-live {
   display: inline-flex;
   align-items: center;
   gap: .3rem;
-  color: #047857;
+  color: #10b981;
   font-size: .58rem;
   font-weight: 900;
   letter-spacing: .12em;
@@ -670,21 +681,21 @@ body {
   height: .38rem;
   border-radius: 999px;
   background: #10b981;
-  box-shadow: 0 0 0 3px rgba(16,185,129,.12);
+  box-shadow: 0 0 0 3px rgba(16,185,129,.25);
 }
 .now-dock-center {
-  border-left: 1px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   padding: 0 .8rem;
 }
 .now-dock-play-wrap {
   padding: .2rem;
   border-radius: 999px;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .now-dock-play {
-  box-shadow: 0 7px 18px rgba(5,150,105,.28);
+  box-shadow: 0 7px 18px rgba(16,185,129,.35);
 }
 .now-dock-icon-button {
   display: flex;
@@ -693,16 +704,16 @@ body {
   width: 2rem;
   height: 2rem;
   border-radius: .7rem;
-  color: #64748b;
+  color: #94a3b8;
   transition: color 180ms ease, background 180ms ease, transform 180ms ease;
 }
 .now-dock-icon-button:hover {
-  color: #047857;
-  background: #ecfdf5;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
   transform: translateY(-1px);
 }
 .now-dock-watch {
-  box-shadow: 0 7px 16px rgba(15,23,42,.14);
+  box-shadow: 0 7px 16px rgba(0,0,0,.4);
 }
 @media (max-width: 640px) {
   .now-dock {

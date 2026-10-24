@@ -34,27 +34,27 @@ export default function MatchCountdown({ timestamp, status }) {
 
   if (timeLeft.isSoon) {
     return (
-      <div className="rounded-[22px] border border-emerald-300 bg-emerald-50 px-6 py-4 shadow-sm text-center">
-        <span className="text-sm font-black text-emerald-800 animate-pulse">📢 Match Kickoff: Starting Very Soon</span>
+      <div className="rounded-[22px] border border-emerald-500/30 bg-emerald-500/10 px-6 py-4 shadow-xl text-center text-white">
+        <span className="text-sm font-black text-emerald-400 animate-pulse">📢 Match Kickoff: Starting Very Soon</span>
       </div>
     );
   }
 
   if (timeLeft.isEnded) {
     return (
-      <div className="rounded-[22px] border border-slate-200 bg-slate-100 px-6 py-4 shadow-sm text-center">
-        <span className="text-sm font-black text-slate-600">Match ended</span>
+      <div className="rounded-[22px] border border-white/10 bg-[#181627] px-6 py-4 shadow-xl text-center text-white">
+        <span className="text-sm font-black text-slate-400">Match ended</span>
       </div>
     );
   }
 
   if (timeLeft.isNotStarted) {
     return (
-      <div className="rounded-[28px] border border-amber-200 bg-amber-50 px-6 py-8 text-center shadow-lg">
-        <span className="text-xl font-black uppercase tracking-wide text-amber-800 sm:text-2xl">
+      <div className="rounded-[28px] border border-amber-500/30 bg-amber-500/10 px-6 py-8 text-center shadow-xl text-white">
+        <span className="text-xl font-black uppercase tracking-wide text-amber-300 sm:text-2xl">
           Streaming not started
         </span>
-        <p className="mt-2 text-sm font-medium text-amber-700">
+        <p className="mt-2 text-sm font-medium text-amber-200/80">
           The scheduled kickoff time has arrived, but no stream is available yet.
         </p>
       </div>
@@ -62,42 +62,42 @@ export default function MatchCountdown({ timestamp, status }) {
   }
 
   return (
-    <div className="rounded-[28px] border border-emerald-200/90 bg-white/95 px-5 py-7 shadow-lg sm:px-8 sm:py-9">
+    <div className="rounded-[28px] border border-white/10 bg-[#181627] px-5 py-7 shadow-2xl sm:px-8 sm:py-9 text-white">
       <div className="flex flex-col items-center gap-7">
         <div className="flex items-center gap-3">
-          <Clock className="h-7 w-7 text-emerald-600" />
-          <span className="text-lg font-black uppercase tracking-wide text-slate-800 sm:text-2xl">Match Kickoff Countdown</span>
+          <Clock className="h-7 w-7 text-purple-400" />
+          <span className="text-lg font-black uppercase tracking-wide text-white sm:text-2xl">Match Kickoff Countdown</span>
         </div>
 
         <div className="flex w-full items-center justify-center gap-1.5 sm:gap-4">
           {timeLeft.days > 0 && (
             <div className="flex items-center">
-              <div className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-3xl font-black tabular-nums text-slate-900 shadow-sm sm:px-5 sm:py-4 sm:text-5xl">
+              <div className="rounded-xl border border-white/10 bg-[#131120] px-3 py-2.5 text-3xl font-black tabular-nums text-white shadow-md sm:px-5 sm:py-4 sm:text-5xl">
                 {timeLeft.days}
               </div>
-              <span className="ml-1 mr-1 text-xs font-black uppercase text-slate-500 sm:ml-2 sm:mr-2 sm:text-sm">d</span>
+              <span className="ml-1 mr-1 text-xs font-black uppercase text-slate-400 sm:ml-2 sm:mr-2 sm:text-sm">d</span>
             </div>
           )}
           
           <div className="flex items-center">
-            <div className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-3xl font-black tabular-nums text-slate-900 shadow-sm sm:px-5 sm:py-4 sm:text-5xl">
+            <div className="rounded-xl border border-white/10 bg-[#131120] px-3 py-2.5 text-3xl font-black tabular-nums text-white shadow-md sm:px-5 sm:py-4 sm:text-5xl">
               {String(timeLeft.hours).padStart(2, '0')}
             </div>
-            <span className="ml-1 mr-1 text-xs font-black uppercase text-slate-500 sm:ml-2 sm:mr-2 sm:text-sm">h</span>
+            <span className="ml-1 mr-1 text-xs font-black uppercase text-slate-400 sm:ml-2 sm:mr-2 sm:text-sm">h</span>
           </div>
 
           <div className="flex items-center">
-            <div className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-3xl font-black tabular-nums text-slate-900 shadow-sm sm:px-5 sm:py-4 sm:text-5xl">
+            <div className="rounded-xl border border-white/10 bg-[#131120] px-3 py-2.5 text-3xl font-black tabular-nums text-white shadow-md sm:px-5 sm:py-4 sm:text-5xl">
               {String(timeLeft.minutes).padStart(2, '0')}
             </div>
-            <span className="ml-1 mr-1 text-xs font-black uppercase text-slate-500 sm:ml-2 sm:mr-2 sm:text-sm">m</span>
+            <span className="ml-1 mr-1 text-xs font-black uppercase text-slate-400 sm:ml-2 sm:mr-2 sm:text-sm">m</span>
           </div>
 
           <div className="flex items-center">
-            <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2.5 text-3xl font-black tabular-nums text-emerald-800 shadow-sm sm:px-5 sm:py-4 sm:text-5xl">
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/20 px-3 py-2.5 text-3xl font-black tabular-nums text-emerald-400 shadow-md sm:px-5 sm:py-4 sm:text-5xl">
               {String(timeLeft.seconds).padStart(2, '0')}
             </div>
-            <span className="ml-1 text-xs font-black uppercase text-emerald-700 sm:text-sm">s</span>
+            <span className="ml-1 text-xs font-black uppercase text-emerald-400 sm:text-sm">s</span>
           </div>
         </div>
       </div>

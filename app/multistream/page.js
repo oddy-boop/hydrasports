@@ -127,20 +127,20 @@ export default function MultiStreamPage() {
   });
 
   return (
-    <div className="multistream-page w-full max-w-[1500px] mx-auto space-y-5 px-3 py-3 sm:px-5 sm:py-5 lg:px-6">
+    <div className="multistream-page w-full max-w-[1500px] mx-auto space-y-5 px-3 py-3 sm:px-5 sm:py-5 lg:px-6 text-white">
       {/* Header and Control Dash */}
-      <div className="arena-hero flex items-center justify-between gap-4 p-4 md:p-5 rounded-[22px] border border-emerald-100 shadow-[0_12px_34px_rgba(15,118,110,0.08)] transition-all duration-300">
+      <div className="arena-hero flex items-center justify-between gap-4 p-4 md:p-5 rounded-[22px] bg-[#181627] border border-white/10 shadow-2xl transition-all duration-300">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 text-xs font-bold border border-slate-200 shadow-2xs hover:shadow-xs transition-all group shrink-0"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-bold border border-white/10 transition-all group shrink-0"
           >
-            <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 text-emerald-600 transition-transform" />
+            <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 text-purple-400 transition-transform" />
             <span>Dashboard</span>
           </Link>
           <div className="flex items-center gap-2 min-w-0">
-            <Layers className="h-5 w-5 shrink-0 text-emerald-600" />
-            <h1 className="text-xl md:text-2xl font-black tracking-tight text-slate-950 truncate">Multi-view Arena</h1>
+            <Layers className="h-5 w-5 shrink-0 text-purple-400" />
+            <h1 className="text-xl md:text-2xl font-black tracking-tight text-white truncate">Multi-view Arena</h1>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -148,13 +148,13 @@ export default function MultiStreamPage() {
             onClick={() => {
               setSlots([null, null, null, null]);
             }}
-            className="arena-button arena-button-muted"
+            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition-all cursor-pointer"
           >
             Clear
           </button>
           <button
             onClick={fetchMatches}
-            className="arena-button arena-button-primary flex items-center gap-1.5"
+            className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 flex items-center gap-1.5 transition-all cursor-pointer"
           >
             <RefreshCw className={`h-3 w-3 ${loadingMatches ? 'animate-spin' : ''}`} />
             Refresh
@@ -163,9 +163,9 @@ export default function MultiStreamPage() {
       </div>
 
       {/* Dynamic Viewports Arena */}
-      <div className="arena-section-label">
-        <div><LayoutGrid className="h-4 w-4 text-emerald-600" /><span>Broadcast wall</span></div>
-        <span>{slots.filter(Boolean).length}/4 screens active</span>
+      <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1">
+        <div className="flex items-center gap-2 text-white"><LayoutGrid className="h-4 w-4 text-purple-400" /><span>Broadcast Wall</span></div>
+        <span className="text-purple-400">{slots.filter(Boolean).length}/4 screens active</span>
       </div>
       <div 
         ref={arenaRef}
@@ -182,12 +182,12 @@ export default function MultiStreamPage() {
                 maxWidth: '100%',
                 minWidth: '290px',
               }}
-              className={`arena-slot relative rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-[0_14px_34px_rgba(15,23,42,0.08)] aspect-video flex flex-col ${
+              className={`arena-slot relative rounded-2xl overflow-hidden bg-[#181627] border border-white/10 shadow-xl aspect-video flex flex-col ${
                 resizingSlotIdx === idx 
-                  ? 'transition-none ring-2 ring-violet-500 shadow-violet-500/10 scale-[0.99]' 
+                  ? 'transition-none ring-2 ring-purple-500 shadow-purple-500/20 scale-[0.99]' 
                   : 'transition-all duration-500 ease-out'
               } ${
-                slot ? 'ring-1 ring-violet-500/10' : 'border-dashed'
+                slot ? 'ring-1 ring-purple-500/20' : 'border-dashed'
               }`}
             >
               {slot ? (
@@ -203,16 +203,16 @@ export default function MultiStreamPage() {
                   onRemove={() => removeSlot(idx)} 
                 />
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-3 cursor-pointer group hover:bg-zinc-100/50 dark:hover:bg-zinc-900/10 transition-all duration-300" onClick={() => openSelector(idx)}>
-                  <div className="h-12 w-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-100 group-hover:scale-110 transition-all shadow-inner">
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-3 cursor-pointer group hover:bg-white/[0.03] transition-all duration-300" onClick={() => openSelector(idx)}>
+                  <div className="h-12 w-12 rounded-2xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-110 group-hover:bg-purple-600/30 transition-all shadow-inner">
                     <Plus className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-800">Screen {idx + 1} is ready</h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Click to add a live fixture.</p>
+                    <h3 className="text-sm font-bold text-white">Screen {idx + 1} is ready</h3>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Click to add a live fixture.</p>
                   </div>
                   <div className="pt-2 w-32" onClick={(e) => e.stopPropagation()}>
-                    <label className="text-[9px] font-extrabold text-zinc-450 dark:text-zinc-550 block mb-1">Set Screen Width: {currentSize}%</label>
+                    <label className="text-[9px] font-extrabold text-slate-400 block mb-1">Set Screen Width: {currentSize}%</label>
                     <input 
                       type="range" 
                       min="25" 
@@ -251,16 +251,16 @@ export default function MultiStreamPage() {
 
       {/* Match Selector Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-fade-in">
+          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#181627] p-5 shadow-2xl space-y-4 max-h-[85vh] flex flex-col text-white">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div>
-                <h3 className="text-base font-black text-slate-900">Mount Live Fixture</h3>
-                <p className="text-[11px] text-slate-500">Mount a stream into Screen Slot {activeSlot + 1}</p>
+                <h3 className="text-base font-black text-white">Mount Live Fixture</h3>
+                <p className="text-[11px] text-slate-400">Mount a stream into Screen Slot {activeSlot + 1}</p>
               </div>
               <button 
                 onClick={() => setModalOpen(false)}
-                className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -274,15 +274,15 @@ export default function MultiStreamPage() {
                 placeholder="Search teams, tournament, or keywords..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
+                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-[#131120] border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-all font-medium"
               />
             </div>
 
             {/* Match List */}
             <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
               {loadingMatches ? (
-                <div className="py-12 text-center text-xs text-zinc-400 font-semibold flex items-center justify-center gap-2">
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-violet-500" />
+                <div className="py-12 text-center text-xs text-slate-400 font-semibold flex items-center justify-center gap-2">
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-purple-400" />
                   Updating live rosters...
                 </div>
               ) : filteredMatches.length > 0 ? (
@@ -293,24 +293,24 @@ export default function MultiStreamPage() {
                       key={m.id}
                       className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
                         alreadySelected 
-                          ? 'border-zinc-100 bg-zinc-50/50 dark:border-zinc-900 dark:bg-zinc-900/10 opacity-60' 
-                          : 'border-zinc-200/60 hover:border-zinc-300 bg-white hover:bg-zinc-50 dark:border-zinc-900 dark:bg-zinc-950 dark:hover:bg-zinc-900/60'
+                          ? 'border-white/5 bg-[#141221] opacity-50' 
+                          : 'border-white/10 hover:border-purple-500/40 bg-[#1e1c32] hover:bg-[#25233e]'
                       }`}
                     >
                       <div className="text-left space-y-1.5 max-w-[70%]">
-                        <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-650 dark:bg-zinc-900 dark:text-zinc-400 border border-zinc-200/60 dark:border-zinc-850">
+                        <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-purple-600/20 text-purple-300 border border-purple-500/30">
                           {m.tournament || 'Live Stream'}
                         </span>
-                        <div className="flex items-center gap-2 text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                        <div className="flex items-center gap-2 text-xs font-bold text-white">
                           <span>{m.homeTeam?.name}</span>
-                          <span className="text-zinc-400 dark:text-zinc-500 font-medium">vs</span>
+                          <span className="text-slate-400 font-medium">vs</span>
                           <span>{m.awayTeam?.name}</span>
                         </div>
                         {m.status === 'live' && (
                           <div className="flex items-center gap-2">
                             <span className="inline-flex h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
                             <span className="text-[10px] font-extrabold uppercase tracking-widest text-red-500">Live</span>
-                            <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 ml-1">
+                            <span className="text-[10px] font-bold text-slate-300 ml-1">
                               {m.homeScore ?? '—'} - {m.awayScore ?? '—'} ({m.currentMinute})
                             </span>
                           </div>
@@ -320,10 +320,10 @@ export default function MultiStreamPage() {
                       <button
                         disabled={alreadySelected}
                         onClick={() => selectMatch(m)}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${
+                        className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
                           alreadySelected
-                            ? 'border-zinc-200 bg-zinc-100 text-zinc-400 dark:border-zinc-900 dark:bg-zinc-950 dark:text-zinc-600'
-                            : 'border-violet-500 bg-violet-600 hover:bg-violet-500 text-white shadow-md shadow-violet-600/10 active:scale-95'
+                            ? 'border-white/5 bg-white/5 text-slate-500 cursor-not-allowed'
+                            : 'border-purple-500 bg-purple-600 hover:bg-purple-500 text-white shadow-md shadow-purple-600/20 active:scale-95'
                         }`}
                       >
                         {alreadySelected ? 'Added' : 'Mount Stream'}
@@ -332,7 +332,7 @@ export default function MultiStreamPage() {
                   );
                 })
               ) : (
-                <div className="py-12 text-center text-xs text-zinc-550 dark:text-zinc-500 font-semibold">
+                <div className="py-12 text-center text-xs text-slate-400 font-semibold">
                   No match fixtures found matching your search.
                 </div>
               )}

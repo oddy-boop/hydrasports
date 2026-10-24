@@ -39,20 +39,20 @@ function PlayerList({ players, emptyLabel }) {
       {players.map((entry, index) => {
         const athlete = entry.athlete || entry;
         return (
-          <div key={athlete.id || `${athlete.displayName}-${index}`} className="flex items-center gap-2.5 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 px-3 py-2 transition-colors">
+          <div key={athlete.id || `${athlete.displayName}-${index}`} className="flex items-center gap-2.5 rounded-xl bg-[#131120] hover:bg-white/5 border border-white/10 px-3 py-2 transition-colors">
             {playerImage(entry) ? (
               <img
                 src={playerImage(entry)}
                 alt=""
-                className="h-7 w-7 shrink-0 rounded-full bg-white object-contain border border-slate-200"
+                className="h-7 w-7 shrink-0 rounded-full bg-slate-900 object-contain border border-white/10"
                 onError={(event) => { event.currentTarget.style.display = 'none'; }}
               />
             ) : (
-              <span className="w-6 shrink-0 text-center text-[10px] font-black text-slate-500">
+              <span className="w-6 shrink-0 text-center text-[10px] font-black text-slate-400">
                 {entry.jersey || '—'}
               </span>
             )}
-            <span className="min-w-0 flex-1 truncate text-xs font-bold text-slate-800">
+            <span className="min-w-0 flex-1 truncate text-xs font-bold text-white">
               {playerName(entry)}
             </span>
             {entry.position?.abbreviation && (
@@ -151,14 +151,14 @@ export default function LineupSection({ rosters, homeTeam, awayTeam, sport = 'fo
   if (!teams.some(team => team.starters.length || team.substitutes.length)) return null;
 
   return (
-    <section className="rounded-[24px] border border-slate-200/90 bg-white/95 overflow-hidden shadow-md">
+    <section className="rounded-[24px] border border-white/10 bg-[#181627] overflow-hidden shadow-2xl text-white">
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between border-b border-slate-100 px-6 py-4 text-sm font-black text-slate-800 transition-colors hover:text-emerald-700"
+        className="flex w-full items-center justify-between border-b border-white/10 px-6 py-4 text-sm font-black text-white transition-colors hover:text-purple-400 cursor-pointer"
       >
         <span className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50">
-            <Users className="h-4 w-4 text-emerald-600" />
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-purple-500/30 bg-purple-600/20 text-purple-400">
+            <Users className="h-4 w-4" />
           </span>
           <span>Official Match Lineups</span>
         </span>
@@ -169,22 +169,22 @@ export default function LineupSection({ rosters, homeTeam, awayTeam, sport = 'fo
         <div className="grid gap-6 px-6 py-6 md:grid-cols-2">
           {teams.map(team => (
             <div key={team.name} className="space-y-4">
-              <h3 className="border-b border-slate-100 pb-2.5 text-xs font-black uppercase tracking-wider text-slate-800 flex items-center justify-between">
+              <h3 className="border-b border-white/10 pb-2.5 text-xs font-black uppercase tracking-wider text-white flex items-center justify-between">
                 <span>{team.name}</span>
                 {sport === 'football' && (
-                  <span className="text-emerald-600 font-extrabold">{team.formation || 'Formation unavailable'}</span>
+                  <span className="text-purple-400 font-extrabold">{team.formation || 'Formation unavailable'}</span>
                 )}
               </h3>
               {sport === 'football' && <FormationPitch team={team} />}
               <div>
-                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-purple-400">
                   {sport === 'football' ? 'Starting XI' : 'Players'}
                 </p>
                 <PlayerList players={team.starters.length ? team.starters : team.substitutes} emptyLabel="Player data unavailable" />
               </div>
               {sport === 'football' && (
                 <div>
-                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Substitutes</p>
+                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Substitutes</p>
                 <PlayerList players={team.substitutes} emptyLabel="Substitutes unavailable" />
                 </div>
               )}
