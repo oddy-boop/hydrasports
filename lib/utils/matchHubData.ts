@@ -808,6 +808,10 @@ export function parseMatchHubData(match: any, stats: any) {
     awayName,
     homeBadge,
     awayBadge,
+    score: {
+      home: typeof match?.homeScore === 'number' ? match.homeScore : 0,
+      away: typeof match?.awayScore === 'number' ? match.awayScore : 0,
+    },
     homeGoals,
     awayGoals,
     homeScorersList,

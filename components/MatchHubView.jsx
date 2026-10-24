@@ -104,9 +104,9 @@ export default function MatchHubView({
     }
   };
 
-  const currentStarters = selectedTeamTab === 'home' ? hubData.lineups.home : hubData.lineups.away;
-  const currentSubstitutes = selectedTeamTab === 'home' ? hubData.substitutes.home : hubData.substitutes.away;
-  const currentFormation = selectedTeamTab === 'home' ? hubData.formations.home : hubData.formations.away;
+  const currentStarters = selectedTeamTab === 'home' ? (hubData.lineups?.home || []) : (hubData.lineups?.away || []);
+  const currentSubstitutes = selectedTeamTab === 'home' ? (hubData.substitutes?.home || []) : (hubData.substitutes?.away || []);
+  const currentFormation = selectedTeamTab === 'home' ? (hubData.formations?.home || '4-3-3') : (hubData.formations?.away || '4-3-3');
   const currentTeamName = selectedTeamTab === 'home' ? hubData.homeName : hubData.awayName;
   const currentTeamBadge = selectedTeamTab === 'home' ? hubData.homeBadge : hubData.awayBadge;
 
@@ -125,8 +125,8 @@ export default function MatchHubView({
       goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal').map(e => e.player || ''),
       yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
       isHome: isHomeTeam,
-      homeScore: hubData.score.home,
-      awayScore: hubData.score.away,
+      homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
+      awayScore: match?.awayScore ?? hubData.score?.away ?? 0,
     });
     setSelectedPlayerDetails(details);
   };
@@ -808,8 +808,8 @@ export default function MatchHubView({
                               goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal').map(e => e.player || ''),
                               yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
                               isHome: selectedTeamTab === 'home',
-                              homeScore: hubData.score.home,
-                              awayScore: hubData.score.away,
+                              homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
+                              awayScore: match?.awayScore ?? hubData.score?.away ?? 0,
                             });
                             return (
                               <div 
@@ -865,8 +865,8 @@ export default function MatchHubView({
                             goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal').map(e => e.player || ''),
                             yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
                             isHome: selectedTeamTab === 'home',
-                            homeScore: hubData.score.home,
-                            awayScore: hubData.score.away,
+                            homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
+                            awayScore: match?.awayScore ?? hubData.score?.away ?? 0,
                           });
                           return (
                             <div 
@@ -933,8 +933,8 @@ export default function MatchHubView({
                         goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal').map(e => e.player || ''),
                         yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
                         isHome: selectedTeamTab === 'home',
-                        homeScore: hubData.score.home,
-                        awayScore: hubData.score.away,
+                        homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
+                        awayScore: match?.awayScore ?? hubData.score?.away ?? 0,
                       });
                       return (
                         <div
@@ -1095,7 +1095,7 @@ export default function MatchHubView({
                       {hubData.homeName} {hubData.sport === 'basketball' ? 'Personal Fouls' : hubData.sport === 'hockey' ? 'Minor Pens' : hubData.sport === 'tennis' ? 'Double Faults' : 'Yellows'}
                     </span>
                     <span className="text-2xl font-black text-amber-300">
-                      {hubData.sport === 'basketball' ? hubData.fouls.home : hubData.discipline.yellowCards.home}
+                      {hubData.sport === 'basketball' ? (hubData.fouls?.home ?? 0) : (hubData.discipline?.yellowCards?.home ?? 0)}
                     </span>
                   </div>
 
@@ -1103,7 +1103,7 @@ export default function MatchHubView({
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-400 block mb-1">
                       {hubData.homeName} {hubData.sport === 'basketball' ? 'Tech Fouls' : hubData.sport === 'hockey' ? 'Major / PIM' : hubData.sport === 'tennis' ? 'Unforced Errors' : 'Reds'}
                     </span>
-                    <span className="text-2xl font-black text-rose-300">{hubData.discipline.redCards.home}</span>
+                    <span className="text-2xl font-black text-rose-300">{hubData.discipline?.redCards?.home ?? 0}</span>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center">
@@ -1111,7 +1111,7 @@ export default function MatchHubView({
                       {hubData.awayName} {hubData.sport === 'basketball' ? 'Personal Fouls' : hubData.sport === 'hockey' ? 'Minor Pens' : hubData.sport === 'tennis' ? 'Double Faults' : 'Yellows'}
                     </span>
                     <span className="text-2xl font-black text-amber-300">
-                      {hubData.sport === 'basketball' ? hubData.fouls.away : hubData.discipline.yellowCards.away}
+                      {hubData.sport === 'basketball' ? (hubData.fouls?.away ?? 0) : (hubData.discipline?.yellowCards?.away ?? 0)}
                     </span>
                   </div>
 
@@ -1119,7 +1119,7 @@ export default function MatchHubView({
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-400 block mb-1">
                       {hubData.awayName} {hubData.sport === 'basketball' ? 'Tech Fouls' : hubData.sport === 'hockey' ? 'Major / PIM' : hubData.sport === 'tennis' ? 'Unforced Errors' : 'Reds'}
                     </span>
-                    <span className="text-2xl font-black text-rose-300">{hubData.discipline.redCards.away}</span>
+                    <span className="text-2xl font-black text-rose-300">{hubData.discipline?.redCards?.away ?? 0}</span>
                   </div>
                 </div>
 
