@@ -676,7 +676,8 @@ export function getPlayerMatchRating(
   }
   if (ownGoals === 0 && matchContext && (matchContext as any).timelineEvents && Array.isArray((matchContext as any).timelineEvents)) {
     ownGoals = (matchContext as any).timelineEvents.filter((e: any) => {
-      if (!e.isOwnGoal && e.type !== 'own_goal') return false;
+      const isOg = e.isOwnGoal || e.type === 'own_goal' || (e.text && (e.text.includes('(OG)') || e.text.toLowerCase().includes('own goal')));
+      if (!isOg) return false;
       const cleanP = normalizePlayerName(e.player || e.text || '');
       return cleanP.includes(norm) || norm.includes(cleanP);
     }).length;
@@ -705,8 +706,16 @@ export function getPlayerMatchRating(
     const teamWon = isHome ? homeScore > awayScore : awayScore > homeScore;
     const teamLost = isHome ? homeScore < awayScore : awayScore < homeScore;
 
-    if (teamWon) rating += 0.15;
-    else if (teamLost) rating -= 0.15;
+    if (teamWon) {
+      rating += 0.15;
+    } else if (teamLost) {
+      // Do not penalize outfield players who have made zero defensive/disciplinary errors
+      if (ownGoals === 0 && redCards === 0 && yellowCards === 0) {
+        rating += 0.2; // Preserves realistic 6.2+ rating for active possession players
+      } else {
+        rating -= 0.15;
+      }
+    }
 
     // MVP / Best Player boost on Flashscore (elevates to 8.0 - 8.6, or up to 10.0 with multiple goals)
     if (bestPlayerName && normalizePlayerName(bestPlayerName).includes(norm)) {

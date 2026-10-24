@@ -818,7 +818,9 @@ export function parseMatchHubData(match: any, stats: any) {
       secondaryLabel,
     };
   } else if (homeStarters.length > 0) {
-    const lead = homeStarters[0];
+    const lead = homeStarters.find(p => p.positionGroup === 'FW') ||
+      homeStarters.find(p => p.positionGroup === 'MF') ||
+      homeStarters[0];
     const estPts = (sport === 'basketball' && match?.homeScore && match.homeScore > 0)
       ? Math.max(16, Math.round(match.homeScore * 0.28))
       : 0;
