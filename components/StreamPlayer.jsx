@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Maximize, RefreshCw, AlertCircle, ShieldAlert, Cpu, Play, Pause, Volume2, Volume1, VolumeX, Tv } from 'lucide-react';
+import { Maximize, RefreshCw, AlertCircle, ShieldAlert, Cpu, Play, Pause, Volume2, Volume1, VolumeX, Sliders, ChevronDown, Check } from 'lucide-react';
 
 export default function StreamPlayer({ streamUrl, channels, matchTitle, matchStatus, videoOnly = false }) {
   const isUpcoming = matchStatus === 'upcoming';
@@ -16,6 +16,9 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(true);
   const [isTheaterMode, setIsTheaterMode] = useState(false);
+  const [hlsLevels, setHlsLevels] = useState([]);
+  const [selectedResolution, setSelectedResolution] = useState('auto');
+  const [resDropdownOpen, setResDropdownOpen] = useState(false);
 
   const iframeRef = useRef(null);
   const videoRef = useRef(null);
@@ -122,9 +125,18 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
       hls.loadSource(currentUrl);
       hls.attachMedia(video);
 
-      hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+      hls.on(window.Hls.Events.MANIFEST_PARSED, (event, data) => {
         setIsLoading(false);
         setStreamStatus('active');
+        if (data?.levels && data.levels.length > 0) {
+          const lvls = data.levels.map((lvl, index) => ({
+            index,
+            height: lvl.height,
+            bitrate: lvl.bitrate,
+            label: lvl.height ? `${lvl.height}p` : `${Math.round(lvl.bitrate / 1000)}k`,
+          }));
+          setHlsLevels(lvls);
+        }
         video.play()
           .then(() => setIsPlaying(true))
           .catch(() => setIsPlaying(false));
@@ -292,6 +304,39 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
       } else {
         setVolume(0.8);
         videoRef.current.volume = 0.8;
+      }
+    }
+  };
+
+  const changeResolution = (res) => {
+    setSelectedResolution(res);
+    setResDropdownOpen(false);
+
+    if (hlsInstanceRef.current) {
+      if (res === 'auto') {
+        hlsInstanceRef.current.currentLevel = -1;
+      } else {
+        const levelIdx = parseInt(res, 10);
+        if (!isNaN(levelIdx) && levelIdx >= 0) {
+          hlsInstanceRef.current.currentLevel = levelIdx;
+        } else if (res === 'low' || res === '360p' || res === '480p') {
+          hlsInstanceRef.current.currentLevel = 0; // lowest bitrate for slow internet
+        } else if (res === 'high' || res === '1080p') {
+          hlsInstanceRef.current.currentLevel = hlsLevels.length > 0 ? hlsLevels.length - 1 : -1;
+        }
+      }
+    } else {
+      // For multi-server stream channels: automatically select SD server for low bandwidth
+      if (res === '360p' || res === '480p' || res === 'low') {
+        const sdIndex = allChannels.findIndex(c => (c.quality || '').toLowerCase() === 'sd');
+        if (sdIndex !== -1 && sdIndex !== activeChannel) {
+          setActiveChannel(sdIndex);
+        }
+      } else if (res === '1080p' || res === '720p' || res === 'high') {
+        const hdIndex = allChannels.findIndex(c => (c.quality || '').toLowerCase().includes('hd') || (c.quality || '').toLowerCase().includes('1080'));
+        if (hdIndex !== -1 && hdIndex !== activeChannel) {
+          setActiveChannel(hdIndex);
+        }
       }
     }
   };
@@ -523,7 +568,83 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
             </div>
 
             {/* Right Side: Viewport Controls Group */}
-            <div className="flex items-center gap-2 bg-[#131120] p-1.5 rounded-xl border border-white/10 justify-end">
+            <div className="flex items-center gap-2 bg-[#131120] p-1.5 rounded-xl border border-white/10 justify-end flex-wrap">
+              {/* Resolution / Quality selector dropdown (Allows picking low res for slow internet) */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setResDropdownOpen(!resDropdownOpen)}
+                  className="rounded-lg bg-white/10 hover:bg-white/20 px-2.5 py-1.5 text-slate-200 hover:text-white transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold border border-white/10 shadow-sm cursor-pointer"
+                  title="Select video resolution (Lower resolution saves data on slow internet)"
+                >
+                  <Sliders className="h-3.5 w-3.5 text-amber-400" />
+                  <span className="capitalize">{selectedResolution === 'auto' ? 'Auto Res' : selectedResolution}</span>
+                  <ChevronDown className="h-3 w-3 text-slate-400" />
+                </button>
+
+                {resDropdownOpen && (
+                  <div className="absolute right-0 bottom-full mb-1.5 w-48 rounded-xl bg-[#1c1a2d] border border-white/15 p-1 shadow-2xl z-50 animate-fade-in text-white">
+                    <div className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-slate-400 border-b border-white/10 mb-1 flex items-center justify-between">
+                      <span>Stream Quality</span>
+                      <span className="text-amber-400">Data Saver</span>
+                    </div>
+                    {hlsLevels.length > 0 ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => changeResolution('auto')}
+                          className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-between cursor-pointer ${
+                            selectedResolution === 'auto' ? 'bg-purple-600 text-white' : 'text-slate-300 hover:bg-white/10'
+                          }`}
+                        >
+                          <span>Auto (Adaptive)</span>
+                          <span className="text-[9px] text-slate-400">Best</span>
+                        </button>
+                        {hlsLevels.map((lvl) => (
+                          <button
+                            key={lvl.index}
+                            type="button"
+                            onClick={() => changeResolution(String(lvl.index))}
+                            className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-between cursor-pointer ${
+                              selectedResolution === String(lvl.index) ? 'bg-purple-600 text-white' : 'text-slate-300 hover:bg-white/10'
+                            }`}
+                          >
+                            <span>{lvl.label}</span>
+                            <span className={`text-[9px] font-bold ${lvl.height && lvl.height <= 480 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                              {lvl.height && lvl.height <= 480 ? '🍃 Low Data' : 'HD'}
+                            </span>
+                          </button>
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        {[
+                          { id: 'auto', label: 'Auto (Adaptive)', badge: 'Default' },
+                          { id: '1080p', label: '1080p Full HD', badge: 'Fast net' },
+                          { id: '720p', label: '720p HD', badge: 'Standard' },
+                          { id: '480p', label: '480p SD (Data Saver)', badge: 'Slow net' },
+                          { id: '360p', label: '360p Low Bandwidth', badge: 'Slowest' },
+                        ].map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => changeResolution(opt.id)}
+                            className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-between cursor-pointer ${
+                              selectedResolution === opt.id ? 'bg-purple-600 text-white' : 'text-slate-300 hover:bg-white/10'
+                            }`}
+                          >
+                            <span>{opt.label}</span>
+                            <span className={`text-[9px] font-bold ${opt.id === '360p' || opt.id === '480p' ? 'text-amber-400' : 'text-slate-400'}`}>
+                              {opt.badge}
+                            </span>
+                          </button>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Refresh button */}
               <button
                 type="button"

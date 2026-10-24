@@ -49,6 +49,53 @@ export const LEAGUE_KEYWORDS = {
     'lyon', 'ol', 'olympique lyonnais', 'monaco', 'lille', 'rennes', 'lens',
     'nice', 'strasbourg', 'toulouse', 'reims', 'brest', 'nantes',
     'auxerre', 'montpellier', 'le havre', 'saint-etienne', 'troyes', 'angers'
+  ],
+  'MLS': [
+    'mls', 'major league soccer', 'usa.1',
+    'inter miami', 'miami', 'la galaxy', 'galaxy', 'lafc', 'los angeles fc',
+    'columbus crew', 'atlanta united', 'seattle sounders', 'nashville',
+    'cf montreal', 'montréal', 'philadelphia union', 'nycfc', 'new york city fc',
+    'new york red bulls', 'red bulls', 'austin fc', 'orlando city',
+    'portland timbers', 'sporting kansas city', 'fc cincinnati', 'charlotte fc',
+    'chicago fire', 'toronto fc', 'st. louis city', 'vancouver whitecaps', 'real salt lake'
+  ],
+  'Eredivisie': [
+    'eredivisie', 'dutch eredivise', 'dutch eredivisie', 'ned.1',
+    'ajax', 'psv', 'psv eindhoven', 'feyenoord', 'az alkmaar', 'az',
+    'fc utrecht', 'utrecht', 'fc twente', 'twente', 'pec zwolle',
+    'sc heerenveen', 'heerenveen', 'vitesse', 'fc groningen', 'willem ii', 'sparta rotterdam',
+    'go ahead eagles', 'nec nijmegen', 'fortuna sittard', 'almere city'
+  ],
+  'Europa League': [
+    'europa league', 'uefa europa league', 'uel', 'europa',
+    'manchester united', 'tottenham', 'roma', 'lazio', 'porto', 'athletic bilbao',
+    'ajax', 'real sociedad', 'galatasaray', 'fenerbahce', 'lyon', 'eintracht frankfurt'
+  ],
+  'Brasileiro': [
+    'brasileiro', 'brasileirao', 'brasileiro série a', 'bra.1',
+    'flamengo', 'palmeiras', 'sao paulo', 'são paulo', 'corinthians',
+    'gremio', 'grêmio', 'internacional', 'fluminense', 'botafogo',
+    'atletico mineiro', 'cruzeiro', 'santos', 'vasco da gama', 'bahia', 'fortaleza'
+  ],
+  'SAF Primera': [
+    'saf primera', 'saf primera division', 'liga profesional', 'arg.1',
+    'boca juniors', 'boca', 'river plate', 'river', 'racing club',
+    'independiente', 'san lorenzo', 'velez sarsfield', 'estudiantes'
+  ],
+  'World Cup 2026': [
+    'world cup', 'fifa world cup', 'world cup 2026', 'world cup qualifiers', 'wc qualification'
+  ],
+  'Nations League': [
+    'nations league', 'uefa nations league', 'uefa nations'
+  ],
+  'Copa America': [
+    'copa america', 'copa américa', 'conmebol'
+  ],
+  'Asian Cup': [
+    'asian cup', 'afc asian cup', 'afc'
+  ],
+  'International Friendlies': [
+    'friendly', 'friendlies', 'international friendly', 'intl friendly'
   ]
 };
 
@@ -59,6 +106,8 @@ export const COMPETITIONS_LIST = [
   { id: 'Serie A', name: 'Serie A', flag: '🇮🇹', country: 'Italy', color: 'from-cyan-600 to-blue-800' },
   { id: 'Bundesliga', name: 'Bundesliga', flag: '🇩🇪', country: 'Germany', color: 'from-red-600 to-amber-700' },
   { id: 'Ligue 1', name: 'Ligue 1', flag: '🇫🇷', country: 'France', color: 'from-emerald-600 to-teal-800' },
+  { id: 'MLS', name: 'Major League Soccer', flag: '🇺🇸', country: 'USA', color: 'from-blue-600 to-red-700' },
+  { id: 'Eredivisie', name: 'Eredivisie', flag: '🇳🇱', country: 'Netherlands', color: 'from-orange-600 to-amber-700' },
 ];
 
 export const POPULAR_TEAMS = [

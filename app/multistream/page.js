@@ -1,81 +1,62 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Play, Volume2, VolumeX, Maximize, X, Plus, Search, RefreshCw, Layers, ShieldAlert, Cpu, LayoutGrid, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import {
+  Layers,
+  ArrowLeft,
+  RefreshCw,
+  Plus,
+  X,
+  Volume2,
+  VolumeX,
+  Maximize,
+  Search,
+  Grid2x2,
+  Columns2,
+  Square,
+  Sliders,
+  Wifi,
+  WifiOff,
+  Flame,
+  Tv,
+  Check,
+  ChevronDown,
+  ShieldAlert,
+  Play,
+  Pause,
+  Shuffle
+} from 'lucide-react';
 
 export default function MultiStreamPage() {
+  // 4 Slot State
   const [slots, setSlots] = useState([null, null, null, null]);
-  const [sizes, setSizes] = useState([50, 50, 50, 50]); // Dynamic sizing percentages for the 4 slots
+  const [layoutMode, setLayoutMode] = useState('quad'); // 'quad' | 'spotlight' | 'split' | 'focus'
+  const [focusedAudioIndex, setFocusedAudioIndex] = useState(0); // Only 1 slot has audio active
+  const [lowDataGlobal, setLowDataGlobal] = useState(false); // Global slow internet / data-saver mode
+  const [activeSlotTarget, setActiveSlotTarget] = useState(null); // which slot drawer is targeting
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [focusSlotIdx, setFocusSlotIdx] = useState(0); // In focus layout mode, which slot is enlarged
+
+  // Matches fetching & filtering
   const [availableMatches, setAvailableMatches] = useState([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [activeSlot, setActiveSlot] = useState(null);
-  const [resizingSlotIdx, setResizingSlotIdx] = useState(null);
-  const arenaRef = useRef(null);
+  const [selectedSportFilter, setSelectedSportFilter] = useState('all');
 
-  const startResize = (e, index) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    setResizingSlotIdx(index);
-
-    const isTouch = e.type.startsWith('touch');
-    const startX = isTouch ? e.touches[0].clientX : e.clientX;
-    const startSize = sizes[index] || 50;
-    const parentWidth = arenaRef.current ? arenaRef.current.clientWidth : 1200;
-
-    const handleMove = (moveEvent) => {
-      const currentX = moveEvent.type.startsWith('touch') 
-        ? moveEvent.touches[0].clientX 
-        : moveEvent.clientX;
-      const deltaX = currentX - startX;
-      // Convert pixels to percentage of parent width
-      const deltaPercent = (deltaX / parentWidth) * 100;
-      let newSize = startSize + deltaPercent;
-      // Clamp between 20% and 100%
-      newSize = Math.max(20, Math.min(100, newSize));
-      // Round for smoothness
-      newSize = Math.round(newSize);
-
-      setSizes((prev) => {
-        const next = [...prev];
-        next[index] = newSize;
-        return next;
-      });
-    };
-
-    const handleEnd = () => {
-      setResizingSlotIdx(null);
-      if (isTouch) {
-        window.removeEventListener('touchmove', handleMove);
-        window.removeEventListener('touchend', handleEnd);
-      } else {
-        window.removeEventListener('mousemove', handleMove);
-        window.removeEventListener('mouseup', handleEnd);
-      }
-    };
-
-    if (isTouch) {
-      window.addEventListener('touchmove', handleMove, { passive: false });
-      window.addEventListener('touchend', handleEnd);
-    } else {
-      window.addEventListener('mousemove', handleMove);
-      window.addEventListener('mouseup', handleEnd);
-    }
-  };
+  const arenaContainerRef = useRef(null);
 
   // Poll available matches
   const fetchMatches = async () => {
     try {
+      setLoadingMatches(true);
       const res = await fetch('/api/matches', { cache: 'no-store' });
       const data = await res.json();
       if (data.matches) {
         setAvailableMatches(data.matches);
       }
     } catch (err) {
-      console.error('Failed fetching matches:', err);
+      console.error('Failed fetching matches for multistream:', err);
     } finally {
       setLoadingMatches(false);
     }
@@ -83,257 +64,556 @@ export default function MultiStreamPage() {
 
   useEffect(() => {
     fetchMatches();
-    const interval = setInterval(fetchMatches, 20000);
+    const interval = setInterval(fetchMatches, 25000);
     return () => clearInterval(interval);
   }, []);
 
-  const openSelector = (slotIndex) => {
-    setActiveSlot(slotIndex);
-    setModalOpen(true);
+  const openDrawerForSlot = (slotIndex) => {
+    setActiveSlotTarget(slotIndex);
+    setDrawerOpen(true);
   };
 
-  const selectMatch = (match) => {
-    if (activeSlot === null) return;
+  const selectMatchForSlot = (match, targetIndex = null) => {
+    const slotIdx = targetIndex !== null ? targetIndex : (activeSlotTarget !== null ? activeSlotTarget : slots.findIndex(s => !s));
+    const finalIdx = slotIdx === -1 ? 0 : slotIdx;
+
     const nextSlots = [...slots];
-    nextSlots[activeSlot] = {
+    nextSlots[finalIdx] = {
       id: match.id,
       title: match.title,
-      sport: match.sport,
-      homeName: match.homeTeam?.name,
-      awayName: match.awayTeam?.name,
+      sport: match.sport || 'football',
+      tournament: match.tournament || 'Match Fixture',
+      homeName: match.homeTeam?.name || 'Home',
+      awayName: match.awayTeam?.name || 'Away',
       homeBadge: match.homeTeam?.badge,
       awayBadge: match.awayTeam?.badge,
-      status: match.status,
+      status: match.status || 'live',
+      homeScore: match.homeScore,
+      awayScore: match.awayScore,
+      currentMinute: match.currentMinute,
       timestamp: match.timestamp
     };
+
     setSlots(nextSlots);
-    setModalOpen(false);
-    setActiveSlot(null);
+    setDrawerOpen(false);
+    setActiveSlotTarget(null);
+
+    // If first stream loaded, give it audio focus
+    if (focusedAudioIndex === null) {
+      setFocusedAudioIndex(finalIdx);
+    }
   };
 
   const removeSlot = (slotIndex) => {
     const nextSlots = [...slots];
     nextSlots[slotIndex] = null;
     setSlots(nextSlots);
+    if (focusedAudioIndex === slotIndex) {
+      // Find another active slot for audio
+      const nextActiveIdx = nextSlots.findIndex(s => Boolean(s));
+      setFocusedAudioIndex(nextActiveIdx !== -1 ? nextActiveIdx : null);
+    }
   };
 
+  const clearAllSlots = () => {
+    setSlots([null, null, null, null]);
+    setFocusedAudioIndex(null);
+  };
+
+  const toggleGlobalLowData = () => {
+    setLowDataGlobal(prev => !prev);
+  };
+
+  const toggleArenaFullscreen = () => {
+    if (!arenaContainerRef.current) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      arenaContainerRef.current.requestFullscreen().catch(() => {});
+    }
+  };
+
+  // Filter matches in drawer
   const filteredMatches = availableMatches.filter(m => {
-    const query = searchQuery.toLowerCase();
-    const matchesTitle = m.title.toLowerCase().includes(query);
-    const matchesHome = (m.homeTeam?.name || '').toLowerCase().includes(query);
-    const matchesAway = (m.awayTeam?.name || '').toLowerCase().includes(query);
-    const matchesTournament = (m.tournament || '').toLowerCase().includes(query);
-    return matchesTitle || matchesHome || matchesAway || matchesTournament;
+    const query = searchQuery.toLowerCase().trim();
+    const matchesQuery = !query || 
+      (m.title && m.title.toLowerCase().includes(query)) ||
+      (m.homeTeam?.name && m.homeTeam.name.toLowerCase().includes(query)) ||
+      (m.awayTeam?.name && m.awayTeam.name.toLowerCase().includes(query)) ||
+      (m.tournament && m.tournament.toLowerCase().includes(query));
+
+    const matchesSport = selectedSportFilter === 'all' || 
+      (selectedSportFilter === 'live' ? m.status === 'live' : m.sport === selectedSportFilter);
+
+    return matchesQuery && matchesSport;
   });
 
+  const activeScreensCount = slots.filter(Boolean).length;
+
   return (
-    <div className="multistream-page w-full max-w-[1500px] mx-auto space-y-5 px-3 py-3 sm:px-5 sm:py-5 lg:px-6 text-white">
-      {/* Header and Control Dash */}
-      <div className="arena-hero flex items-center justify-between gap-4 p-4 md:p-5 rounded-[22px] bg-[#181627] border border-white/10 shadow-2xl transition-all duration-300">
-        <div className="flex items-center gap-3 min-w-0">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-bold border border-white/10 transition-all group shrink-0"
-          >
-            <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 text-purple-400 transition-transform" />
-            <span>Dashboard</span>
-          </Link>
-          <div className="flex items-center gap-2 min-w-0">
-            <Layers className="h-5 w-5 shrink-0 text-purple-400" />
-            <h1 className="text-xl md:text-2xl font-black tracking-tight text-white truncate">Multi-view Arena</h1>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => {
-              setSlots([null, null, null, null]);
-            }}
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition-all cursor-pointer"
-          >
-            Clear
-          </button>
-          <button
-            onClick={fetchMatches}
-            className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 flex items-center gap-1.5 transition-all cursor-pointer"
-          >
-            <RefreshCw className={`h-3 w-3 ${loadingMatches ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Dynamic Viewports Arena */}
-      <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1">
-        <div className="flex items-center gap-2 text-white"><LayoutGrid className="h-4 w-4 text-purple-400" /><span>Broadcast Wall</span></div>
-        <span className="text-purple-400">{slots.filter(Boolean).length}/4 screens active</span>
-      </div>
-      <div 
-        ref={arenaRef}
-        className="arena-grid flex flex-wrap gap-4 transition-all duration-500 ease-out select-none"
-      >
-        {slots.map((slot, idx) => {
-          const currentSize = sizes[idx] || 50;
-          return (
-            <div 
-              key={idx}
-              style={{
-                flex: `1 1 calc(${currentSize}% - 16px)`,
-                width: `calc(${currentSize}% - 16px)`,
-                maxWidth: '100%',
-                minWidth: '290px',
-              }}
-              className={`arena-slot relative rounded-2xl overflow-hidden bg-[#181627] border border-white/10 shadow-xl aspect-video flex flex-col ${
-                resizingSlotIdx === idx 
-                  ? 'transition-none ring-2 ring-purple-500 shadow-purple-500/20 scale-[0.99]' 
-                  : 'transition-all duration-500 ease-out'
-              } ${
-                slot ? 'ring-1 ring-purple-500/20' : 'border-dashed'
-              }`}
+    <div className="min-h-screen bg-[#0d0c15] text-slate-100 flex flex-col font-sans pb-12">
+      {/* Top Navigation & Controls Header */}
+      <header className="sticky top-0 z-40 bg-[#141221]/95 backdrop-blur-md border-b border-white/10 px-4 py-3">
+        <div className="max-w-[1720px] mx-auto flex flex-wrap items-center justify-between gap-3">
+          {/* Left: Brand & Return Link */}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-bold border border-white/10 transition-all group"
             >
-              {slot ? (
-                <MultiStreamSlot 
-                  slotData={slot} 
-                  slotIndex={idx}
-                  size={currentSize}
-                  onResize={(newSize) => {
-                    const nextSizes = [...sizes];
-                    nextSizes[idx] = newSize;
-                    setSizes(nextSizes);
-                  }}
-                  onRemove={() => removeSlot(idx)} 
-                />
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-3 cursor-pointer group hover:bg-white/[0.03] transition-all duration-300" onClick={() => openSelector(idx)}>
-                  <div className="h-12 w-12 rounded-2xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-110 group-hover:bg-purple-600/30 transition-all shadow-inner">
-                    <Plus className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white">Screen {idx + 1} is ready</h3>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Click to add a live fixture.</p>
-                  </div>
-                  <div className="pt-2 w-32" onClick={(e) => e.stopPropagation()}>
-                    <label className="text-[9px] font-extrabold text-slate-400 block mb-1">Set Screen Width: {currentSize}%</label>
-                    <input 
-                      type="range" 
-                      min="25" 
-                      max="100" 
-                      step="5"
-                      value={currentSize} 
-                      onChange={(e) => {
-                        const nextSizes = [...sizes];
-                        nextSizes[idx] = parseInt(e.target.value);
-                        setSizes(nextSizes);
-                      }}
-                      className="w-full h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-violet-500" 
-                    />
-                  </div>
-                </div>
-              )}
+              <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 text-purple-400 transition-transform" />
+              <span>Dashboard</span>
+            </Link>
 
-              {/* Dynamic Drag Edge Resize Handle */}
-              <div 
-                onMouseDown={(e) => startResize(e, idx)}
-                onTouchStart={(e) => startResize(e, idx)}
-                className="absolute top-0 right-0 bottom-0 w-3 hover:w-4 bg-zinc-400/0 hover:bg-violet-500/10 active:bg-violet-600/20 cursor-col-resize z-30 transition-all duration-150 flex items-center justify-center group/handle"
-                title="Drag right border to resize screen width"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="w-1.5 h-14 rounded-full bg-zinc-300/10 border border-zinc-250/20 dark:border-zinc-800 group-hover/handle:bg-zinc-450/45 group-hover/handle:border-violet-500/20 group-active/handle:bg-violet-500 group-active/handle:border-violet-500/50 transition-all shadow-sm flex flex-col justify-between py-1 items-center select-none text-zinc-400/40 group-hover/handle:text-zinc-400/80 group-active/handle:text-white">
-                  <span className="w-0.5 h-0.5 bg-current rounded-full" />
-                  <span className="w-0.5 h-0.5 bg-current rounded-full" />
-                  <span className="w-0.5 h-0.5 bg-current rounded-full" />
-                </div>
+            <div className="h-4 w-px bg-white/10 hidden sm:block" />
+
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 shadow-lg shadow-purple-600/30">
+                <Layers className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <h1 className="text-base font-black tracking-tight text-white flex items-center gap-2">
+                  <span>Hydra Multi-Stream</span>
+                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 hidden md:inline-block">
+                    Arena v2
+                  </span>
+                </h1>
               </div>
             </div>
-          );
-        })}
-      </div>
+          </div>
 
-      {/* Match Selector Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-fade-in">
-          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#181627] p-5 shadow-2xl space-y-4 max-h-[85vh] flex flex-col text-white">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div>
-                <h3 className="text-base font-black text-white">Mount Live Fixture</h3>
-                <p className="text-[11px] text-slate-400">Mount a stream into Screen Slot {activeSlot + 1}</p>
+          {/* Center: Layout Presets Switcher */}
+          <div className="flex items-center bg-[#0d0c15] p-1 rounded-xl border border-white/10 shadow-inner">
+            <button
+              onClick={() => setLayoutMode('quad')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                layoutMode === 'quad'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+              title="Quad View (2x2 Grid)"
+            >
+              <Grid2x2 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Quad 2x2</span>
+            </button>
+
+            <button
+              onClick={() => setLayoutMode('spotlight')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                layoutMode === 'spotlight'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+              title="Spotlight View (1 Hero + 2 Stacked)"
+            >
+              <Sliders className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Spotlight</span>
+            </button>
+
+            <button
+              onClick={() => setLayoutMode('split')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                layoutMode === 'split'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+              title="Split View (2x1 Dual Feed)"
+            >
+              <Columns2 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Split 2x1</span>
+            </button>
+
+            <button
+              onClick={() => setLayoutMode('focus')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                layoutMode === 'focus'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+              title="Focus View (1 Screen + Switcher)"
+            >
+              <Square className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Focus 1x1</span>
+            </button>
+          </div>
+
+          {/* Right: Low-Data Mode Toggle, Clear, Add Fixture, Fullscreen */}
+          <div className="flex items-center gap-2">
+            {/* Global Low Data Saver Toggle (Slow internet optimizer) */}
+            <button
+              onClick={toggleGlobalLowData}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                lowDataGlobal
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm shadow-emerald-500/20'
+                  : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
+              }`}
+              title="Low-Data Mode optimizes bandwidth for slow internet connections by streaming in low resolution (360p/SD)"
+            >
+              {lowDataGlobal ? <WifiOff className="h-3.5 w-3.5 text-emerald-400" /> : <Wifi className="h-3.5 w-3.5 text-slate-400" />}
+              <span className="hidden md:inline">{lowDataGlobal ? 'Low Data (Active)' : 'Low Data Mode'}</span>
+            </button>
+
+            {/* Audio Master Status Pill */}
+            {focusedAudioIndex !== null && slots[focusedAudioIndex] && (
+              <div 
+                onClick={() => setFocusedAudioIndex(null)}
+                className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold cursor-pointer hover:bg-purple-500/25 transition-all"
+                title="Click to Mute All"
+              >
+                <div className="flex items-center gap-0.5">
+                  <span className="w-1 h-2 bg-purple-400 rounded-full animate-pulse" />
+                  <span className="w-1 h-3.5 bg-purple-400 rounded-full animate-pulse delay-75" />
+                  <span className="w-1 h-2 bg-purple-400 rounded-full animate-pulse delay-150" />
+                </div>
+                <span>Audio: Screen {focusedAudioIndex + 1}</span>
+                <VolumeX className="h-3 w-3 text-purple-400 hover:text-white" />
               </div>
-              <button 
-                onClick={() => setModalOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+            )}
+
+            {/* Add Match Fixture Button */}
+            <button
+              onClick={() => openDrawerForSlot(null)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition-all cursor-pointer active:scale-95"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add Fixture</span>
+            </button>
+
+            {/* Clear All */}
+            {activeScreensCount > 0 && (
+              <button
+                onClick={clearAllSlots}
+                className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-300 border border-white/10 hover:border-red-500/30 text-xs font-bold transition-all cursor-pointer"
+                title="Clear all active slots"
+              >
+                Clear
+              </button>
+            )}
+
+            {/* Fullscreen Arena */}
+            <button
+              onClick={toggleArenaFullscreen}
+              className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 text-xs font-bold transition-all cursor-pointer"
+              title="Fullscreen Arena Wall"
+            >
+              <Maximize className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Multi-Stream Display Arena */}
+      <main 
+        ref={arenaContainerRef}
+        className="flex-1 w-full max-w-[1720px] mx-auto p-3 sm:p-5 flex flex-col justify-start"
+      >
+        {/* Audio Banner & Screens info */}
+        <div className="flex items-center justify-between text-xs font-bold text-slate-400 mb-3 px-1">
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+            <span className="text-white font-extrabold uppercase tracking-wider text-[11px]">
+              {activeScreensCount === 0 ? 'Empty Arena — Add Fixtures to Begin' : `${activeScreensCount}/4 Fixtures Mounted`}
+            </span>
+            {lowDataGlobal && (
+              <span className="px-2 py-0.5 rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                🍃 Data-Saver Mode Active (Low Bandwidth)
+              </span>
+            )}
+          </div>
+          <div className="text-[11px] text-slate-400 hidden sm:block">
+            Click any screen's audio badge to switch live sound focus
+          </div>
+        </div>
+
+        {/* LAYOUT 1: QUAD (2x2 Grid) */}
+        {layoutMode === 'quad' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 flex-1 min-h-[70vh]">
+            {[0, 1, 2, 3].map((slotIdx) => (
+              <div key={slotIdx} className="h-full min-h-[280px] sm:min-h-[340px] flex flex-col">
+                <SlotCard
+                  slotIndex={slotIdx}
+                  slotData={slots[slotIdx]}
+                  isAudioFocused={focusedAudioIndex === slotIdx}
+                  onFocusAudio={() => setFocusedAudioIndex(slotIdx)}
+                  onMuteAudio={() => setFocusedAudioIndex(null)}
+                  onRemove={() => removeSlot(slotIdx)}
+                  onOpenDrawer={() => openDrawerForSlot(slotIdx)}
+                  lowDataGlobal={lowDataGlobal}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* LAYOUT 2: SPOTLIGHT (1 Primary Large + 2 Secondary Stacked) */}
+        {layoutMode === 'spotlight' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 flex-1 min-h-[75vh]">
+            {/* Hero Main Screen (Slot 0) */}
+            <div className="lg:col-span-2 min-h-[380px] sm:min-h-[500px] flex flex-col">
+              <SlotCard
+                slotIndex={0}
+                slotData={slots[0]}
+                isAudioFocused={focusedAudioIndex === 0}
+                onFocusAudio={() => setFocusedAudioIndex(0)}
+                onMuteAudio={() => setFocusedAudioIndex(null)}
+                onRemove={() => removeSlot(0)}
+                onOpenDrawer={() => openDrawerForSlot(0)}
+                lowDataGlobal={lowDataGlobal}
+                isSpotlightHero
+              />
+            </div>
+
+            {/* Stacked Side Screens (Slot 1 & Slot 2) */}
+            <div className="flex flex-col gap-3.5 min-h-[400px]">
+              <div className="flex-1 min-h-[200px]">
+                <SlotCard
+                  slotIndex={1}
+                  slotData={slots[1]}
+                  isAudioFocused={focusedAudioIndex === 1}
+                  onFocusAudio={() => setFocusedAudioIndex(1)}
+                  onMuteAudio={() => setFocusedAudioIndex(null)}
+                  onRemove={() => removeSlot(1)}
+                  onOpenDrawer={() => openDrawerForSlot(1)}
+                  lowDataGlobal={lowDataGlobal}
+                />
+              </div>
+              <div className="flex-1 min-h-[200px]">
+                <SlotCard
+                  slotIndex={2}
+                  slotData={slots[2]}
+                  isAudioFocused={focusedAudioIndex === 2}
+                  onFocusAudio={() => setFocusedAudioIndex(2)}
+                  onMuteAudio={() => setFocusedAudioIndex(null)}
+                  onRemove={() => removeSlot(2)}
+                  onOpenDrawer={() => openDrawerForSlot(2)}
+                  lowDataGlobal={lowDataGlobal}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LAYOUT 3: SPLIT (2x1 Dual Feed) */}
+        {layoutMode === 'split' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 flex-1 min-h-[70vh]">
+            {[0, 1].map((slotIdx) => (
+              <div key={slotIdx} className="h-full min-h-[340px] sm:min-h-[460px] flex flex-col">
+                <SlotCard
+                  slotIndex={slotIdx}
+                  slotData={slots[slotIdx]}
+                  isAudioFocused={focusedAudioIndex === slotIdx}
+                  onFocusAudio={() => setFocusedAudioIndex(slotIdx)}
+                  onMuteAudio={() => setFocusedAudioIndex(null)}
+                  onRemove={() => removeSlot(slotIdx)}
+                  onOpenDrawer={() => openDrawerForSlot(slotIdx)}
+                  lowDataGlobal={lowDataGlobal}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* LAYOUT 4: FOCUS (1 Full Screen + Thumbnail Switcher) */}
+        {layoutMode === 'focus' && (
+          <div className="flex flex-col gap-3.5 flex-1 min-h-[75vh]">
+            <div className="flex-1 min-h-[420px] sm:min-h-[580px] w-full flex flex-col">
+              <SlotCard
+                slotIndex={focusSlotIdx}
+                slotData={slots[focusSlotIdx]}
+                isAudioFocused={focusedAudioIndex === focusSlotIdx}
+                onFocusAudio={() => setFocusedAudioIndex(focusSlotIdx)}
+                onMuteAudio={() => setFocusedAudioIndex(null)}
+                onRemove={() => removeSlot(focusSlotIdx)}
+                onOpenDrawer={() => openDrawerForSlot(focusSlotIdx)}
+                lowDataGlobal={lowDataGlobal}
+              />
+            </div>
+
+            {/* Thumbnail Switcher for other 3 screens */}
+            <div className="grid grid-cols-4 gap-3 bg-[#141221] p-3 rounded-2xl border border-white/10">
+              {[0, 1, 2, 3].map((idx) => {
+                const s = slots[idx];
+                const isSelected = focusSlotIdx === idx;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setFocusSlotIdx(idx);
+                      if (slots[idx]) setFocusedAudioIndex(idx);
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-purple-500 bg-purple-600/20 ring-1 ring-purple-500'
+                        : 'border-white/10 bg-[#0d0c15] hover:border-white/20'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-extrabold uppercase text-purple-400">
+                        Screen {idx + 1}
+                      </span>
+                      {s && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                      )}
+                    </div>
+                    <div className="text-xs font-bold text-white truncate">
+                      {s ? `${s.homeName} vs ${s.awayName}` : 'Empty Slot'}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Slide-over Match Selector Drawer */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div 
+            className="w-full max-w-md bg-[#141221] border-l border-white/10 h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drawer Header */}
+            <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <Tv className="h-4 w-4 text-purple-400" />
+                  <span>Mount Fixture Stream</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {activeSlotTarget !== null ? `Selecting for Screen ${activeSlotTarget + 1}` : 'Select a live match to mount'}
+                </p>
+              </div>
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            {/* Quick Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search teams, tournament, or keywords..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-[#131120] border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-all font-medium"
-              />
+            {/* Quick Search & Filters */}
+            <div className="p-4 space-y-3 border-b border-white/10 bg-[#181627]/50">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search teams, tournament, or sport..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-[#0d0c15] border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 font-medium"
+                />
+              </div>
+
+              {/* Sport Filter Chips */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                {[
+                  { id: 'all', label: 'All' },
+                  { id: 'live', label: '🔴 Live Now' },
+                  { id: 'football', label: 'Football' },
+                  { id: 'basketball', label: 'Basketball' },
+                  { id: 'tennis', label: 'Tennis' },
+                  { id: 'combat', label: 'Combat' },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setSelectedSportFilter(f.id)}
+                    className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                      selectedSportFilter === f.id
+                        ? 'bg-purple-600 text-white shadow-sm shadow-purple-600/30'
+                        : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Match List */}
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+            {/* Matches List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2.5 custom-scrollbar">
               {loadingMatches ? (
-                <div className="py-12 text-center text-xs text-slate-400 font-semibold flex items-center justify-center gap-2">
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-purple-400" />
-                  Updating live rosters...
+                <div className="py-20 text-center space-y-3">
+                  <RefreshCw className="h-6 w-6 text-purple-400 animate-spin mx-auto" />
+                  <p className="text-xs text-slate-400 font-semibold">Scanning live verified feeds...</p>
                 </div>
               ) : filteredMatches.length > 0 ? (
                 filteredMatches.map((m) => {
-                  const alreadySelected = slots.some(s => s && s.id === m.id);
+                  const isMounted = slots.some(s => s && s.id === m.id);
                   return (
-                    <div 
+                    <div
                       key={m.id}
-                      className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                        alreadySelected 
-                          ? 'border-white/5 bg-[#141221] opacity-50' 
-                          : 'border-white/10 hover:border-purple-500/40 bg-[#1e1c32] hover:bg-[#25233e]'
+                      className={`p-3.5 rounded-2xl border transition-all ${
+                        isMounted
+                          ? 'border-purple-500/30 bg-purple-950/20 opacity-80'
+                          : 'border-white/10 bg-[#181627] hover:border-purple-500/40 hover:bg-[#1d1a30]'
                       }`}
                     >
-                      <div className="text-left space-y-1.5 max-w-[70%]">
-                        <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-purple-600/20 text-purple-300 border border-purple-500/30">
-                          {m.tournament || 'Live Stream'}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                          {m.tournament || 'Match Fixture'}
                         </span>
-                        <div className="flex items-center gap-2 text-xs font-bold text-white">
-                          <span>{m.homeTeam?.name}</span>
-                          <span className="text-slate-400 font-medium">vs</span>
-                          <span>{m.awayTeam?.name}</span>
+                        {m.status === 'live' ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                            <span className="text-[10px] font-black uppercase text-red-400">Live</span>
+                            {m.currentMinute && (
+                              <span className="text-[10px] font-bold text-slate-400">({m.currentMinute})</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-slate-400">Upcoming</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 my-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-white truncate">{m.homeTeam?.name || 'Home'}</p>
+                          <p className="text-xs font-bold text-white truncate mt-0.5">{m.awayTeam?.name || 'Away'}</p>
                         </div>
                         {m.status === 'live' && (
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-                            <span className="text-[10px] font-extrabold uppercase tracking-widest text-red-500">Live</span>
-                            <span className="text-[10px] font-bold text-slate-300 ml-1">
-                              {m.homeScore ?? '—'} - {m.awayScore ?? '—'} ({m.currentMinute})
-                            </span>
+                          <div className="text-sm font-black text-white px-2 py-1 rounded-lg bg-black/40 border border-white/5 tabular-nums">
+                            {m.homeScore ?? 0} - {m.awayScore ?? 0}
                           </div>
                         )}
                       </div>
-                      
-                      <button
-                        disabled={alreadySelected}
-                        onClick={() => selectMatch(m)}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
-                          alreadySelected
-                            ? 'border-white/5 bg-white/5 text-slate-500 cursor-not-allowed'
-                            : 'border-purple-500 bg-purple-600 hover:bg-purple-500 text-white shadow-md shadow-purple-600/20 active:scale-95'
-                        }`}
-                      >
-                        {alreadySelected ? 'Added' : 'Mount Stream'}
-                      </button>
+
+                      <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between">
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {isMounted ? 'Already mounted' : 'Ready to stream'}
+                        </span>
+
+                        <div className="flex items-center gap-1.5">
+                          {activeSlotTarget !== null ? (
+                            <button
+                              onClick={() => selectMatchForSlot(m, activeSlotTarget)}
+                              className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-purple-600/30"
+                            >
+                              Load to Screen {activeSlotTarget + 1}
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              {[0, 1, 2, 3].map((slotNumber) => (
+                                <button
+                                  key={slotNumber}
+                                  onClick={() => selectMatchForSlot(m, slotNumber)}
+                                  className="h-7 w-7 rounded-lg bg-white/5 hover:bg-purple-600 text-slate-300 hover:text-white text-[10px] font-black border border-white/10 transition-all cursor-pointer"
+                                  title={`Mount to Screen ${slotNumber + 1}`}
+                                >
+                                  S{slotNumber + 1}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   );
                 })
               ) : (
-                <div className="py-12 text-center text-xs text-slate-400 font-semibold">
-                  No match fixtures found matching your search.
+                <div className="py-20 text-center space-y-2">
+                  <p className="text-xs font-bold text-slate-300">No match fixtures found</p>
+                  <p className="text-[11px] text-slate-500">Try searching another tournament or sport filter.</p>
                 </div>
               )}
             </div>
@@ -344,154 +624,130 @@ export default function MultiStreamPage() {
   );
 }
 
-/* Slot Viewport Component loading streams dynamically */
-function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
+/* Individual Slot Card Component */
+function SlotCard({
+  slotIndex,
+  slotData,
+  isAudioFocused,
+  onFocusAudio,
+  onMuteAudio,
+  onRemove,
+  onOpenDrawer,
+  lowDataGlobal,
+  isSpotlightHero = false,
+}) {
   const [streams, setStreams] = useState([]);
   const [activeStreamIdx, setActiveStreamIdx] = useState(0);
-  const [resolving, setResolving] = useState(true);
+  const [resolving, setResolving] = useState(false);
   const [error, setError] = useState(null);
-  const [muted, setMuted] = useState(slotIndex > 0); // Mute slot 2, 3, 4 by default so they don't blast concurrently!
   const [isPlaying, setIsPlaying] = useState(true);
-  const [hlsLoaded, setHlsLoaded] = useState(false);
-  const [resolveAttempt, setResolveAttempt] = useState(0);
-  
-  // Custom Hover State & Gestures
-  const [isHovered, setIsHovered] = useState(false);
-  const [gestureToast, setGestureToast] = useState(null);
-  const [dragStartX, setDragStartX] = useState(null);
-  const [dragDeltaX, setDragDeltaX] = useState(0);
-  const [isDraggingHeader, setIsDraggingHeader] = useState(false);
-  const [isLongPress, setIsLongPress] = useState(false);
-  const longPressTimerRef = useRef(null);
+  const [hlsLevels, setHlsLevels] = useState([]);
+  const [selectedResolution, setSelectedResolution] = useState('auto'); // 'auto' | '1080p' | '720p' | '480p' | '360p'
+  const [resDropdownOpen, setResDropdownOpen] = useState(false);
+  const [serverDropdownOpen, setServerDropdownOpen] = useState(false);
 
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
+  const slotContainerRef = useRef(null);
+
+  // If slotData is empty, show empty placeholder card
+  if (!slotData) {
+    return (
+      <div 
+        onClick={onOpenDrawer}
+        className="w-full h-full min-h-[260px] rounded-2xl border-2 border-dashed border-white/10 hover:border-purple-500/40 bg-[#141221]/50 hover:bg-[#181627] flex flex-col items-center justify-center p-6 text-center cursor-pointer group transition-all duration-300"
+      >
+        <div className="h-12 w-12 rounded-2xl bg-purple-600/10 border border-purple-500/20 group-hover:scale-110 group-hover:bg-purple-600/25 flex items-center justify-center text-purple-400 transition-all shadow-inner mb-3">
+          <Plus className="h-5 w-5" />
+        </div>
+        <h3 className="text-sm font-extrabold text-white">Screen Slot {slotIndex + 1}</h3>
+        <p className="text-xs text-slate-400 mt-1 max-w-xs">
+          Click to mount a live fixture stream into this viewport.
+        </p>
+        <span className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 group-hover:bg-purple-600 text-[11px] font-bold text-slate-300 group-hover:text-white transition-all">
+          Browse Fixtures
+        </span>
+      </div>
+    );
+  }
+
+  // Resolve streams for this fixture
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchStreams = async () => {
+      setResolving(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/streams/${slotData.id}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Stream API status ${res.status}`);
+        const data = await res.json();
+        if (isCancelled) return;
+
+        if (data.streams && data.streams.length > 0) {
+          setStreams(data.streams);
+          setActiveStreamIdx(0);
+        } else if (data.error) {
+          setError(data.error);
+        } else {
+          setError('No active streaming feeds found for this match.');
+        }
+      } catch (err) {
+        if (!isCancelled) setError('Could not resolve streaming servers.');
+      } finally {
+        if (!isCancelled) setResolving(false);
+      }
+    };
+
+    fetchStreams();
+    return () => {
+      isCancelled = true;
+    };
+  }, [slotData.id]);
 
   const activeStream = streams[activeStreamIdx];
   const streamUrl = activeStream?.proxiedUrl || activeStream?.url;
   const isDirectHls = streamUrl && (
-    streamUrl.includes('.m3u8') || 
-    streamUrl.includes('.mpd') || 
-    streamUrl.includes('/hls/') || 
+    streamUrl.includes('.m3u8') ||
+    streamUrl.includes('.mpd') ||
+    streamUrl.includes('/hls/') ||
     streamUrl.includes('.mp4')
   );
 
-  const showToast = (message) => {
-    setGestureToast(message);
-    setTimeout(() => {
-      setGestureToast((prev) => prev === message ? null : prev);
-    }, 2200);
-  };
-
-  // Keyboard gestures handler when hovering over this viewport
+  // Setup HLS / Video playback
   useEffect(() => {
-    if (!isHovered) return;
-
-    const handleKeyDown = (e) => {
-      const key = e.key.toLowerCase();
-      
-      // Don't capture standard browser inputs if user is typing elsewhere
-      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
-        return;
-      }
-
-      if (key === 's') {
-        e.preventDefault();
-        if (streams.length > 1) {
-          setActiveStreamIdx((prev) => {
-            const next = (prev + 1) % streams.length;
-            showToast(`🔌 Feed: Server ${next + 1} (${streams[next]?.quality || 'SD'})`);
-            return next;
-          });
-        } else {
-          showToast('ℹ️ Feed: Only 1 server available');
-        }
-      } else if (key === 'r') {
-        e.preventDefault();
-        reloadFeed();
-        showToast('🔄 Feed: Reloading Stream...');
-      } else if (key === 'm') {
-        e.preventDefault();
-        toggleMute();
-        showToast(muted ? '🔊 Feed: Unmuted' : '🔇 Feed: Muted');
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isHovered, streams, activeStreamIdx, muted, streamUrl, isDirectHls]);
-
-  // Load HLS Client script if HLS stream is resolved
-  useEffect(() => {
-    if (!isDirectHls) return;
-    if (window.Hls) {
-      setHlsLoaded(true);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.4.0/dist/hls.min.js';
-    script.async = true;
-    script.onload = () => setHlsLoaded(true);
-    document.body.appendChild(script);
-  }, [isDirectHls]);
-
-  // Resolve streams from custom stream API endpoint
-  useEffect(() => {
-    const controller = new AbortController();
-    const resolveStreams = async () => {
-      setResolving(true);
-      setError(null);
-      try {
-        const res = await fetch(`/api/streams/${slotData.id}`, {
-          cache: 'no-store',
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error(`Stream API returned ${res.status}`);
-        const data = await res.json();
-        if (data.error) {
-          setError(data.error);
-        } else if (data.streams && data.streams.length > 0) {
-          setStreams(data.streams);
-          setActiveStreamIdx(0);
-        } else {
-          setError('No active servers found.');
-        }
-      } catch (err) {
-        if (err.name !== 'AbortError') setError('Failed resolving video feeds.');
-      } finally {
-        if (!controller.signal.aborted) setResolving(false);
-      }
-    };
-    resolveStreams();
-    return () => controller.abort();
-  }, [slotData.id, resolveAttempt]);
-
-  // HLS Direct Playback setup
-  useEffect(() => {
-    if (!isDirectHls || !hlsLoaded || !videoRef.current) return;
-
+    if (!isDirectHls || !streamUrl || !videoRef.current) return;
     const video = videoRef.current;
-    
+
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
 
-    video.muted = muted;
-    setIsPlaying(true);
+    video.muted = !isAudioFocused;
 
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = streamUrl;
       video.play().catch(() => {});
     } else if (window.Hls) {
       const hls = new window.Hls({
-        maxBufferSize: 10 * 1024 * 1024,
+        maxBufferSize: 15 * 1024 * 1024,
         maxBufferLength: 15,
+        liveSyncDuration: 3,
       });
       hlsRef.current = hls;
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
-      hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+
+      hls.on(window.Hls.Events.MANIFEST_PARSED, (e, data) => {
+        if (data?.levels && data.levels.length > 0) {
+          const lvls = data.levels.map((lvl, index) => ({
+            index,
+            height: lvl.height,
+            bitrate: lvl.bitrate,
+            label: lvl.height ? `${lvl.height}p` : `${Math.round(lvl.bitrate / 1000)}k`,
+          }));
+          setHlsLevels(lvls);
+        }
         video.play().catch(() => {});
       });
     }
@@ -502,273 +758,298 @@ function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
         hlsRef.current = null;
       }
     };
-  }, [streamUrl, isDirectHls, hlsLoaded, muted]);
+  }, [streamUrl, isDirectHls]);
 
-  // Volume toggle
-  const toggleMute = () => {
-    const nextMute = !muted;
-    setMuted(nextMute);
+  // Sync audio mute state based on audio focus
+  useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.muted = nextMute;
+      videoRef.current.muted = !isAudioFocused;
     }
-  };
+  }, [isAudioFocused]);
 
-  const handlePlayPause = () => {
-    if (!videoRef.current) return;
-    if (isPlaying) {
-      videoRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      videoRef.current.play().catch(() => {});
-      setIsPlaying(true);
-    }
-  };
+  // Apply Resolution / Low Data Mode change
+  const applyResolution = (res) => {
+    setSelectedResolution(res);
+    setResDropdownOpen(false);
 
-  const handleFullscreen = () => {
-    const el = videoRef.current;
-    if (!el) return;
-    if (el.requestFullscreen) el.requestFullscreen();
-  };
-
-  const reloadFeed = () => {
-    if (videoRef.current && isDirectHls) {
-      if (hlsRef.current) {
-        hlsRef.current.loadSource(streamUrl);
-        hlsRef.current.startLoad();
+    if (hlsRef.current) {
+      if (res === 'auto') {
+        hlsRef.current.currentLevel = -1;
       } else {
-        videoRef.current.src = streamUrl;
-        videoRef.current.load();
-      }
-    } else {
-      // Toggle key reload for iframe components
-      const curr = activeStreamIdx;
-      setActiveStreamIdx(-1);
-      setTimeout(() => setActiveStreamIdx(curr), 50);
-    }
-  };
-
-  // Header Gestures
-  const handleHeaderStart = (e) => {
-    if (e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-      return;
-    }
-    const isTouch = e.type.startsWith('touch');
-    const clientX = isTouch ? e.touches[0].clientX : e.clientX;
-    setDragStartX(clientX);
-    setDragDeltaX(0);
-    setIsDraggingHeader(true);
-    setIsLongPress(false);
-
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-    }
-
-    longPressTimerRef.current = setTimeout(() => {
-      setIsLongPress(true);
-      if (navigator.vibrate) {
-        try {
-          navigator.vibrate(50);
-        } catch (_) {}
-      }
-    }, 600);
-  };
-
-  const handleHeaderMove = (e) => {
-    if (!isDraggingHeader || dragStartX === null) return;
-    const isTouch = e.type.startsWith('touch');
-    const clientX = isTouch ? e.touches[0].clientX : e.clientX;
-    const deltaX = clientX - dragStartX;
-    setDragDeltaX(deltaX);
-
-    if (Math.abs(deltaX) > 10) {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-    }
-  };
-
-  const handleHeaderEnd = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-
-    if (!isDraggingHeader) return;
-    setIsDraggingHeader(false);
-
-    if (isLongPress) {
-      setDragStartX(null);
-      setDragDeltaX(0);
-      setIsLongPress(false);
-      return;
-    }
-
-    if (Math.abs(dragDeltaX) > 60) {
-      if (streams.length > 1) {
-        if (dragDeltaX > 0) {
-          // Swipe Right -> Previous Server
-          setActiveStreamIdx((prev) => {
-            const next = (prev - 1 + streams.length) % streams.length;
-            showToast(`🔌 Feed: Server ${next + 1} (${streams[next]?.quality || 'SD'})`);
-            return next;
-          });
-        } else {
-          // Swipe Left -> Next Server
-          setActiveStreamIdx((prev) => {
-            const next = (prev + 1) % streams.length;
-            showToast(`🔌 Feed: Server ${next + 1} (${streams[next]?.quality || 'SD'})`);
-            return next;
-          });
+        const levelIdx = parseInt(res, 10);
+        if (!isNaN(levelIdx) && levelIdx >= 0) {
+          hlsRef.current.currentLevel = levelIdx;
+        } else if (res === 'low' || res === '360p' || res === '480p') {
+          hlsRef.current.currentLevel = 0; // lowest bitrate for slow internet
+        } else if (res === '1080p' || res === 'high') {
+          hlsRef.current.currentLevel = hlsLevels.length > 0 ? hlsLevels.length - 1 : -1;
         }
-      } else {
-        showToast('ℹ️ Feed: Only 1 server available');
+      }
+    } else {
+      // For multi-server stream channels (iframe): automatically select SD server for low bandwidth
+      if (res === '360p' || res === '480p' || res === 'low') {
+        const sdIndex = streams.findIndex(c => (c.quality || '').toLowerCase() === 'sd');
+        if (sdIndex !== -1 && sdIndex !== activeStreamIdx) {
+          setActiveStreamIdx(sdIndex);
+        }
+      } else if (res === '1080p' || res === '720p' || res === 'high') {
+        const hdIndex = streams.findIndex(c => (c.quality || '').toLowerCase().includes('hd') || (c.quality || '').toLowerCase().includes('1080'));
+        if (hdIndex !== -1 && hdIndex !== activeStreamIdx) {
+          setActiveStreamIdx(hdIndex);
+        }
       }
     }
-
-    setDragStartX(null);
-    setDragDeltaX(0);
   };
 
-  const handleHeaderDoubleClick = (e) => {
-    e.stopPropagation();
-  };
+  // Sync with global low-data mode
+  useEffect(() => {
+    if (lowDataGlobal) {
+      applyResolution('360p');
+    } else if (selectedResolution === '360p' && !lowDataGlobal) {
+      applyResolution('auto');
+    }
+  }, [lowDataGlobal]);
 
-  const handleHeaderRightClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (streams.length > 1) {
-      setActiveStreamIdx((prev) => {
-        const next = (prev + 1) % streams.length;
-        showToast(`🔌 Feed: Server ${next + 1} (${streams[next]?.quality || 'SD'})`);
-        return next;
-      });
+  const toggleSlotFullscreen = () => {
+    if (!slotContainerRef.current) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
     } else {
-      showToast('ℹ️ Feed: Only 1 server available');
+      slotContainerRef.current.requestFullscreen().catch(() => {});
     }
   };
 
-  const handleWheelServer = (e) => {
-    if (streams.length <= 1) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.deltaY > 0) {
-      setActiveStreamIdx((prev) => (prev + 1) % streams.length);
-      showToast(`🔌 Server Cycle: Next Feed`);
-    } else {
-      setActiveStreamIdx((prev) => (prev - 1 + streams.length) % streams.length);
-      showToast(`🔌 Server Cycle: Previous Feed`);
-    }
+  const reloadStream = () => {
+    const current = activeStreamIdx;
+    setActiveStreamIdx(-1);
+    setTimeout(() => setActiveStreamIdx(current), 100);
   };
 
   return (
-    <div 
-      className="flex-1 flex flex-col h-full w-full relative group"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+    <div
+      ref={slotContainerRef}
+      className={`relative w-full h-full rounded-2xl overflow-hidden bg-[#0a0910] border flex flex-col group transition-all duration-300 shadow-xl ${
+        isAudioFocused ? 'border-purple-500/80 ring-1 ring-purple-500/50' : 'border-white/10 hover:border-white/20'
+      }`}
     >
-      {/* Gesture Pill Toast Notification */}
-      {gestureToast && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 pointer-events-none transition-all duration-300">
-          <div className="px-4 py-2.5 bg-black/90 dark:bg-black/85 backdrop-blur-md border border-violet-500/35 text-white font-extrabold text-[10px] uppercase tracking-wider rounded-full shadow-2xl flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-ping" />
-            {gestureToast}
-          </div>
-        </div>
-      )}
-
-      {/* Swipe Feedback Overlay */}
-      {isDraggingHeader && Math.abs(dragDeltaX) > 20 && (
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] z-35 flex items-center justify-center pointer-events-none transition-all duration-250 select-none">
-          <div className="px-5 py-3 bg-zinc-950/90 border border-violet-500/40 text-white rounded-2xl flex flex-col items-center gap-2 shadow-2xl scale-100 transform transition-transform">
-            <span className="text-2xl animate-pulse">
-              {dragDeltaX > 0 ? '👈' : '👉'}
-            </span>
-            <span className="text-[11px] font-extrabold uppercase tracking-wider">
-              {dragDeltaX > 0 ? 'Swipe Right: Previous Feed' : 'Swipe Left: Next Feed'}
-            </span>
-            <span className="text-[9px] text-zinc-400 font-semibold mt-1">
-              Release to switch (Offset: {Math.round(dragDeltaX)}px)
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Title HUD Bar */}
-      <div 
-        onMouseDown={handleHeaderStart}
-        onMouseMove={handleHeaderMove}
-        onMouseUp={handleHeaderEnd}
-        onMouseLeave={handleHeaderEnd}
-        onTouchStart={handleHeaderStart}
-        onTouchMove={handleHeaderMove}
-        onTouchEnd={handleHeaderEnd}
-        onDoubleClick={handleHeaderDoubleClick}
-        onContextMenu={handleHeaderRightClick}
-        className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-2 bg-gradient-to-b from-black/80 to-transparent pointer-events-auto cursor-grab active:cursor-grabbing select-none"
-        title="Swipe Left/Right: Cycle Servers | Hold 600ms or Double Click: Toggle Shield | Right Click: Cycle Server"
-      >
-        <div className="flex items-center gap-2 max-w-[65%]">
-          <span className={`h-1.5 w-1.5 rounded-full ${slotData.status === 'live' ? 'bg-red-500 animate-pulse' : 'bg-zinc-500'}`} />
-          <span className="text-[10px] font-extrabold text-white truncate drop-shadow-md">
-            Screen {slotIndex + 1}: {slotData.homeName} vs {slotData.awayName}
-          {slotData.sport && slotData.sport !== 'football' && ` · ${slotData.sport.toUpperCase()}`}
+      {/* Top HUD Control Bar */}
+      <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-[#0d0c15]/90 via-[#0d0c15]/60 to-transparent p-2.5 flex items-center justify-between gap-2 select-none">
+        {/* Match Info & Status */}
+        <div className="flex items-center gap-2 min-w-0 max-w-[55%]">
+          <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-purple-600/40 text-purple-200 border border-purple-500/30 shrink-0">
+            S{slotIndex + 1}
           </span>
+          <div className="truncate">
+            <span className="text-xs font-bold text-white truncate drop-shadow">
+              {slotData.homeName} vs {slotData.awayName}
+            </span>
+            {slotData.tournament && (
+              <span className="text-[10px] text-slate-400 font-medium ml-1.5 hidden sm:inline">
+                ({slotData.tournament})
+              </span>
+            )}
+          </div>
         </div>
-        
-        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-          {/* Server Switcher Dropdown (With Wheel gesture cycle capability) */}
-          {streams.length > 1 && (
-            <select
-              value={activeStreamIdx}
-              onWheel={handleWheelServer}
-              onChange={(e) => {
-                const idx = parseInt(e.target.value);
-                setActiveStreamIdx(idx);
-                showToast(`🔌 Switched to Server ${idx + 1}`);
-              }}
-              className="text-[9px] font-extrabold uppercase px-1 py-0.5 rounded bg-black/60 border border-zinc-800 text-white cursor-pointer focus:outline-none"
-              title="Scroll wheel over select to cycle feeds"
-            >
-              {streams.map((s, index) => (
-                <option key={index} value={index} className="bg-zinc-950">
-                  S{index + 1} ({s.quality || 'SD'})
-                </option>
-              ))}
-            </select>
+
+        {/* Controls: Audio Focus, Server Selector, Resolution, Slot Actions */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Audio Focus Toggle Button */}
+          <button
+            onClick={isAudioFocused ? onMuteAudio : onFocusAudio}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-extrabold uppercase transition-all cursor-pointer ${
+              isAudioFocused
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/40 ring-1 ring-purple-400'
+                : 'bg-black/60 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10'
+            }`}
+            title={isAudioFocused ? 'Audio Focused (Click to mute)' : 'Click to Focus Audio (mutes other screens)'}
+          >
+            {isAudioFocused ? (
+              <>
+                <Volume2 className="h-3 w-3 text-white" />
+                <span className="hidden sm:inline">Audio Live</span>
+              </>
+            ) : (
+              <>
+                <VolumeX className="h-3 w-3 text-slate-400" />
+                <span className="hidden sm:inline">Muted</span>
+              </>
+            )}
+          </button>
+
+          {/* Server Selector Dropdown */}
+          {streams.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setServerDropdownOpen(!serverDropdownOpen);
+                  setResDropdownOpen(false);
+                }}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/60 hover:bg-white/10 border border-white/10 text-white text-[10px] font-extrabold uppercase transition-all"
+                title="Select Streaming Server"
+              >
+                <span>Server {activeStreamIdx + 1}</span>
+                <ChevronDown className="h-2.5 w-2.5 text-slate-400" />
+              </button>
+
+              {serverDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-32 bg-[#141221] border border-white/10 rounded-xl shadow-2xl py-1 z-30">
+                  <div className="px-2 py-1 text-[9px] font-extrabold text-slate-400 uppercase tracking-wider border-b border-white/5">
+                    Stream Servers
+                  </div>
+                  {streams.map((s, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setActiveStreamIdx(idx);
+                        setServerDropdownOpen(false);
+                      }}
+                      className={`w-full px-2.5 py-1.5 text-left text-[11px] font-bold flex items-center justify-between hover:bg-white/5 transition-colors ${
+                        activeStreamIdx === idx ? 'text-purple-400' : 'text-slate-200'
+                      }`}
+                    >
+                      <span>Server {idx + 1}</span>
+                      <span className="text-[9px] px-1 py-0.5 rounded bg-white/5 text-slate-400">
+                        {s.quality || 'SD'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
-          {/* Close Screen Slot */}
-          <button 
+          {/* Resolution Selector Dropdown (Slow Internet Optimizer) */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setResDropdownOpen(!resDropdownOpen);
+                setServerDropdownOpen(false);
+              }}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-extrabold uppercase transition-all ${
+                selectedResolution === '360p' || selectedResolution === '480p' || lowDataGlobal
+                  ? 'bg-emerald-950/70 text-emerald-400 border-emerald-500/30'
+                  : 'bg-black/60 text-white border-white/10 hover:bg-white/10'
+              }`}
+              title="Change Resolution / Bandwidth Saver"
+            >
+              <span>{selectedResolution === 'auto' ? 'Auto' : selectedResolution}</span>
+              <ChevronDown className="h-2.5 w-2.5 text-slate-400" />
+            </button>
+
+            {resDropdownOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-36 bg-[#141221] border border-white/10 rounded-xl shadow-2xl py-1 z-30">
+                <div className="px-2 py-1 text-[9px] font-extrabold text-slate-400 uppercase tracking-wider border-b border-white/5">
+                  Resolution / Speed
+                </div>
+
+                <button
+                  onClick={() => applyResolution('auto')}
+                  className={`w-full px-2.5 py-1.5 text-left text-[11px] font-bold flex items-center justify-between hover:bg-white/5 ${
+                    selectedResolution === 'auto' ? 'text-purple-400' : 'text-slate-200'
+                  }`}
+                >
+                  <span>Auto (Adaptive)</span>
+                  {selectedResolution === 'auto' && <Check className="h-3 w-3" />}
+                </button>
+
+                {hlsLevels.length > 0 ? (
+                  hlsLevels.map((lvl) => (
+                    <button
+                      key={lvl.index}
+                      onClick={() => applyResolution(lvl.index.toString())}
+                      className={`w-full px-2.5 py-1.5 text-left text-[11px] font-bold flex items-center justify-between hover:bg-white/5 ${
+                        selectedResolution === lvl.index.toString() ? 'text-purple-400' : 'text-slate-200'
+                      }`}
+                    >
+                      <span>{lvl.label}</span>
+                      {selectedResolution === lvl.index.toString() && <Check className="h-3 w-3" />}
+                    </button>
+                  ))
+                ) : (
+                  <>
+                    <button
+                      onClick={() => applyResolution('1080p')}
+                      className={`w-full px-2.5 py-1.5 text-left text-[11px] font-bold flex items-center justify-between hover:bg-white/5 ${
+                        selectedResolution === '1080p' ? 'text-purple-400' : 'text-slate-200'
+                      }`}
+                    >
+                      <span>1080p HD</span>
+                      {selectedResolution === '1080p' && <Check className="h-3 w-3" />}
+                    </button>
+                    <button
+                      onClick={() => applyResolution('720p')}
+                      className={`w-full px-2.5 py-1.5 text-left text-[11px] font-bold flex items-center justify-between hover:bg-white/5 ${
+                        selectedResolution === '720p' ? 'text-purple-400' : 'text-slate-200'
+                      }`}
+                    >
+                      <span>720p HD</span>
+                      {selectedResolution === '720p' && <Check className="h-3 w-3" />}
+                    </button>
+                    <button
+                      onClick={() => applyResolution('480p')}
+                      className={`w-full px-2.5 py-1.5 text-left text-[11px] font-bold flex items-center justify-between hover:bg-white/5 ${
+                        selectedResolution === '480p' ? 'text-emerald-400' : 'text-slate-200'
+                      }`}
+                    >
+                      <span>480p (Fast)</span>
+                      {selectedResolution === '480p' && <Check className="h-3 w-3" />}
+                    </button>
+                    <button
+                      onClick={() => applyResolution('360p')}
+                      className={`w-full px-2.5 py-1.5 text-left text-[11px] font-bold flex items-center justify-between hover:bg-white/5 ${
+                        selectedResolution === '360p' ? 'text-emerald-400' : 'text-slate-200'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1">
+                        <span>360p (Low Data)</span>
+                      </span>
+                      {selectedResolution === '360p' && <Check className="h-3 w-3" />}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Swap Fixture button */}
+          <button
+            onClick={onOpenDrawer}
+            className="p-1 rounded-lg bg-black/60 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-colors"
+            title="Swap Match Fixture"
+          >
+            <Shuffle className="h-3 w-3" />
+          </button>
+
+          {/* Close/Remove Slot */}
+          <button
             onClick={onRemove}
-            className="p-1 rounded bg-black/50 hover:bg-red-600 border border-zinc-800/60 text-zinc-300 hover:text-white transition-colors"
-            title="Unmount Stream"
+            className="p-1 rounded-lg bg-black/60 hover:bg-red-600 text-slate-300 hover:text-white border border-white/10 transition-colors"
+            title="Unmount Slot"
           >
             <X className="h-3 w-3" />
           </button>
         </div>
       </div>
 
-      {/* Screen Stream Body */}
-      <div 
-        className="flex-1 w-full bg-black relative flex items-center justify-center"
-        onDoubleClick={handleHeaderDoubleClick}
-      >
+      {/* Stream Video / Frame Body */}
+      <div className="flex-1 w-full bg-black relative flex items-center justify-center overflow-hidden">
         {resolving ? (
-          <div className="flex flex-col items-center justify-center space-y-2.5">
-            <RefreshCw className="h-6 w-6 text-violet-500 animate-spin" />
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-500">Resolving Streaming Signals...</span>
+          <div className="flex flex-col items-center justify-center space-y-2 p-6">
+            <RefreshCw className="h-6 w-6 text-purple-400 animate-spin" />
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              Connecting Feed...
+            </p>
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center justify-center p-4 text-center space-y-2 max-w-xs">
-            <ShieldAlert className="h-6 w-6 text-amber-500" />
-            <h4 className="text-xs font-bold text-zinc-300">Stream unavailable</h4>
-            <p className="text-[10px] text-zinc-500">{error}</p>
+          <div className="flex flex-col items-center justify-center p-6 text-center space-y-2 max-w-sm">
+            <ShieldAlert className="h-6 w-6 text-amber-400" />
+            <p className="text-xs font-bold text-slate-200">Stream Currently Unavailable</p>
+            <p className="text-[11px] text-slate-400">{error}</p>
             <button
-              onClick={() => setResolveAttempt(attempt => attempt + 1)}
-              className="mt-1 rounded-lg border border-violet-500/40 bg-violet-600/20 px-3 py-1.5 text-[10px] font-bold text-violet-300 hover:bg-violet-600/40"
+              onClick={onOpenDrawer}
+              className="mt-2 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-md"
             >
-              Retry stream resolution
+              Choose Alternative Fixture
             </button>
           </div>
         ) : isDirectHls ? (
@@ -776,11 +1057,17 @@ function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
             ref={videoRef}
             className="absolute inset-0 h-full w-full object-contain cursor-pointer"
             playsInline
-            onClick={handlePlayPause}
+            onClick={() => {
+              if (videoRef.current) {
+                if (videoRef.current.paused) videoRef.current.play();
+                else videoRef.current.pause();
+                setIsPlaying(!videoRef.current.paused);
+              }
+            }}
           />
         ) : activeStreamIdx === -1 ? (
           <div className="flex items-center justify-center">
-            <RefreshCw className="h-5 w-5 text-zinc-500 animate-spin" />
+            <RefreshCw className="h-5 w-5 text-slate-400 animate-spin" />
           </div>
         ) : (
           <iframe
@@ -791,76 +1078,51 @@ function MultiStreamSlot({ slotData, slotIndex, size, onResize, onRemove }) {
             allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
           />
         )}
+
+        {/* Low Data Mode Active Pill */}
+        {(selectedResolution === '360p' || selectedResolution === '480p' || lowDataGlobal) && (
+          <div className="absolute bottom-2 left-2 z-10 pointer-events-none">
+            <div className="px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 text-[9px] font-bold flex items-center gap-1 shadow-md">
+              <WifiOff className="h-2.5 w-2.5 text-emerald-400" />
+              <span>Low-Data Active</span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Screen HUD controls (bottom overlay on hover) */}
-      {!resolving && !error && (
-        <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-300 z-20">
-          <div className="flex items-center gap-2">
-            {/* Play/Pause (HLS only) */}
-            {isDirectHls && (
-              <button
-                onClick={handlePlayPause}
-                className="p-1 rounded bg-black/60 hover:bg-white/10 text-white transition-colors"
-              >
-                {isPlaying ? <VolumeX className="h-3 w-3" /> : <Play className="h-3 w-3 fill-white" />}
-              </button>
-            )}
+      {/* Bottom HUD Controls on Hover */}
+      <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-[#0d0c15]/90 via-[#0d0c15]/50 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+        <div className="flex items-center gap-2">
+          {/* Reload feed */}
+          <button
+            onClick={reloadStream}
+            className="p-1.5 rounded-lg bg-black/60 hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
+            title="Reload Video Stream"
+          >
+            <RefreshCw className="h-3 w-3" />
+          </button>
 
-            {/* Mute/Unmute toggle */}
-            <button
-              onClick={toggleMute}
-              className={`p-1 rounded transition-colors ${
-                muted ? 'bg-red-600/40 text-red-400 hover:bg-red-600/60' : 'bg-black/60 text-white hover:bg-white/10'
-              }`}
-              title={muted ? "Unmute Feed" : "Mute Feed"}
-            >
-              {muted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Dynamic Screen Sizing Slider */}
-            <div className="flex items-center gap-1.5 bg-black/60 border border-zinc-800/80 px-2 py-0.5 rounded-lg select-none">
-              <span className="text-[8px] font-extrabold uppercase tracking-widest text-zinc-400">Size: {size}%</span>
-              <input
-                type="range"
-                min="25"
-                max="100"
-                step="5"
-                value={size}
-                onChange={(e) => onResize(parseInt(e.target.value))}
-                className="w-16 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
-                title="Drag to resize screen width"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-
-            {/* Refresh stream */}
-            <button
-              onClick={() => {
-                reloadFeed();
-                showToast('🔄 Feed Reloaded');
-              }}
-              className="p-1 rounded bg-black/60 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors"
-              title="Refresh Screen Feed"
-            >
-              <RefreshCw className="h-3 w-3" />
-            </button>
-
-            {/* Fullscreen (HLS direct only) */}
-            {isDirectHls && (
-              <button
-                onClick={handleFullscreen}
-                className="p-1 rounded bg-black/60 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors"
-                title="Fullscreen Feed"
-              >
-                <Maximize className="h-3 w-3" />
-              </button>
-            )}
-          </div>
+          {/* Audio focus switch */}
+          <button
+            onClick={isAudioFocused ? onMuteAudio : onFocusAudio}
+            className="p-1.5 rounded-lg bg-black/60 hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
+            title={isAudioFocused ? 'Mute Audio' : 'Unmute & Focus Audio'}
+          >
+            {isAudioFocused ? <Volume2 className="h-3 w-3 text-purple-400" /> : <VolumeX className="h-3 w-3 text-slate-400" />}
+          </button>
         </div>
-      )}
+
+        <div className="flex items-center gap-2">
+          {/* Fullscreen Slot */}
+          <button
+            onClick={toggleSlotFullscreen}
+            className="p-1.5 rounded-lg bg-black/60 hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
+            title="Fullscreen Screen"
+          >
+            <Maximize className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

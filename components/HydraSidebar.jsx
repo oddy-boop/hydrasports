@@ -21,10 +21,11 @@ export const REGIONAL_LEAGUES = [
 ];
 
 export const INTERNATIONAL_LEAGUES = [
-  { id: 'World Cup', name: 'World Cup 2022', icon: '🌍', color: '#fbbf24', category: 'international' },
-  { id: 'Euro', name: 'UEFA Euro 2020', icon: '🇪🇺', color: '#3b82f6', category: 'international' },
-  { id: 'Concacaf', name: 'Concacaf 2023', icon: '🌎', color: '#f59e0b', category: 'international' },
-  { id: 'Asian Cup', name: 'Asian Cup 2023', icon: '🌏', color: '#ec4899', category: 'international' },
+  { id: 'World Cup 2026', name: 'World Cup 2026 Qualifiers', icon: '🌍', color: '#fbbf24', category: 'international' },
+  { id: 'Nations League', name: 'UEFA Nations League', icon: '🇪🇺', color: '#3b82f6', category: 'international' },
+  { id: 'Copa America', name: 'Copa América', icon: '🌎', color: '#f59e0b', category: 'international' },
+  { id: 'Asian Cup', name: 'AFC Asian Cup', icon: '🌏', color: '#ec4899', category: 'international' },
+  { id: 'International Friendlies', name: 'Intl Friendlies', icon: '🌐', color: '#10b981', category: 'international' },
 ];
 
 export default function FootySidebar() {
