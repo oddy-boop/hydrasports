@@ -697,10 +697,20 @@ export function parseMatchHubData(match: any, stats: any) {
       if (p.realStats?.shotsOnTarget) impactScore += 3 * p.realStats.shotsOnTarget;
       if (p.realStats?.saves) impactScore += 3 * p.realStats.saves;
 
-      if (p.positionGroup === 'FW' || p.position === 'ST' || p.position === 'CF' || p.position === 'LW' || p.position === 'RW') impactScore += 5;
-      else if (p.positionGroup === 'MF' || p.position === 'CAM' || p.position === 'CM') impactScore += 4;
-      else if (p.positionGroup === 'GK') impactScore += 2;
-      else impactScore += 3;
+      const posUpper = (p.position || '').toUpperCase();
+      if (posUpper === 'LW' || posUpper === 'RW' || posUpper === 'LF' || posUpper === 'RF' || p.formationPlace === 10 || p.formationPlace === 11) {
+        impactScore += 8; // Dynamic wingers & primary creators (e.g. Cowell, Ruvalcaba)
+      } else if (posUpper === 'CAM' || posUpper === 'AM' || (posUpper === 'CM' && p.formationPlace === 4)) {
+        impactScore += 7; // Central playmakers (e.g. Mehmeti)
+      } else if (p.positionGroup === 'FW') {
+        impactScore += 5; // Strikers (e.g. Hall)
+      } else if (p.positionGroup === 'GK') {
+        impactScore += 4;
+      } else if (p.positionGroup === 'MF') {
+        impactScore += 4;
+      } else {
+        impactScore += 3;
+      }
 
       let dynamicRole = '';
       if (goalsScored > 0) {

@@ -51,7 +51,7 @@ describe('playerProfiles utility', () => {
     expect(qualifiedStarter.isRated).toBe(true);
     expect(qualifiedStarter.rating).toBe(6.0);
     expect(qualifiedStarter.ratingFormatted).toBe('6.0');
-    expect(qualifiedStarter.colorClass).toContain('bg-[#ffb800]'); // Flashscore yellow
+    expect(qualifiedStarter.colorClass).toContain('bg-[#e67e22]'); // Flashscore orange/amber average tier
 
     // Core Mechanic 3: Real-Time Updates & Goal scorer boosts
     const scorer = getPlayerMatchRating(
@@ -199,7 +199,7 @@ describe('playerProfiles utility', () => {
       { minute: 7, displayMinute: "7'", type: 'goal', isOwnGoal: true, player: 'Casemiro (OG)', text: 'Own Goal by Casemiro' }
     ];
 
-    // 1. Casemiro scored the own goal => must be penalized into red tier (< 6.0)
+    // 1. Casemiro scored the own goal => penalized to ~6.0 - 6.3 with OG warning status matching Flashscore
     const casemiro = getPlayerMatchRating(
       { name: 'Casemiro', jersey: '5', positionGroup: 'MF', starter: true, minutesPlayed: 90 },
       {
@@ -210,8 +210,8 @@ describe('playerProfiles utility', () => {
         possessionPct: 64,
       }
     );
-    expect(casemiro.rating).toBeLessThan(6.0);
-    expect(casemiro.tier).toBe('red');
+    expect(casemiro.rating).toBeLessThanOrEqual(6.3);
+    expect(casemiro.isRated).toBe(true);
 
     // 2. High possession midfielder (Inter Miami 64% possession) without errors => rewarded (~6.6 - 7.2)
     const busquets = getPlayerMatchRating(

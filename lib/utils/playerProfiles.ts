@@ -715,7 +715,7 @@ export function getPlayerMatchRating(
     }).length;
   }
   if (ownGoals > 0) {
-    rating -= ownGoals * 1.4; // Drops player directly into 4.0 - 5.0 red tier
+    rating -= ownGoals * 0.7; // Drops player to ~6.0 - 6.2 orange warning tier on Flashscore
   }
 
   if (yellowCards > 0) {
@@ -745,9 +745,20 @@ export function getPlayerMatchRating(
 
     if (teamWon) {
       rating += 0.15;
+
+      // Dynamic wingers & playmakers who drove winning attacks (e.g. Cowell, Mehmeti, Ruvalcaba on Flashscore)
+      const pPos = ((player as any).position || '').toUpperCase();
+      const pPlace = (player as any).formationPlace;
+      const isAttackingCreator =
+        pPos.includes('LW') || pPos.includes('RW') || pPos.includes('LF') || pPos.includes('RF') ||
+        pPos.includes('AM') || pPos.includes('CAM') || pPlace === 10 || pPlace === 11 || (pPlace === 4 && posGroup === 'MF');
+
+      if (isAttackingCreator && goals === 0 && assists === 0) {
+        rating += 0.55; // Floats dynamic creative wingers to 7.1 - 7.2 green tier
+      }
     } else if (teamLost) {
       if (ownGoals > 0 || redCards > 0 || yellowCards > 0) {
-        rating -= 0.2;
+        rating -= 0.1;
       }
     }
 
@@ -764,11 +775,11 @@ export function getPlayerMatchRating(
       } else if (teamWon && (homeScore + awayScore >= 2)) {
         // High-scoring team win with designated MVP playmaker (e.g. Martin Odegaard in unit test)
         rating = Math.max(rating, 8.0);
-      } else if (teamWon && (homeScore + awayScore >= 1) && ownGoals === 0) {
-        // 1-0 or tight win: top performer is solid (7.4 - 7.5), not inflated to 8.1 without goals
-        rating = Math.max(rating, 7.5);
-      } else {
+      } else if (teamWon) {
+        // Standout performer in 1-0 or tight win (e.g. Cowell or Mehmeti at 7.2 on Flashscore)
         rating = Math.max(rating, 7.2);
+      } else {
+        rating = Math.max(rating, 6.8);
       }
     }
   }
@@ -794,7 +805,7 @@ export function getPlayerMatchRating(
     label = 'Good';
     tier = 'green';
   } else if (rating >= 6.0) {
-    colorClass = 'bg-[#ffb800] text-slate-950 font-black';
+    colorClass = 'bg-[#e67e22] text-white font-bold';
     label = 'Average';
     tier = 'yellow';
   } else {

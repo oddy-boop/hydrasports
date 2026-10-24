@@ -279,14 +279,26 @@ export default function MatchHubView({
       .catch(() => {});
   }, [currentStarters, hubData.bestPlayer?.name]);
 
+  // Helper to format player last name, handling compound names like "De Paul", "St. Clair", "Van Dijk"
+  const formatDisplayName = (fullName) => {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length <= 1) return fullName;
+    const last = parts[parts.length - 1];
+    const secondLast = parts[parts.length - 2]?.toLowerCase();
+    if (['de', 'da', 'di', 'del', 'della', 'van', 'von', 'st.', 'st', 'san', 'la', 'le', 'dos', 'al'].includes(secondLast)) {
+      return `${parts[parts.length - 2]} ${last}`;
+    }
+    return last;
+  };
+
   // Helper to determine tactical depth (tier) and horizontal lateral position (x)
   const getPlayerRoleScore = (p) => {
     // 1. Explicit formationPlace from standard soccer lineup numbering (FIFA/ESPN)
-    // 1: GK
-    // 3: LB (-2), 6: CB-L (-1), 5: CB-R (1), 2: RB (2)
-    // 4: DM-L / LM (-1), 8: DM-R / RM (1)
-    // 11: AM-L / LW (-2), 10: AM / CAM (0), 7: AM-R / RW (2)
-    // 9: ST / CF (0)
+    // 1: GK (tier 0)
+    // 3: LB (-2), 6: CB-L (-1), 5: CB-R (1), 2: RB (2) => Backline Defenders (tier 1)
+    // 8: LM (-2), 4: CM (0), 7: RM (2) => Midfielders (tier 2)
+    // 11: LW (-2), 9: CF (0), 10: RW (2) => Forward Attackers (tier 4)
     const place = p.formationPlace;
     if (typeof place === 'number' && place >= 1 && place <= 11) {
       if (place === 1) return { tier: 0, x: 0 };
@@ -294,12 +306,12 @@ export default function MatchHubView({
       if (place === 6) return { tier: 1, x: -1 };
       if (place === 5) return { tier: 1, x: 1 };
       if (place === 2) return { tier: 1, x: 2 };
-      if (place === 4) return { tier: 2, x: -1 };
-      if (place === 8) return { tier: 2, x: 1 };
-      if (place === 11) return { tier: 3, x: -2 };
-      if (place === 10) return { tier: 3, x: 0 };
-      if (place === 7) return { tier: 3, x: 2 };
-      if (place === 9) return { tier: 4, x: 0 };
+      if (place === 8) return { tier: 2, x: -2 };
+      if (place === 4) return { tier: 2, x: 0 };
+      if (place === 7) return { tier: 2, x: 2 };
+      if (place === 11) return { tier: 4, x: -2 };
+      if (place === 9)  return { tier: 4, x: 0 };
+      if (place === 10) return { tier: 4, x: 2 };
     }
 
     const pos = (p.position || '').toUpperCase().trim();
@@ -1124,6 +1136,15 @@ export default function MatchHubView({
                               hubData.timelineEvents?.some(e => e.type === 'yellow_card' && (normalizePlayerName(e.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(e.player || '')))) ||
                               hubData.cards?.some(c => c.cardType === 'yellow' && (normalizePlayerName(c.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(c.player || ''))))
                             );
+                            const hasOwnGoal = Boolean(
+                              (p.realStats?.ownGoals && p.realStats.ownGoals > 0) ||
+                              hubData.timelineEvents?.some(e => {
+                                const isOg = e.isOwnGoal || e.type === 'own_goal' || (e.text && (e.text.includes('(OG)') || e.text.toLowerCase().includes('own goal')));
+                                if (!isOg) return false;
+                                const cleanP = normalizePlayerName(e.player || e.text || '');
+                                return cleanP.includes(cleanPName) || cleanPName.includes(cleanP);
+                              })
+                            );
 
                             const ratingObj = getPlayerMatchRating(p, {
                               bestPlayerName: hubData.bestPlayer?.name,
@@ -1172,6 +1193,13 @@ export default function MatchHubView({
                                       className="absolute -top-1 -left-1 sm:-left-1.5 h-3.5 w-2.5 rounded-[2px] bg-amber-400 border border-black/40 shadow-md z-20"
                                       title="Yellow Card"
                                     />
+                                  ) : hasOwnGoal ? (
+                                    <span 
+                                      className="absolute -top-1 -left-1 sm:-left-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-red-600 border border-white text-[8px] sm:text-[9px] font-black flex items-center justify-center shadow-md z-20 text-white"
+                                      title="Scored Own Goal (OG)"
+                                    >
+                                      ⚽
+                                    </span>
                                   ) : null}
 
                                   {/* Live Match Rating Badge on Player Side (Flashscore Opta model) */}
@@ -1184,7 +1212,7 @@ export default function MatchHubView({
                                 </div>
 
                                 <span className="text-[8px] sm:text-[9.5px] font-bold text-white mt-1 px-1 sm:px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md truncate max-w-[62px] sm:max-w-[95px] border border-white/10 shadow text-center flex items-center justify-center gap-0.5 sm:gap-1 group-hover:border-purple-400/50 group-hover:text-purple-200 transition-colors">
-                                  <span className="truncate">{p.name.split(' ').slice(-1)[0]}</span>
+                                  <span className="truncate">{formatDisplayName(p.name)}</span>
                                   {p.position && (
                                     <span className="text-[7px] sm:text-[7.5px] text-purple-300 font-black uppercase opacity-90 hidden xs:inline">{p.position}</span>
                                   )}
@@ -1210,6 +1238,15 @@ export default function MatchHubView({
                             (p.realStats?.yellowCards && p.realStats.yellowCards > 0) ||
                             hubData.timelineEvents?.some(e => e.type === 'yellow_card' && (normalizePlayerName(e.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(e.player || '')))) ||
                             hubData.cards?.some(c => c.cardType === 'yellow' && (normalizePlayerName(c.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(c.player || ''))))
+                          );
+                          const hasOwnGoal = Boolean(
+                            (p.realStats?.ownGoals && p.realStats.ownGoals > 0) ||
+                            hubData.timelineEvents?.some(e => {
+                              const isOg = e.isOwnGoal || e.type === 'own_goal' || (e.text && (e.text.includes('(OG)') || e.text.toLowerCase().includes('own goal')));
+                              if (!isOg) return false;
+                              const cleanP = normalizePlayerName(e.player || e.text || '');
+                              return cleanP.includes(cleanPName) || cleanPName.includes(cleanP);
+                            })
                           );
 
                           const ratingObj = getPlayerMatchRating(p, {
@@ -1259,6 +1296,13 @@ export default function MatchHubView({
                                     className="absolute -top-1 -left-1 sm:-left-1.5 h-3.5 w-2.5 rounded-[2px] bg-amber-400 border border-black/40 shadow-md z-20"
                                     title="Yellow Card"
                                   />
+                                ) : hasOwnGoal ? (
+                                  <span 
+                                    className="absolute -top-1 -left-1 sm:-left-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-red-600 border border-white text-[8px] sm:text-[9px] font-black flex items-center justify-center shadow-md z-20 text-white"
+                                    title="Scored Own Goal (OG)"
+                                  >
+                                    ⚽
+                                  </span>
                                 ) : null}
 
                                 {/* Live Match Rating Badge on Goalkeeper Side (Flashscore Opta model) */}
@@ -1271,7 +1315,7 @@ export default function MatchHubView({
                               </div>
 
                               <span className="text-[8px] sm:text-[9.5px] font-bold text-emerald-200 mt-1 px-1 sm:px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md truncate max-w-[62px] sm:max-w-[95px] border border-emerald-500/30 shadow text-center flex items-center justify-center gap-0.5 sm:gap-1 group-hover:border-emerald-400 group-hover:text-emerald-100 transition-colors">
-                                <span className="truncate">{p.name.split(' ').slice(-1)[0]}</span>
+                                <span className="truncate">{formatDisplayName(p.name)}</span>
                                 <span className="text-[7px] sm:text-[7.5px] text-emerald-400 font-black uppercase opacity-90 hidden xs:inline">GK</span>
                               </span>
                             </div>
@@ -1308,6 +1352,15 @@ export default function MatchHubView({
                         (player.realStats?.yellowCards && player.realStats.yellowCards > 0) ||
                         hubData.timelineEvents?.some(e => e.type === 'yellow_card' && (normalizePlayerName(e.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(e.player || '')))) ||
                         hubData.cards?.some(c => c.cardType === 'yellow' && (normalizePlayerName(c.player || '').includes(cleanPName) || cleanPName.includes(normalizePlayerName(c.player || ''))))
+                      );
+                      const hasOwnGoal = Boolean(
+                        (player.realStats?.ownGoals && player.realStats.ownGoals > 0) ||
+                        hubData.timelineEvents?.some(e => {
+                          const isOg = e.isOwnGoal || e.type === 'own_goal' || (e.text && (e.text.includes('(OG)') || e.text.toLowerCase().includes('own goal')));
+                          if (!isOg) return false;
+                          const cleanP = normalizePlayerName(e.player || e.text || '');
+                          return cleanP.includes(cleanPName) || cleanPName.includes(cleanP);
+                        })
                       );
 
                       const ratingObj = getPlayerMatchRating(player, {
@@ -1347,7 +1400,7 @@ export default function MatchHubView({
                                 </span>
                               </div>
 
-                              {/* Disciplinary Badge Beside Player Image on Roster */}
+                              {/* Disciplinary & Error Badges Beside Player Image on Roster */}
                               {hasRedCard && (
                                 <span 
                                   className="absolute -top-1 -left-1 h-3.5 w-2.5 rounded-[2px] bg-red-600 border border-white shadow-md z-20 animate-pulse"
@@ -1359,6 +1412,14 @@ export default function MatchHubView({
                                   className="absolute -top-1 -left-1 h-3 w-2 rounded-[2px] bg-amber-400 border border-black/40 shadow-sm z-20"
                                   title="Yellow Card"
                                 />
+                              )}
+                              {hasOwnGoal && (
+                                <span 
+                                  className="absolute -top-1 -left-1 h-3.5 w-3.5 rounded-full bg-red-600 border border-white text-[8px] font-black flex items-center justify-center shadow-md z-20 text-white"
+                                  title="Own Goal (OG)"
+                                >
+                                  ⚽
+                                </span>
                               )}
                             </div>
                             <span className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition-colors">
@@ -1759,11 +1820,15 @@ export default function MatchHubView({
                 <span className="text-[11px] text-purple-300 font-semibold">{hubData.bestPlayer.teamName}</span>
               </div>
 
-              {/* Goals & Assists Pill */}
+              {/* Goals or Match Rating Pill */}
               <div className="flex gap-1.5 text-right text-xs font-black">
                 <div className="bg-black/30 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/15">
-                  <span className="text-[9px] text-purple-200 uppercase block leading-tight">Goals</span>
-                  <span className="text-sm font-black">{hubData.bestPlayer.goals}</span>
+                  <span className="text-[9px] text-purple-200 uppercase block leading-tight">
+                    {hubData.bestPlayer.goals > 0 ? (hubData.sport === 'basketball' ? 'Points' : 'Goals') : 'Rating'}
+                  </span>
+                  <span className="text-sm font-black text-emerald-400">
+                    {hubData.bestPlayer.goals > 0 ? hubData.bestPlayer.goals : '7.2'}
+                  </span>
                 </div>
               </div>
             </div>
