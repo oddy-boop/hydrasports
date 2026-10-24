@@ -34,29 +34,29 @@ export const TENNIS_STREAM_CHANNELS: { name: string; url: string; quality: strin
 export const FOOTBALL_STREAM_CHANNELS: { name: string; url: string; quality: string }[] = [
   {
     name: 'CBS Sports Golazo HD (Direct 1-Click HLS)',
-    url: 'https://cbsn-us.cbsnstream.cbsnews.com/out/v1/55a8648e8f1345948956555146c827b5/master.m3u8',
+    url: 'https://service-stitcher.clusters.pluto.tv/stitch/hls/channel/5e0f7cd09315350009ec3551/master.m3u8?advertisingId=&appName=web&appVersion=unknown&appStoreUrl=&architecture=&buildVersion=&clientDeviceType=0&deviceDNT=0&deviceId=unknown&deviceMake=Chrome&deviceModel=web&deviceType=web&deviceVersion=unknown&includeExtendedEvents=false&sid=unknown&userId=',
     quality: '1080p',
-  },
-  {
-    name: 'FIFA+ HD Live (Direct 1-Click HLS)',
-    url: 'https://amg01444-fifa-fifaplus4-samsunguk-h8vsm.amagi.tv/playlist/amg01444-fifa-fifaplus4-samsunguk/playlist.m3u8',
-    quality: '1080p',
-  },
-  {
-    name: 'beIN Sports Xtra (Direct 1-Click HLS)',
-    url: 'https://beinsportsxtra-rakuten.amagi.tv/playlist.m3u8',
-    quality: '720p',
   },
   {
     name: 'Red Bull Sports Football (Direct 1-Click HLS)',
     url: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8',
     quality: '1080p',
   },
+  {
+    name: 'Pluto TV Sports Europe (Direct 1-Click HLS)',
+    url: 'https://service-stitcher.clusters.pluto.tv/stitch/hls/channel/5d8b87e62a28b05612347cb5/master.m3u8?advertisingId=&appName=web&appVersion=unknown&appStoreUrl=&architecture=&buildVersion=&clientDeviceType=0&deviceDNT=0&deviceId=unknown&deviceMake=Chrome&deviceModel=web&deviceType=web&deviceVersion=unknown&includeExtendedEvents=false&sid=unknown&userId=',
+    quality: '1080p',
+  },
 ];
 
 export const BASKETBALL_STREAM_CHANNELS: { name: string; url: string; quality: string }[] = [
   {
-    name: 'Hoops Action HD (Direct 1-Click HLS)',
+    name: 'Hoops & Action Sports (Direct 1-Click HLS)',
+    url: 'https://service-stitcher.clusters.pluto.tv/stitch/hls/channel/5d8b87e62a28b05612347cb5/master.m3u8?advertisingId=&appName=web&appVersion=unknown&appStoreUrl=&architecture=&buildVersion=&clientDeviceType=0&deviceDNT=0&deviceId=unknown&deviceMake=Chrome&deviceModel=web&deviceType=web&deviceVersion=unknown&includeExtendedEvents=false&sid=unknown&userId=',
+    quality: '1080p',
+  },
+  {
+    name: 'Red Bull Live Arena (Direct 1-Click HLS)',
     url: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8',
     quality: '1080p',
   },

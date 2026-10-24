@@ -124,7 +124,11 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
 
   const handleError = () => {
     setIsLoading(false);
-    setStreamStatus('error');
+    if (activeChannel < allChannels.length - 1) {
+      setActiveChannel(prev => prev + 1);
+    } else {
+      setStreamStatus('error');
+    }
     if (loadTimeout) clearTimeout(loadTimeout);
   };
 
@@ -156,7 +160,11 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
           .catch(() => setIsPlaying(false));
       };
       const onNativeError = () => {
-        setStreamStatus('error');
+        if (activeChannel < allChannels.length - 1) {
+          setActiveChannel(prev => prev + 1);
+        } else {
+          setStreamStatus('error');
+        }
       };
       
       video.addEventListener('loadedmetadata', onLoadedMetadata);
@@ -200,16 +208,27 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              console.log('Fatal network error, trying to recover HLS stream...');
-              hls.startLoad();
+              console.log('Fatal network error, attempting auto-fallback...');
+              if (activeChannel < allChannels.length - 1) {
+                hls.destroy();
+                setActiveChannel(prev => prev + 1);
+              } else {
+                setStreamStatus('error');
+                hls.destroy();
+              }
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
               console.log('Fatal media error, attempting error recovery...');
               hls.recoverMediaError();
               break;
             default:
-              setStreamStatus('error');
-              hls.destroy();
+              if (activeChannel < allChannels.length - 1) {
+                hls.destroy();
+                setActiveChannel(prev => prev + 1);
+              } else {
+                setStreamStatus('error');
+                hls.destroy();
+              }
               break;
           }
         }
@@ -222,7 +241,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
         }
       };
     }
-  }, [currentUrl, isDirectHls]);
+  }, [currentUrl, isDirectHls, activeChannel, allChannels.length]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -498,6 +517,14 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
                 Retry Source
               </button>
             </div>
+            {adShieldMode === 'strict' && !isDirectHls && (
+              <button
+                onClick={() => setAdShieldMode('standard')}
+                className="mt-3 text-xs text-amber-400 hover:text-amber-300 font-semibold underline underline-offset-2 cursor-pointer"
+              >
+                Embed restricted? Switch Ad Shield to Balanced mode
+              </button>
+            )}
           </div>
         )}
 
