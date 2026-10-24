@@ -139,13 +139,25 @@ export default function PlayerDetailsModal({ player, onClose }) {
 
             <div className="my-2.5 flex items-center gap-2.5">
               <div className={`px-2.5 py-1 rounded-lg text-xl sm:text-2xl font-black shadow-md ${player.ratingColor || 'bg-[#008744] text-white'}`}>
-                {player.rating.toFixed(1)}
+                {player.isRated === false ? '–' : (player.ratingFormatted || (typeof player.rating === 'number' ? player.rating.toFixed(1) : '6.0'))}
               </div>
               <div className="flex flex-col">
                 <span className="text-xs font-black text-white">
-                  {player.rating >= 8.0 ? 'Top Performer' : player.rating >= 7.0 ? 'Good' : player.rating >= 6.0 ? 'Average' : 'Below Average'}
+                  {player.isRated === false
+                    ? 'Unrated'
+                    : player.rating === 10.0
+                    ? 'Exceptional 10.0'
+                    : player.rating >= 8.0
+                    ? 'Top Performer'
+                    : player.rating >= 7.0
+                    ? 'Good'
+                    : player.rating >= 6.0
+                    ? 'Average'
+                    : 'Below Average'}
                 </span>
-                <span className="text-[10px] text-slate-400 font-medium">Flashscore Scale / 10.0</span>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {player.isRated === false ? 'Requires ≥ 10 mins played' : 'Flashscore Scale / 10.0'}
+                </span>
               </div>
             </div>
 

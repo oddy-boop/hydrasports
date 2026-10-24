@@ -1013,6 +1013,7 @@ export default function MatchHubView({
                               isHome: selectedTeamTab === 'home',
                               homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
                               awayScore: match?.awayScore ?? hubData.score?.away ?? 0,
+                              currentMinute: match?.currentMinute ? parseInt(match.currentMinute, 10) : 90,
                             });
                             return (
                               <div 
@@ -1037,12 +1038,12 @@ export default function MatchHubView({
                                     {p.jersey}
                                   </span>
 
-                                  {/* Live Match Rating Badge on Player Side (FotMob / Sofascore style) */}
+                                  {/* Live Match Rating Badge on Player Side (Flashscore Opta model) */}
                                   <span 
                                     className={`absolute -bottom-1 -right-1 sm:-right-1.5 px-0.5 sm:px-1 min-w-[18px] sm:min-w-[20px] h-3.5 sm:h-4 rounded-full border border-black/40 text-[8px] sm:text-[8.5px] font-black flex items-center justify-center shadow-md leading-none ${ratingObj.colorClass}`}
-                                    title={`Match Rating: ${ratingObj.rating.toFixed(1)} (${ratingObj.label})`}
+                                    title={`Flashscore Rating: ${ratingObj.ratingFormatted} (${ratingObj.label})`}
                                   >
-                                    {ratingObj.rating.toFixed(1)}
+                                    {ratingObj.ratingFormatted}
                                   </span>
                                 </div>
 
@@ -1070,6 +1071,7 @@ export default function MatchHubView({
                             isHome: selectedTeamTab === 'home',
                             homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
                             awayScore: match?.awayScore ?? hubData.score?.away ?? 0,
+                            currentMinute: match?.currentMinute ? parseInt(match.currentMinute, 10) : 90,
                           });
                           return (
                             <div 
@@ -1094,12 +1096,12 @@ export default function MatchHubView({
                                   {p.jersey}
                                 </span>
 
-                                {/* Live Match Rating Badge on Goalkeeper Side */}
+                                {/* Live Match Rating Badge on Goalkeeper Side (Flashscore Opta model) */}
                                 <span 
                                   className={`absolute -bottom-1 -right-1 sm:-right-1.5 px-0.5 sm:px-1 min-w-[18px] sm:min-w-[20px] h-3.5 sm:h-4 rounded-full border border-black/40 text-[8px] sm:text-[8.5px] font-black flex items-center justify-center shadow-md leading-none ${ratingObj.colorClass}`}
-                                  title={`Match Rating: ${ratingObj.rating.toFixed(1)} (${ratingObj.label})`}
+                                  title={`Flashscore Rating: ${ratingObj.ratingFormatted} (${ratingObj.label})`}
                                 >
-                                  {ratingObj.rating.toFixed(1)}
+                                  {ratingObj.ratingFormatted}
                                 </span>
                               </div>
 
@@ -1138,6 +1140,7 @@ export default function MatchHubView({
                         isHome: selectedTeamTab === 'home',
                         homeScore: match?.homeScore ?? hubData.score?.home ?? 0,
                         awayScore: match?.awayScore ?? hubData.score?.away ?? 0,
+                        currentMinute: match?.currentMinute ? parseInt(match.currentMinute, 10) : 90,
                       });
                       return (
                         <div
@@ -1167,8 +1170,11 @@ export default function MatchHubView({
                           </div>
 
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${ratingObj.colorClass}`}>
-                              {ratingObj.rating.toFixed(1)}
+                            <span 
+                              className={`text-[9px] font-black px-1.5 py-0.5 rounded ${ratingObj.colorClass}`}
+                              title={`Flashscore Rating: ${ratingObj.ratingFormatted} (${ratingObj.label})`}
+                            >
+                              {ratingObj.ratingFormatted}
                             </span>
                             <span className={`text-[10px] font-black px-1.5 py-0.5 rounded uppercase ${
                               player.positionGroup === 'GK' || player.positionGroup === 'G'

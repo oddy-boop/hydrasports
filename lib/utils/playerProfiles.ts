@@ -16,6 +16,8 @@ export interface PlayerFullDetails {
   teamBadge: string;
   avatar: string;
   rating: number;
+  ratingFormatted?: string;
+  isRated?: boolean;
   ratingColor: string;
   marketValue: string;
   highestMarketValue: string;
@@ -506,26 +508,39 @@ export function getPlayerMarketValue(
   };
 }
 
+export interface PlayerMatchRatingResult {
+  rating: number;
+  ratingFormatted: string;
+  isRated: boolean;
+  colorClass: string;
+  label: string;
+  tier: 'green' | 'yellow' | 'red' | 'unrated';
+}
+
 /**
- * Computes live match rating (scale 4.0 - 9.8) for a player using Flashscore / Opta formula:
- * - Kickoff baseline rating: 6.0 flat (or 6.0 - 6.3 based on early active involvement).
- * - Goal: +0.9 (penalty: +0.7)
- * - Assist: +0.6
- * - Key Pass / Shot on Target / GK Save: +0.2 each
- * - Clean sheet (GK/DF): +0.3
- * - Goals conceded (GK/DF): -0.25 per goal
- * - Yellow Card: -0.4
- * - Red Card: -1.8 (drops player into < 5.5 range)
- * - Winning team match finish: +0.2; Losing team: -0.2
- * - Match MVP / Best Player: 8.0 - 8.6
+ * Computes live match rating using the official Flashscore / Opta algorithmic model:
+ * 1. Playing Time Requirement: Players must spend at least 10 minutes on the pitch to receive a rating.
+ * 2. Starting Point: Every player automatically initializes with a baseline score of 6.0 flat.
+ * 3. Real-Time Updates: Dynamic minute-by-minute calculations with time decay/sustain weighting.
+ * 4. Scale Limits: Ratings cap out at 10.0 for extraordinary performances (hat-tricks/multiple goals),
+ *    while poor performances or major disciplinary/defensive errors drop ratings below 6.0.
+ * 5. Role-based Opta weighting for GK, DF, MF, and FW.
  *
  * Flashscore Visual Colors:
  * - >= 7.0: Flashscore Green (#008744 / bg-[#008744] text-white font-bold)
  * - 6.0 - 6.9: Flashscore Yellow/Amber (#FFB800 / bg-[#ffb800] text-slate-950 font-black)
  * - < 6.0: Flashscore Red (#DC2626 / bg-[#dc2626] text-white font-bold)
+ * - < 10 mins: Unrated (bg-white/10 text-slate-400 font-bold)
  */
 export function getPlayerMatchRating(
-  player: { name: string; positionGroup?: string; jersey?: string; starter?: boolean; realStats?: any },
+  player: {
+    name: string;
+    positionGroup?: string;
+    jersey?: string;
+    starter?: boolean;
+    minutesPlayed?: number;
+    realStats?: any;
+  },
   matchContext?: {
     bestPlayerName?: string;
     goalScorers?: string[];
@@ -533,73 +548,156 @@ export function getPlayerMatchRating(
     isHome?: boolean;
     homeScore?: number;
     awayScore?: number;
+    currentMinute?: number;
+    matchStatus?: string;
   }
-): { rating: number; colorClass: string; label: string; tier: 'green' | 'yellow' | 'red' } {
+): PlayerMatchRatingResult {
+  // 1. Determine minutes played (Flashscore 10-minute playing time requirement)
+  let minutesPlayed = player.minutesPlayed;
+  if (typeof minutesPlayed !== 'number') {
+    const elapsedMatchMinutes = matchContext?.currentMinute ?? 90;
+    // Starters have played elapsed match minutes; unassigned substitutes default to 0 unless specified
+    minutesPlayed = player.starter !== false ? elapsedMatchMinutes : 0;
+  }
+
+  // Flashscore Core Mechanic 1: Players must spend at least 10 minutes on the pitch to receive a rating
+  if (minutesPlayed < 10) {
+    return {
+      rating: 6.0,
+      ratingFormatted: '–',
+      isRated: false,
+      colorClass: 'bg-white/10 text-slate-400 font-bold',
+      label: 'Unrated (<10 mins)',
+      tier: 'unrated',
+    };
+  }
+
+  // Flashscore Core Mechanic 2: Starting Point is strictly baseline 6.0
+  let rating = 6.0;
+
   const norm = normalizePlayerName(player.name);
-  const h = hashString(norm);
-
-  // Flashscore baseline: Starters begin at 6.0 + minor variance (6.0 - 6.3), subs at 6.0 flat
-  const isStarter = player.starter !== false;
-  let rating = isStarter ? 6.0 + ((h % 4) / 10) : 6.0;
-
+  const posGroup = player.positionGroup || 'MF';
   const stats = player.realStats;
+  const elapsed = Math.max(10, Math.min(90, minutesPlayed));
+
+  // 3. Extract role-based Opta statistics
+  let goals = 0;
+  let assists = 0;
+  let shotsOnTarget = 0;
+  let saves = 0;
+  let goalsConceded = 0;
+  let yellowCards = 0;
+  let redCards = 0;
+
   if (stats) {
-    if (stats.goals > 0) rating += stats.goals * 0.9;
-    if (stats.assists > 0) rating += stats.assists * 0.6;
-    if (stats.shotsOnTarget > 0) rating += Math.min(stats.shotsOnTarget, 4) * 0.2;
-    if (stats.saves > 0) rating += Math.min(stats.saves, 6) * 0.2;
-    if (stats.goalsConceded > 0 && (player.positionGroup === 'GK' || player.positionGroup === 'DF')) {
-      rating -= Math.min(stats.goalsConceded, 4) * 0.25;
+    goals = stats.goals ?? 0;
+    assists = stats.assists ?? 0;
+    shotsOnTarget = stats.shotsOnTarget ?? 0;
+    saves = stats.saves ?? 0;
+    goalsConceded = stats.goalsConceded ?? 0;
+    yellowCards = stats.yellowCards ?? 0;
+    redCards = stats.redCards ?? 0;
+  } else if (matchContext) {
+    if (matchContext.goalScorers && Array.isArray(matchContext.goalScorers)) {
+      goals = matchContext.goalScorers.filter(s => {
+        const cleanS = normalizePlayerName(s);
+        return cleanS.includes(norm) || norm.includes(cleanS);
+      }).length;
     }
-    if (stats.yellowCards > 0) rating -= 0.4;
-    if (stats.redCards > 0) rating -= 1.8;
+    if (matchContext.yellowCards && Array.isArray(matchContext.yellowCards)) {
+      yellowCards = matchContext.yellowCards.filter(c => {
+        const cleanC = normalizePlayerName(c);
+        return cleanC.includes(norm) || norm.includes(cleanC);
+      }).length;
+    }
+    const teamConceded = matchContext.isHome ? (matchContext.awayScore ?? 0) : (matchContext.homeScore ?? 0);
+    if (posGroup === 'GK' || posGroup === 'DF') {
+      goalsConceded = teamConceded;
+    }
   }
 
+  // 4. Role-based scoring (Opta model)
+  // Goals (Hat-tricks can reach up to 10.0)
+  if (goals > 0) {
+    if (goals >= 3) {
+      // Hat-trick: extraordinary display in Flashscore
+      rating += 3.2 + (goals - 3) * 0.8;
+    } else if (goals === 2) {
+      // Brace
+      rating += posGroup === 'FW' ? 1.7 : 1.9;
+    } else {
+      // Single goal
+      rating += posGroup === 'FW' ? 0.9 : posGroup === 'MF' ? 1.0 : 1.15;
+    }
+  }
+
+  // Assists
+  if (assists > 0) {
+    rating += assists * (posGroup === 'FW' ? 0.6 : 0.7);
+  }
+
+  // Shots on target / attacking output
+  if (shotsOnTarget > 0) {
+    rating += Math.min(shotsOnTarget, 4) * 0.15;
+  }
+
+  // Goalkeeper saves
+  if (saves > 0) {
+    rating += Math.min(saves, 6) * 0.2;
+  }
+
+  // Defensive impact / Conceded goals
+  if (posGroup === 'GK' || posGroup === 'DF') {
+    if (goalsConceded === 0 && elapsed >= 45) {
+      rating += 0.35; // Clean sheet bonus
+    } else if (goalsConceded > 0) {
+      rating -= Math.min(goalsConceded, 4) * 0.25;
+    }
+  }
+
+  // Disciplinary penalties
+  if (yellowCards > 0) {
+    rating -= yellowCards * 0.4;
+  }
+  if (redCards > 0) {
+    rating -= 1.8; // Drops rating below 6.0 into 4.0 - 5.0 range
+  }
+
+  // 5. Flashscore Core Mechanic 3: Real-Time Dynamic Decay / Sustain Factor
+  // An early high score normalizes downward if the player does not maintain active impact over 90 mins
+  if (goals === 1 && assists === 0 && elapsed > 60) {
+    const decay = ((elapsed - 60) / 30) * 0.15;
+    rating -= decay;
+  }
+
+  // 6. Match Context & Outcome adjustments
   if (matchContext) {
-    const { bestPlayerName, goalScorers, yellowCards, isHome, homeScore = 0, awayScore = 0 } = matchContext;
-
-    // Goalscorer boost (if not already counted via realStats)
-    if (!stats?.goals && goalScorers && goalScorers.some(s => normalizePlayerName(s).includes(norm) || norm.includes(normalizePlayerName(s)))) {
-      rating += 0.9;
-    }
-
-    // Yellow card deduction (if not already counted via realStats)
-    if (!stats?.yellowCards && yellowCards && yellowCards.some(c => normalizePlayerName(c).includes(norm) || norm.includes(normalizePlayerName(c)))) {
-      rating -= 0.4;
-    }
-
-    // Best player / Match MVP in Flashscore is 8.0 - 8.6 (rarely > 8.8 unless 3+ goals)
-    if (bestPlayerName && normalizePlayerName(bestPlayerName).includes(norm)) {
-      rating = Math.max(rating, 8.1 + ((h % 5) / 10));
-    }
-
-    // Clean sheet bonus for defenders / GK
-    const teamConceded = isHome ? awayScore : homeScore;
-    if (teamConceded === 0 && (player.positionGroup === 'GK' || player.positionGroup === 'DF')) {
-      rating += 0.3;
-    } else if (teamConceded > 0 && (player.positionGroup === 'GK' || player.positionGroup === 'DF')) {
-      rating -= Math.min(teamConceded, 4) * 0.2;
-    }
-
-    // Team winning / losing adjustments in Flashscore
+    const { isHome, homeScore = 0, awayScore = 0, bestPlayerName } = matchContext;
     const teamWon = isHome ? homeScore > awayScore : awayScore > homeScore;
     const teamLost = isHome ? homeScore < awayScore : awayScore < homeScore;
-    if (teamWon) rating += 0.2;
-    else if (teamLost) rating -= 0.2;
+
+    if (teamWon) rating += 0.15;
+    else if (teamLost) rating -= 0.15;
+
+    // MVP / Best Player boost on Flashscore (elevates to 8.0 - 8.6, or up to 10.0 with multiple goals)
+    if (bestPlayerName && normalizePlayerName(bestPlayerName).includes(norm)) {
+      rating = Math.max(rating, goals >= 3 ? 9.5 : goals >= 2 ? 8.8 : 8.1);
+    }
   }
 
-  // Flashscore bounds: 4.0 (disastrous/red card) to 9.8 (world-class hat-trick)
-  rating = Math.min(9.8, Math.max(4.0, Math.round(rating * 10) / 10));
+  // Flashscore Core Mechanic 4: Scale Limits - Cap out at 10.0, floor at 3.0
+  rating = Math.min(10.0, Math.max(3.0, Math.round(rating * 10) / 10));
 
-  // Flashscore Visual Color Palette:
-  // >= 7.0: Flashscore Green (#008744)
-  // 6.0 - 6.9: Flashscore Yellow/Amber (#FFB800) with dark text
-  // < 6.0: Flashscore Red (#DC2626)
+  // Flashscore Visual Colors & Tiers
   let colorClass = 'bg-[#008744] text-white font-bold';
   let label = 'Good';
-  let tier: 'green' | 'yellow' | 'red' = 'green';
+  let tier: 'green' | 'yellow' | 'red' | 'unrated' = 'green';
 
-  if (rating >= 8.0) {
+  if (rating === 10.0) {
+    colorClass = 'bg-[#008744] text-white font-black ring-2 ring-amber-400 shadow-[0_0_15px_rgba(250,204,21,0.8)]';
+    label = 'Exceptional 10.0';
+    tier = 'green';
+  } else if (rating >= 8.0) {
     colorClass = 'bg-[#008744] text-white font-black ring-1 ring-white/40 shadow-[0_0_10px_rgba(0,135,68,0.5)]';
     label = 'Top Performer';
     tier = 'green';
@@ -617,7 +715,14 @@ export function getPlayerMatchRating(
     tier = 'red';
   }
 
-  return { rating, colorClass, label, tier };
+  return {
+    rating,
+    ratingFormatted: rating.toFixed(1),
+    isRated: true,
+    colorClass,
+    label,
+    tier,
+  };
 }
 
 /**
@@ -633,8 +738,17 @@ export function buildPlayerFullDetails(
   const norm = normalizePlayerName(player.name || '');
   const h = hashString(norm);
 
-  const { rating, colorClass } = getPlayerMatchRating(player, matchContext);
-  const { valueFormatted, valueNum } = getPlayerMarketValue(player.name, player.positionGroup, player.starter);
+  const elapsedMinutes = matchContext?.currentMinute ?? 90;
+  const isStarter = player.starter !== false;
+  const minutesPlayed = typeof player.minutesPlayed === 'number'
+    ? player.minutesPlayed
+    : (isStarter ? elapsedMinutes : 22);
+
+  const { rating, ratingFormatted, isRated, colorClass } = getPlayerMatchRating(
+    { ...player, starter: isStarter, minutesPlayed },
+    matchContext
+  );
+  const { valueFormatted, valueNum } = getPlayerMarketValue(player.name, player.positionGroup, isStarter);
   
   const peakVal = Math.round(valueNum * (1.0 + ((h % 25) / 100)) * 10) / 10;
   const highestMarketValue = `€${peakVal.toFixed(2)}M`;
@@ -755,7 +869,9 @@ export function buildPlayerFullDetails(
     teamName,
     teamBadge,
     avatar: faceUrl || player.avatar || '',
-    rating,
+    rating: rating ?? 6.0,
+    ratingFormatted,
+    isRated,
     ratingColor: colorClass,
     marketValue: valueFormatted,
     highestMarketValue,
@@ -769,8 +885,8 @@ export function buildPlayerFullDetails(
     preferredFoot,
     weakFootStars: 3 + (h % 3),
     skillMovesStars: 3 + (h % 3),
-    status: player.starter ? 'Starter' : 'Substitute',
-    minutesPlayed: player.starter ? 78 : 22,
+    status: isStarter ? 'Starter' : 'Substitute',
+    minutesPlayed,
     stats: {
       goals,
       assists,

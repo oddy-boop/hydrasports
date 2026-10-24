@@ -31,35 +31,56 @@ describe('playerProfiles utility', () => {
     expect(unknown.valueFormatted).toMatch(/^€\d+\.\d{2}M$/);
   });
 
-  it('computes realistic Flashscore-style match ratings with baseline 6.0 and context boosts', () => {
-    const base = getPlayerMatchRating({ name: 'Viktor Gyökeres' });
-    expect(base.rating).toBeGreaterThanOrEqual(6.0);
-    expect(base.rating).toBeLessThanOrEqual(6.5);
-    expect(base.colorClass).toContain('bg-[#ffb800]'); // Flashscore yellow for average starter
+  it('implements Flashscore Opta model core mechanics: 10-min rule, 6.0 baseline, and 10.0 cap', () => {
+    // Core Mechanic 1: Playing time requirement (< 10 mins is unrated)
+    const lateSub = getPlayerMatchRating({
+      name: 'Endrick',
+      starter: false,
+      minutesPlayed: 7,
+    });
+    expect(lateSub.isRated).toBe(false);
+    expect(lateSub.ratingFormatted).toBe('–');
+    expect(lateSub.tier).toBe('unrated');
 
-    // Goal scorer should receive higher rating and enter green tier
+    // Core Mechanic 2: Starting Point is strictly baseline 6.0
+    const qualifiedStarter = getPlayerMatchRating({
+      name: 'Viktor Gyökeres',
+      starter: true,
+      minutesPlayed: 25,
+    });
+    expect(qualifiedStarter.isRated).toBe(true);
+    expect(qualifiedStarter.rating).toBe(6.0);
+    expect(qualifiedStarter.ratingFormatted).toBe('6.0');
+    expect(qualifiedStarter.colorClass).toContain('bg-[#ffb800]'); // Flashscore yellow
+
+    // Core Mechanic 3: Real-Time Updates & Goal scorer boosts
     const scorer = getPlayerMatchRating(
-      { name: 'Viktor Gyökeres' },
+      { name: 'Viktor Gyökeres', minutesPlayed: 45, starter: true },
       { goalScorers: ['Viktor Gyökeres'], homeScore: 2, awayScore: 0, isHome: true }
     );
-    expect(scorer.rating).toBeGreaterThan(base.rating);
+    expect(scorer.rating).toBeGreaterThan(qualifiedStarter.rating);
     expect(scorer.rating).toBeGreaterThanOrEqual(7.0);
     expect(scorer.colorClass).toContain('bg-[#008744]'); // Flashscore green
 
-    // Player with yellow card receives rating deduction
-    const carded = getPlayerMatchRating(
-      { name: 'Viktor Gyökeres' },
-      { yellowCards: ['Viktor Gyökeres'] }
-    );
-    expect(carded.rating).toBeLessThan(base.rating);
-
-    // Red card should drop rating into poor red tier
+    // Disciplinary error drops rating below 6.0 into red tier
     const redCarded = getPlayerMatchRating({
       name: 'Viktor Gyökeres',
+      starter: true,
+      minutesPlayed: 55,
       realStats: { redCards: 1, yellowCards: 0, goals: 0, assists: 0 },
     });
     expect(redCarded.rating).toBeLessThan(6.0);
     expect(redCarded.colorClass).toContain('bg-[#dc2626]'); // Flashscore red
+
+    // Core Mechanic 4: Extraordinary performances cap out at 10.0 (e.g. hat-trick)
+    const extraordinary = getPlayerMatchRating({
+      name: 'Erling Haaland',
+      starter: true,
+      minutesPlayed: 85,
+      realStats: { goals: 4, assists: 1, shotsOnTarget: 5, yellowCards: 0, redCards: 0 },
+    });
+    expect(extraordinary.rating).toBe(10.0);
+    expect(extraordinary.label).toBe('Exceptional 10.0');
   });
 
   it('constructs a complete PlayerFullDetails object with valid stats and physical info', () => {
