@@ -48,55 +48,60 @@ export const LEAGUE_KEYWORDS = {
     'paris saint-germain', 'paris sg', 'psg', 'marseille', 'om', 'olympique marseille',
     'lyon', 'ol', 'olympique lyonnais', 'monaco', 'lille', 'rennes', 'lens',
     'nice', 'strasbourg', 'toulouse', 'reims', 'brest', 'nantes',
-    'auxerre', 'montpellier', 'le havre', 'saint-etienne', 'troyes', 'angers'
+    'montpellier', 'auxerre', 'angers', 'saint-etienne', 'le havre'
   ],
   'MLS': [
-    'mls', 'major league soccer', 'usa.1',
-    'inter miami', 'miami', 'la galaxy', 'galaxy', 'lafc', 'los angeles fc',
-    'columbus crew', 'atlanta united', 'seattle sounders', 'nashville',
-    'cf montreal', 'montréal', 'philadelphia union', 'nycfc', 'new york city fc',
-    'new york red bulls', 'red bulls', 'austin fc', 'orlando city',
-    'portland timbers', 'sporting kansas city', 'fc cincinnati', 'charlotte fc',
-    'chicago fire', 'toronto fc', 'st. louis city', 'vancouver whitecaps', 'real salt lake'
+    'mls', 'major league soccer', 'inter miami', 'miami', 'la galaxy', 'lafc',
+    'los angeles fc', 'columbus crew', 'seattle sounders', 'atlanta united',
+    'new york red bulls', 'ny red bulls', 'new york city', 'nycfc', 'philadelphia union',
+    'fc cincinnati', 'orlando city', 'nashville sc', 'portland timbers', 'houston dynamo',
+    'austin fc', 'chicago fire', 'toronto fc', 'vancouver whitecaps', 'montreal',
+    'sporting kansas city', 'real salt lake', 'minnesota united', 'san jose earthquakes',
+    'colorado rapids', 'd.c. united', 'new england revolution', 'st. louis city', 'charlotte fc'
   ],
   'Eredivisie': [
-    'eredivisie', 'dutch eredivise', 'dutch eredivisie', 'ned.1',
-    'ajax', 'psv', 'psv eindhoven', 'feyenoord', 'az alkmaar', 'az',
-    'fc utrecht', 'utrecht', 'fc twente', 'twente', 'pec zwolle',
-    'sc heerenveen', 'heerenveen', 'vitesse', 'fc groningen', 'willem ii', 'sparta rotterdam',
-    'go ahead eagles', 'nec nijmegen', 'fortuna sittard', 'almere city'
+    'eredivisie', 'dutch', 'ajax', 'psv', 'psv eindhoven', 'feyenoord', 'az alkmaar', 'az',
+    'fc twente', 'twente', 'fc utrecht', 'utrecht', 'heerenveen', 'vitesse', 'nec nijmegen',
+    'sparta rotterdam', 'go ahead eagles', 'fortuna sittard', 'pec zwolle', 'almere city',
+    'heracles', 'nac breda', 'willem ii', 'rkc waalwijk', 'groningen'
   ],
   'Europa League': [
-    'europa league', 'uefa europa league', 'uel', 'europa',
-    'manchester united', 'tottenham', 'roma', 'lazio', 'porto', 'athletic bilbao',
-    'ajax', 'real sociedad', 'galatasaray', 'fenerbahce', 'lyon', 'eintracht frankfurt'
+    'europa league', 'uel', 'uefa europa', 'manchester united', 'tottenham',
+    'roma', 'lazio', 'porto', 'athletic bilbao', 'real sociedad', 'ajax',
+    'galatasaray', 'fenerbahce', 'eintracht frankfurt', 'lyon', 'nice', 'olympiacos'
   ],
   'Brasileiro': [
-    'brasileiro', 'brasileirao', 'brasileiro série a', 'bra.1',
-    'flamengo', 'palmeiras', 'sao paulo', 'são paulo', 'corinthians',
-    'gremio', 'grêmio', 'internacional', 'fluminense', 'botafogo',
-    'atletico mineiro', 'cruzeiro', 'santos', 'vasco da gama', 'bahia', 'fortaleza'
+    'brasileiro', 'brasileirao', 'serie a brazil', 'flamengo', 'palmeiras',
+    'botafogo', 'sao paulo', 'corinthians', 'fluminense', 'gremio', 'internacional',
+    'atletico mineiro', 'cruzeiro', 'vasco da gama', 'bahia', 'fortaleza', 'santos'
   ],
   'SAF Primera': [
-    'saf primera', 'saf primera division', 'liga profesional', 'arg.1',
-    'boca juniors', 'boca', 'river plate', 'river', 'racing club',
-    'independiente', 'san lorenzo', 'velez sarsfield', 'estudiantes'
+    'argentina', 'primera division argentina', 'liga profesional', 'boca juniors',
+    'boca', 'river plate', 'river', 'racing club', 'independiente', 'san lorenzo',
+    'velez sarsfield', 'estudiantes', 'rosario central', 'newells old boys'
   ],
   'World Cup 2026': [
-    'world cup', 'fifa world cup', 'world cup 2026', 'world cup qualifiers', 'wc qualification'
+    'world cup', 'fifa world cup', 'world cup qualifiers', 'conmebol qualifiers',
+    'uefa qualifiers', 'concacaf qualifiers', 'afc qualifiers', 'caf qualifiers',
+    'brazil', 'argentina', 'france', 'england', 'germany', 'spain', 'italy',
+    'portugal', 'netherlands', 'usa', 'mexico', 'canada', 'japan', 'morocco', 'colombia'
   ],
   'Nations League': [
-    'nations league', 'uefa nations league', 'uefa nations'
+    'nations league', 'uefa nations league', 'croatia', 'poland', 'portugal',
+    'scotland', 'italy', 'belgium', 'france', 'israel', 'germany', 'bosnia',
+    'hungary', 'netherlands', 'spain', 'serbia', 'switzerland', 'denmark'
   ],
   'Copa America': [
-    'copa america', 'copa américa', 'conmebol'
+    'copa america', 'conmebol', 'argentina', 'colombia', 'uruguay', 'canada',
+    'brazil', 'venezuela', 'panama', 'ecuador', 'chile', 'peru', 'mexico', 'usa'
   ],
   'Asian Cup': [
-    'asian cup', 'afc asian cup', 'afc'
+    'asian cup', 'afc asian cup', 'qatar', 'jordan', 'iran', 'south korea',
+    'australia', 'japan', 'uzbekistan', 'saudi arabia', 'iraq', 'tajikistan'
   ],
   'International Friendlies': [
-    'friendly', 'friendlies', 'international friendly', 'intl friendly'
-  ]
+    'friendly', 'friendlies', 'international friendly', 'club friendly'
+  ],
 };
 
 export const COMPETITIONS_LIST = [
@@ -115,6 +120,16 @@ export const POPULAR_TEAMS = [
   'Liverpool', 'Bayern Munich', 'PSG', 'Juventus', 'Inter Milan',
   'Chelsea', 'Borussia Dortmund', 'Atletico Madrid', 'AC Milan'
 ];
+
+export function normalizeSport(sport) {
+  if (!sport) return 'football';
+  const s = String(sport).toLowerCase().replace(/[\s-_]+/g, '');
+  if (s === 'basketball' || s === 'nba') return 'basketball';
+  if (s === 'hockey' || s === 'icehockey' || s === 'nhl') return 'hockey';
+  if (s === 'tennis' || s === 'atp' || s === 'wta') return 'tennis';
+  if (s === 'football' || s === 'soccer') return 'football';
+  return s;
+}
 
 export function matchBelongsToLeague(match, leagueName) {
   if (!leagueName || leagueName === 'All') return true;

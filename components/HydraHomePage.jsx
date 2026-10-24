@@ -5,7 +5,7 @@ import FootyHeroBanner from './HydraHeroBanner';
 import MatchCard from './MatchCard';
 import { useHydraSports } from './HydraContext';
 import { ChevronDown, Radio } from 'lucide-react';
-import { matchBelongsToLeague } from './leagueMatcher';
+import { matchBelongsToLeague, normalizeSport } from './leagueMatcher';
 
 export default function FootyHomePage({ initialMatches = [] }) {
   const {
@@ -20,13 +20,10 @@ export default function FootyHomePage({ initialMatches = [] }) {
   const displayedMatches = useMemo(() => {
     let list = initialMatches || [];
 
-    // 1. Filter by activeSport (Football, Basketball, Tennis, Rugby, Badminton, etc.)
+    // 1. Filter by activeSport (Football, Tennis, Basket Ball, Hockey)
     if (activeSport) {
-      const sportLower = activeSport.toLowerCase();
-      const sportMatches = list.filter(m => (m.sport || '').toLowerCase() === sportLower);
-      if (sportMatches.length > 0) {
-        list = sportMatches;
-      }
+      const target = normalizeSport(activeSport);
+      list = list.filter(m => normalizeSport(m.sport) === target);
     }
 
     // 2. Filter by search query if user typed into topbar search
@@ -41,7 +38,7 @@ export default function FootyHomePage({ initialMatches = [] }) {
     }
 
     // 3. Filter by selected league if football and not 'All'
-    if (activeSport?.toLowerCase() === 'football' && selectedLeague && selectedLeague !== 'All') {
+    if (normalizeSport(activeSport) === 'football' && selectedLeague && selectedLeague !== 'All') {
       const leagueMatches = list.filter(m => matchBelongsToLeague(m, selectedLeague));
       if (leagueMatches.length > 0) {
         list = leagueMatches;
@@ -77,7 +74,7 @@ export default function FootyHomePage({ initialMatches = [] }) {
     if (searchQuery && searchQuery.trim()) {
       return `Search: "${searchQuery.trim()}"`;
     }
-    if (activeSport && activeSport.toLowerCase() !== 'football') {
+    if (activeSport && normalizeSport(activeSport) !== 'football') {
       return `${activeSport} Matches`;
     }
     if (selectedLeague && selectedLeague !== 'All') {
@@ -89,7 +86,7 @@ export default function FootyHomePage({ initialMatches = [] }) {
   return (
     <div className="space-y-6">
       {/* 1. Super Big Match Hero Banner (Image 1) */}
-      <FootyHeroBanner featuredMatch={topMatch} />
+      {topMatch && <FootyHeroBanner featuredMatch={topMatch} />}
 
       {/* 2. Matches Section Header with Dropdown Filter (Image 1) */}
       <div className="pt-2">

@@ -10,8 +10,10 @@ import {
 } from './providers/watchFooty';
 import { CdnLiveProvider } from './providers/cdnLive';
 import { StreamedPkProvider } from './providers/streamedPk';
+import { EspnScoreboardProvider } from './providers/espnScoreboardProvider';
 import { getCacheManager } from './cache/cacheManager';
 import { getExternalMatchStats, getScoreForMatch } from './providers/scoreProvider';
+import { teamsMatch } from './utils/matching';
 
 const SECRET_KEY = process.env.STREAM_SECRET || 'default_stream_hmac_secret_key_123_abc';
 
@@ -59,6 +61,7 @@ const providers = [
   new WatchFootyProvider(),
   new CdnLiveProvider(),
   new StreamedPkProvider(),
+  new EspnScoreboardProvider(),
 ];
 
 export async function getMatchDetails(matchId: string): Promise<Match | null> {
@@ -90,12 +93,50 @@ export async function getMatches(): Promise<Match[]> {
     );
     matches.push(...fallbackMatches.flat());
 
-    const uniqueMatches = Array.from(new Map(matches.map(match => [match.id, match])).values());
+    // Deduplicate and merge matches from different providers (Streamed, WatchFooty, ESPN)
+    const mergedList: Match[] = [];
 
-    if (uniqueMatches.length > 0) {
-      const enriched = await Promise.all(uniqueMatches.map(async match => {
-        if (match.status !== 'live' && match.status !== 'finished') return match;
-        if (match.status !== 'live' && match.homeScore !== null && match.awayScore !== null) return match;
+    for (const match of matches) {
+      const existingIdx = mergedList.findIndex(existing => {
+        if (existing.id === match.id) return true;
+        if (existing.sport === match.sport && teamsMatch(existing.title, match.title)) return true;
+        return false;
+      });
+
+      if (existingIdx !== -1) {
+        // Merge match info: preserve stream sources from streaming provider, incorporate scores/badges from ESPN
+        const existing = mergedList[existingIdx];
+        mergedList[existingIdx] = {
+          ...existing,
+          homeScore: existing.homeScore ?? match.homeScore,
+          awayScore: existing.awayScore ?? match.awayScore,
+          currentMinute: existing.currentMinute || match.currentMinute,
+          status: (match.status === 'live' || existing.status === 'live') ? 'live' : (match.status === 'finished' ? 'finished' : existing.status),
+          homeTeam: {
+            name: existing.homeTeam.name || match.homeTeam.name,
+            badge: existing.homeTeam.badge || match.homeTeam.badge,
+          },
+          awayTeam: {
+            name: existing.awayTeam.name || match.awayTeam.name,
+            badge: existing.awayTeam.badge || match.awayTeam.badge,
+          },
+          sources: existing.sources.length > 0 ? existing.sources : match.sources,
+          fallbackChannels: existing.fallbackChannels.length > 0 ? existing.fallbackChannels : match.fallbackChannels,
+        };
+      } else {
+        mergedList.push(match);
+      }
+    }
+
+    if (mergedList.length > 0) {
+      const enriched = await Promise.all(mergedList.map(async match => {
+        // If score is already populated, no need to re-fetch
+        if (match.homeScore !== null && match.awayScore !== null) return match;
+
+        // Enrich matches that are live, finished, or scheduled for today
+        const isToday = Math.abs(Date.now() - match.timestamp) < 24 * 3600 * 1000;
+        if (match.status !== 'live' && match.status !== 'finished' && !isToday) return match;
+
         const eventId = match.id.match(/(\d+)$/)?.[1];
         const score = await getScoreForMatch(
           match.title,
@@ -104,9 +145,19 @@ export async function getMatches(): Promise<Match[]> {
           eventId,
           match.sport,
         );
-        if (!score || score.home === null || score.away === null) return match;
+
+        if (!score || (score.home === null && score.away === null)) return match;
+
+        let status = match.status;
+        if (score.currentMinute?.toLowerCase().includes('final')) {
+          status = 'finished';
+        } else if (score.currentMinute && (score.currentMinute.includes('Q') || score.currentMinute.includes('P') || score.currentMinute.includes("'") || score.currentMinute.toLowerCase().includes('in progress') || score.currentMinute.toLowerCase().includes('set'))) {
+          status = 'live';
+        }
+
         return {
           ...match,
+          status,
           homeScore: score.home,
           awayScore: score.away,
           currentMinute: score.currentMinute || match.currentMinute,
@@ -151,6 +202,18 @@ export async function resolveAllStreams(
       if (r.status === 'fulfilled') {
         allServers.push(...r.value);
       }
+    }
+
+    // Also include fallbackChannels from preFetchedMatch if present
+    if (preFetchedMatch?.fallbackChannels && preFetchedMatch.fallbackChannels.length > 0) {
+      preFetchedMatch.fallbackChannels.forEach((ch, idx) => {
+        allServers.push({
+          name: ch.name || `Fallback Stream ${idx + 1}`,
+          url: ch.url,
+          provider: 'fallback',
+          quality: 'HD',
+        });
+      });
     }
 
     if (allServers.length === 0) {

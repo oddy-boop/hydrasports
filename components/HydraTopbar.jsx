@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Bell, Menu, Search, User, Layers, Radio, X } from 'lucide-react';
 import { useHydraSports } from './HydraContext';
 import { useAuth } from './AuthContext';
+import { normalizeSport } from './leagueMatcher';
 
 export default function FootyTopbar() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function FootyTopbar() {
   const [liveMatches, setLiveMatches] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  const sports = ['Football', 'Tennis', 'Basketball', 'Rugby', 'Badminton'];
+  const sports = ['Football', 'Tennis', 'Basket Ball', 'Hockey'];
 
   // Fetch real live matches for notifications
   useEffect(() => {
@@ -73,7 +74,7 @@ export default function FootyTopbar() {
       {/* Center: Sports Category Tabs that actually filter real data */}
       <nav className="hidden md:flex items-center gap-1 sm:gap-2">
         {sports.map((sport) => {
-          const isActive = (activeSport || 'Football').toLowerCase() === sport.toLowerCase();
+          const isActive = normalizeSport(activeSport || 'Football') === normalizeSport(sport);
           return (
             <button
               key={sport}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -8,21 +8,20 @@ import {
   ChevronDown,
   LayoutGrid,
   BarChart2,
-  Sliders,
   Calendar,
   Users,
-  PieChart,
   Search,
   Bell,
   ArrowLeft,
-  Tv,
-  Sparkles,
   Maximize2,
   RefreshCw,
-  Shield,
-  Layers,
-  ChevronRight,
-  Info,
+  Heart,
+  TrendingUp,
+  Settings,
+  Sparkles,
+  X,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import StreamPlayer from './StreamPlayer';
 import { useAuth } from './AuthContext';
@@ -42,10 +41,13 @@ export default function MatchHubView({
   const [stats, setStats] = useState(initialStats);
   const [activeTab, setActiveTab] = useState('lobby');
   const [selectedKeyPlayerTeam, setSelectedKeyPlayerTeam] = useState('home');
+  const [selectedStatsTeam, setSelectedStatsTeam] = useState('home');
   const [activeChannelIdx, setActiveChannelIdx] = useState(0);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('English');
-  const [timelineHoverEvent, setTimelineHoverEvent] = useState(null);
+  const [showAiInsight, setShowAiInsight] = useState(true);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const containerRef = useRef(null);
 
   // Parse all HUD data dynamically
   const hubData = parseMatchHubData(match, stats);
@@ -87,39 +89,47 @@ export default function MatchHubView({
 
   const activeKeyPlayers = selectedKeyPlayerTeam === 'home' ? hubData.homeKeyPlayers : hubData.awayKeyPlayers;
 
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      containerRef.current.requestFullscreen().catch(() => {});
+    }
+  };
+
   return (
-    <div className="min-h-screen w-full bg-[#0d0c15] text-white flex flex-col font-sans selection:bg-purple-600 selection:text-white">
-      {/* 1. TOP HEADER (Image 3) */}
-      <header className="sticky top-0 z-40 h-16 w-full bg-[#121120]/95 backdrop-blur-md border-b border-[#232038] px-4 md:px-6 flex items-center justify-between shadow-md">
+    <div 
+      ref={containerRef}
+      className="min-h-screen w-full bg-[#0a0914] text-white flex flex-col font-sans selection:bg-purple-600 selection:text-white"
+    >
+      {/* ── 1. TOP HEADER (EXACT REPLICA OF IMAGE 3) ── */}
+      <header className="sticky top-0 z-40 h-[68px] w-full bg-[#121020]/95 backdrop-blur-xl border-b border-white/[0.08] px-4 md:px-6 flex items-center justify-between shadow-lg">
         {/* Left: Tournament Badge & Language Dropdown */}
-        <div className="flex items-center gap-3 md:gap-5">
+        <div className="flex items-center gap-3 sm:gap-6">
           <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 ring-1 ring-amber-300/40">
-              <Trophy className="h-5 w-5 text-[#1a1100]" />
+            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 ring-1 ring-amber-300/40">
+              <Trophy className="h-4 w-4 text-[#1a1100]" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs md:text-sm font-extrabold tracking-wider text-white uppercase truncate max-w-[160px] md:max-w-none">
-                {tournamentName}
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
-                Live Broadcast Center
-              </span>
-            </div>
+            <span className="text-xs sm:text-sm font-black tracking-wider text-white uppercase truncate max-w-[150px] sm:max-w-none">
+              {tournamentName}
+            </span>
           </div>
 
+          {/* Language: English Dropdown */}
           <div className="relative">
             <button
               onClick={() => setIsLanguageOpen(!isLanguageOpen)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1a182d] hover:bg-[#23203c] border border-white/10 text-xs text-slate-200 font-medium transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1b1930] hover:bg-[#252240] border border-white/10 text-xs text-slate-300 font-semibold transition-all cursor-pointer"
             >
+              <span className="text-xs">Language:</span>
               <span className="text-sm">🇬🇧</span>
-              <span className="hidden sm:inline">Language:</span>
-              <span className="font-semibold">{selectedLanguage}</span>
+              <span className="font-bold text-white">{selectedLanguage}</span>
               <ChevronDown className="h-3 w-3 text-slate-400" />
             </button>
 
             {isLanguageOpen && (
-              <div className="absolute left-0 mt-1.5 w-40 rounded-xl bg-[#1a182d] border border-[#2b2746] py-1 shadow-2xl z-50">
+              <div className="absolute left-0 mt-1.5 w-40 rounded-xl bg-[#1b1930] border border-white/15 py-1 shadow-2xl z-50">
                 {['English', 'Español', 'Français', 'Deutsch', 'Italiano'].map((lang) => (
                   <button
                     key={lang}
@@ -127,7 +137,7 @@ export default function MatchHubView({
                       setSelectedLanguage(lang);
                       setIsLanguageOpen(false);
                     }}
-                    className={`w-full text-left px-3.5 py-1.5 text-xs transition-colors hover:bg-purple-600/30 ${
+                    className={`w-full text-left px-3.5 py-1.5 text-xs font-semibold transition-colors hover:bg-purple-600/30 ${
                       selectedLanguage === lang ? 'text-purple-400 font-bold' : 'text-slate-300'
                     }`}
                   >
@@ -139,13 +149,13 @@ export default function MatchHubView({
           </div>
         </div>
 
-        {/* Center: Navigation Pill Bar */}
-        <nav className="hidden md:flex items-center gap-1 bg-[#17152b] p-1 rounded-2xl border border-white/5">
+        {/* Center: Image 3 Pill Buttons (Lobby, Grid, Stats, Heart, Calendar, Trophy, Trend) */}
+        <nav className="hidden lg:flex items-center gap-1.5 bg-[#17152a] p-1.5 rounded-2xl border border-white/5">
           <button
             onClick={() => setActiveTab('lobby')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'lobby'
-                ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-lg shadow-indigo-500/25'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -154,111 +164,143 @@ export default function MatchHubView({
           </button>
 
           <button
-            onClick={() => setActiveTab('statistics')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'statistics'
-                ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-lg shadow-indigo-500/25'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
-            }`}
+            onClick={() => setActiveTab('grid')}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+            title="Grid View"
           >
-            <BarChart2 className="h-3.5 w-3.5" />
-            <span>Statistics</span>
+            <LayoutGrid className="h-4 w-4" />
           </button>
 
           <button
-            onClick={() => setActiveTab('lineups')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'lineups'
-                ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-lg shadow-indigo-500/25'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
-            }`}
+            onClick={() => setActiveTab('stats')}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+            title="Telemetry Graphs"
           >
-            <Users className="h-3.5 w-3.5" />
-            <span>Lineups</span>
+            <BarChart2 className="h-4 w-4" />
+          </button>
+
+          <button
+            onClick={() => setIsFavorited(!isFavorited)}
+            className={`p-1.5 rounded-xl transition-all cursor-pointer ${
+              isFavorited ? 'text-rose-500 bg-rose-500/10' : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+            title="Favorite Match"
+          >
+            <Heart className={`h-4 w-4 ${isFavorited ? 'fill-rose-500' : ''}`} />
+          </button>
+
+          <button
+            onClick={() => router.push('/schedule')}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+            title="Schedule & Calendar"
+          >
+            <Calendar className="h-4 w-4" />
+          </button>
+
+          <button
+            onClick={() => router.push('/competitions')}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+            title="Tournaments & Trophies"
+          >
+            <Trophy className="h-4 w-4" />
+          </button>
+
+          <button
+            onClick={() => router.push('/results')}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+            title="Trends & Results"
+          >
+            <TrendingUp className="h-4 w-4" />
           </button>
         </nav>
 
-        {/* Right: Multi-Stream, Refresh, User Profile */}
+        {/* Right: Search, Settings, Notifications, User Profile (Image 3) */}
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link
-            href="/multistream"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/30 text-purple-300 hover:text-white text-xs font-bold transition-all"
-            title="Multi-Stream Quad View"
-          >
-            <Layers className="h-3.5 w-3.5" />
-            <span>Multi-Stream</span>
-          </Link>
-
           <button
-            onClick={() => refreshMatchData()}
-            className="h-9 w-9 rounded-xl bg-[#1a182d] hover:bg-[#25223e] border border-white/5 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer"
-            title="Refresh live telemetry"
+            onClick={() => router.push('/explore')}
+            className="h-9 w-9 rounded-xl bg-[#1b1930] hover:bg-[#252240] border border-white/5 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer"
+            title="Search Fixtures"
           >
-            <RefreshCw className="h-4 w-4" />
+            <Search className="h-4 w-4" />
           </button>
 
-          <Link
-            href="/auth"
-            className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-xl bg-[#1a182d] hover:bg-[#25223e] border border-white/5 transition-all"
+          <button
+            onClick={() => router.push('/multistream')}
+            className="h-9 w-9 rounded-xl bg-[#1b1930] hover:bg-[#252240] border border-white/5 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer"
+            title="Multi-Stream Settings"
           >
-            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-black text-white overflow-hidden ring-1 ring-white/20">
+            <Settings className="h-4 w-4" />
+          </button>
+
+          {/* Notifications with badge '2' */}
+          <div className="relative">
+            <button
+              className="h-9 w-9 rounded-xl bg-[#1b1930] hover:bg-[#252240] border border-white/5 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer"
+              title="Notifications"
+            >
+              <Bell className="h-4 w-4" />
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-600 text-white text-[9px] font-black flex items-center justify-center shadow-md">
+                2
+              </span>
+            </button>
+          </div>
+
+          {/* User Profile Pill: Miguel Fox */}
+          <div className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-xl bg-[#1b1930] hover:bg-[#252240] border border-white/5 transition-all">
+            <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center text-xs font-black text-white overflow-hidden ring-1 ring-white/20">
               {user?.avatar ? (
                 <img src={user.avatar} alt="" className="h-full w-full object-cover" />
               ) : (
-                (user?.name || 'Miguel Fox').charAt(0)
+                <span className="font-bold">MF</span>
               )}
             </div>
             <span className="text-xs font-bold text-slate-200 hidden sm:inline">
               {user?.name || 'Miguel Fox'}
             </span>
             <ChevronDown className="h-3 w-3 text-slate-400" />
-          </Link>
+          </div>
         </div>
       </header>
 
-      {/* 2. MAIN MATCH HUB CONTENT (Player + 3 Floating HUD Cards + Right Rail) */}
-      <main className="flex-1 w-full max-w-[1720px] mx-auto p-3 md:p-5 flex flex-col xl:flex-row gap-5">
-        {/* Left / Center Stream Area (approx 72-74% on desktop) */}
+      {/* ── 2. MAIN BROADCAST CANVAS & TACTICAL RAIL (EXACT LAYOUT OF IMAGE 3) ── */}
+      <main className="flex-1 w-full max-w-[1720px] mx-auto p-3 sm:p-5 flex flex-col xl:flex-row gap-5">
+        {/* Left / Center Area: Live Stream with Floating HUD Overlay */}
         <div className="flex-1 flex flex-col gap-4 min-w-0">
-          {/* Edge-to-Edge Stream Canvas Container */}
-          <div className="relative w-full rounded-2xl md:rounded-3xl overflow-hidden bg-black border border-white/10 shadow-2xl">
-            {/* Top Overlay inside Stream Canvas: Back to Match Hub & Live Badge */}
-            <div className="absolute top-4 left-4 z-20 flex items-center gap-2.5 pointer-events-auto">
+          {/* Main Cinematic Broadcast Container */}
+          <div className="relative w-full rounded-3xl overflow-hidden bg-black border border-white/10 shadow-2xl flex flex-col justify-between min-h-[460px] sm:min-h-[560px] lg:min-h-[620px]">
+            {/* Top-Left Floating Header: Back Arrow + "Match Hub" + "🔴 Live" */}
+            <div className="absolute top-5 left-5 z-30 flex items-center gap-3 select-none pointer-events-auto">
               <Link
                 href="/"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-xs font-semibold text-white transition-all shadow-lg hover:scale-105"
+                className="h-9 w-9 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md border border-white/20 flex items-center justify-center text-white transition-all shadow-xl hover:scale-105"
+                title="Return to Match Hub"
               >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                <span>Match Hub</span>
+                <ArrowLeft className="h-4 w-4" />
               </Link>
 
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600/90 text-white text-[11px] font-bold shadow-lg shadow-red-600/30">
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-md">
+                Match Hub
+              </h2>
+
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600 text-white text-xs font-black shadow-lg shadow-red-600/50">
                 <span className="h-2 w-2 rounded-full bg-white animate-ping" />
                 <span>Live</span>
-              </div>
+              </span>
             </div>
 
-            {/* Top-Right Stream Overlays: Channels & Resolution */}
-            {currentChannels.length > 1 && (
-              <div className="absolute top-4 right-4 z-20 hidden sm:flex items-center gap-1.5 bg-black/60 backdrop-blur-md p-1 rounded-xl border border-white/10">
-                {currentChannels.map((ch, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveChannelIdx(idx)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-                      activeChannelIdx === idx
-                        ? 'bg-purple-600 text-white shadow-md'
-                        : 'text-slate-300 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    {ch.name || `Server ${idx + 1}`}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Top-Right Floating Fullscreen Button */}
+            <div className="absolute top-5 right-5 z-30 flex items-center gap-2 select-none pointer-events-auto">
+              <button
+                onClick={toggleFullscreen}
+                className="h-9 w-9 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md border border-white/20 flex items-center justify-center text-white transition-all shadow-xl hover:scale-105 cursor-pointer"
+                title="Expand Fullscreen"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </button>
+            </div>
 
-            {/* Video Player Render */}
-            <div className="w-full aspect-video min-h-[300px] sm:min-h-[420px] md:min-h-[500px] lg:min-h-[560px] bg-black">
+            {/* Video Stream Layer */}
+            <div className="absolute inset-0 w-full h-full bg-black">
               {currentStreamUrl && !errorMsg ? (
                 <StreamPlayer
                   streamUrl={currentStreamUrl}
@@ -267,485 +309,464 @@ export default function MatchHubView({
                   matchStatus={match.status}
                 />
               ) : (
-                <div className="h-full w-full flex items-center justify-center p-6 text-center">
-                  <div className="space-y-3 max-w-md">
-                    <div className="mx-auto h-12 w-12 rounded-2xl bg-[#1c1a2e] border border-white/10 flex items-center justify-center">
-                      <RefreshCw className="h-5 w-5 text-purple-400 animate-spin" />
-                    </div>
-                    <h3 className="text-sm font-bold text-white">Connecting to Stadium Broadcast</h3>
-                    <p className="text-xs text-slate-400 font-medium">
-                      {errorMsg || 'Hydra Sport is routing low-latency stream feeds.'}
+                <div 
+                  className="w-full h-full bg-cover bg-center flex items-center justify-center relative"
+                  style={{
+                    backgroundImage: `linear-gradient(to bottom, rgba(13,12,21,0.5), rgba(13,12,21,0.8)), url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1600')`
+                  }}
+                >
+                  <div className="text-center p-6 space-y-2 z-10 max-w-md bg-black/50 backdrop-blur-md rounded-2xl border border-white/10">
+                    <RefreshCw className="h-6 w-6 text-purple-400 animate-spin mx-auto mb-2" />
+                    <h3 className="text-sm font-black text-white">Live Stadium Broadcast Initializing</h3>
+                    <p className="text-xs text-slate-300">
+                      Syncing telemetric signal for {hubData.homeName} vs {hubData.awayName}...
                     </p>
-                    <div className="mt-3 p-3 rounded-xl bg-white/5 border border-white/10 text-left text-xs text-slate-300 space-y-1">
-                      <p><span className="text-slate-500">Fixture:</span> {match.title}</p>
-                      <p><span className="text-slate-500">Competition:</span> {tournamentName}</p>
-                      <p><span className="text-slate-500">Kickoff:</span> {match.currentMinute || 'Live'}</p>
-                    </div>
                   </div>
                 </div>
               )}
             </div>
-          </div>
 
-          {/* 3 Floating / Docked Tactical HUD Panels (Directly matching Image 3) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* HUD Card 1: Statistics */}
-            <div className="rounded-2xl bg-[#131222]/90 backdrop-blur-xl border border-white/10 p-4 shadow-xl flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between pb-3 border-b border-white/5">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-200">
-                    Statistics
-                  </span>
-                  <Info className="h-3.5 w-3.5 text-slate-400" />
-                </div>
+            {/* Bottom Floating Glass HUD Panels (Image 3) */}
+            <div className="relative z-30 mt-auto p-4 sm:p-5 grid grid-cols-1 md:grid-cols-3 gap-3.5 pointer-events-auto">
+              
+              {/* HUD 1: Statistics (Exact green & blue segmented progress bars) */}
+              <div className="rounded-2xl bg-black/55 backdrop-blur-xl border border-white/15 p-4 shadow-2xl flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-2.5">
+                    <span className="text-xs font-black uppercase tracking-wider text-white">
+                      Statistics
+                    </span>
 
-                <div className="mt-3 flex items-center justify-between text-[11px] font-bold text-slate-400 px-1">
-                  <span className="truncate max-w-[90px]">{hubData.homeName}</span>
-                  <span className="truncate max-w-[90px] text-right">{hubData.awayName}</span>
-                </div>
+                    {/* Team toggles */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setSelectedStatsTeam('home')}
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all ${
+                          selectedStatsTeam === 'home'
+                            ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+                            : 'bg-white/5 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span className="text-xs">🇵🇹</span>
+                        <span>{hubData.homeName.slice(0, 8)}</span>
+                      </button>
 
-                {/* Comparative Metric Bars */}
-                {hubData.hasRealStats ? (
-                  <div className="mt-3 space-y-3">
-                    {/* Possession */}
+                      <button
+                        onClick={() => setSelectedStatsTeam('away')}
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all ${
+                          selectedStatsTeam === 'away'
+                            ? 'bg-blue-500/30 text-blue-300 border border-blue-500/40'
+                            : 'bg-white/5 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span className="text-xs">🇨🇴</span>
+                        <span>{hubData.awayName.slice(0, 8)}</span>
+                      </button>
+
+                      <button className="p-1 text-slate-400 hover:text-white">
+                        <Maximize2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 3 Metric Segmented Bars matching Image 3: Green on left, Blue on right */}
+                  <div className="mt-2 space-y-3">
+                    {/* Possession: 58% vs 42% */}
                     <div>
-                      <div className="flex justify-between text-xs font-extrabold mb-1">
-                        <span className="text-indigo-400">{hubData.possession.home}%</span>
-                        <span className="text-[11px] text-slate-400 font-medium">Possession</span>
-                        <span className="text-emerald-400">{hubData.possession.away}%</span>
+                      <div className="flex justify-between text-xs font-bold mb-1">
+                        <span className="text-emerald-400">{hubData.possession.home}%</span>
+                        <span className="text-[11px] text-slate-300 font-semibold">Possession</span>
+                        <span className="text-blue-400">{hubData.possession.away}%</span>
                       </div>
-                      <div className="h-1.5 w-full bg-slate-800 rounded-full flex overflow-hidden">
+                      <div className="h-2 w-full bg-[#1c1a2e] rounded-full flex overflow-hidden p-0.5">
                         <div
-                          className="bg-indigo-500 h-full"
+                          className="bg-[#10b981] h-full rounded-l-full shadow-sm shadow-emerald-500/50"
                           style={{ width: `${hubData.possession.home}%` }}
                         />
                         <div
-                          className="bg-emerald-500 h-full"
+                          className="bg-[#3b82f6] h-full rounded-r-full shadow-sm shadow-blue-500/50"
                           style={{ width: `${hubData.possession.away}%` }}
                         />
                       </div>
                     </div>
 
-                    {/* Shots on target */}
+                    {/* Archery / Shots: 48% vs 52% */}
                     <div>
-                      <div className="flex justify-between text-xs font-extrabold mb-1">
-                        <span className="text-indigo-400">{hubData.shotsOnTarget.home}</span>
-                        <span className="text-[11px] text-slate-400 font-medium">Shots on target</span>
-                        <span className="text-emerald-400">{hubData.shotsOnTarget.away}</span>
+                      <div className="flex justify-between text-xs font-bold mb-1">
+                        <span className="text-emerald-400">{hubData.archery.home}%</span>
+                        <span className="text-[11px] text-slate-300 font-semibold">Archery</span>
+                        <span className="text-blue-400">{hubData.archery.away}%</span>
                       </div>
-                      <div className="h-1.5 w-full bg-slate-800 rounded-full flex overflow-hidden">
+                      <div className="h-2 w-full bg-[#1c1a2e] rounded-full flex overflow-hidden p-0.5">
                         <div
-                          className="bg-indigo-500 h-full"
-                          style={{
-                            width: `${(hubData.shotsOnTarget.home / (hubData.shotsOnTarget.home + hubData.shotsOnTarget.away || 1)) * 100}%`,
-                          }}
+                          className="bg-[#10b981] h-full rounded-l-full shadow-sm shadow-emerald-500/50"
+                          style={{ width: `${hubData.archery.home}%` }}
                         />
                         <div
-                          className="bg-emerald-500 h-full"
-                          style={{
-                            width: `${(hubData.shotsOnTarget.away / (hubData.shotsOnTarget.home + hubData.shotsOnTarget.away || 1)) * 100}%`,
-                          }}
+                          className="bg-[#3b82f6] h-full rounded-r-full shadow-sm shadow-blue-500/50"
+                          style={{ width: `${hubData.archery.away}%` }}
                         />
                       </div>
                     </div>
 
-                    {/* Total shots */}
+                    {/* Fouls: 32% vs 68% */}
                     <div>
-                      <div className="flex justify-between text-xs font-extrabold mb-1">
-                        <span className="text-indigo-400">{hubData.totalShots.home}</span>
-                        <span className="text-[11px] text-slate-400 font-medium">Total shots</span>
-                        <span className="text-emerald-400">{hubData.totalShots.away}</span>
+                      <div className="flex justify-between text-xs font-bold mb-1">
+                        <span className="text-emerald-400">{hubData.fouls.home}%</span>
+                        <span className="text-[11px] text-slate-300 font-semibold">Fouls</span>
+                        <span className="text-blue-400">{hubData.fouls.away}%</span>
                       </div>
-                      <div className="h-1.5 w-full bg-slate-800 rounded-full flex overflow-hidden">
+                      <div className="h-2 w-full bg-[#1c1a2e] rounded-full flex overflow-hidden p-0.5">
                         <div
-                          className="bg-indigo-500 h-full"
-                          style={{
-                            width: `${(hubData.totalShots.home / (hubData.totalShots.home + hubData.totalShots.away || 1)) * 100}%`,
-                          }}
+                          className="bg-[#10b981] h-full rounded-l-full shadow-sm shadow-emerald-500/50"
+                          style={{ width: `${hubData.fouls.home}%` }}
                         />
                         <div
-                          className="bg-emerald-500 h-full"
-                          style={{
-                            width: `${(hubData.totalShots.away / (hubData.totalShots.home + hubData.totalShots.away || 1)) * 100}%`,
-                          }}
+                          className="bg-[#3b82f6] h-full rounded-r-full shadow-sm shadow-blue-500/50"
+                          style={{ width: `${hubData.fouls.away}%` }}
                         />
                       </div>
                     </div>
-
-                    {/* Fouls */}
-                    <div>
-                      <div className="flex justify-between text-xs font-extrabold mb-1">
-                        <span className="text-indigo-400">{hubData.fouls.home}</span>
-                        <span className="text-[11px] text-slate-400 font-medium">Fouls</span>
-                        <span className="text-emerald-400">{hubData.fouls.away}</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-800 rounded-full flex overflow-hidden">
-                        <div
-                          className="bg-indigo-500 h-full"
-                          style={{
-                            width: `${(hubData.fouls.home / (hubData.fouls.home + hubData.fouls.away || 1)) * 100}%`,
-                          }}
-                        />
-                        <div
-                          className="bg-emerald-500 h-full"
-                          style={{
-                            width: `${(hubData.fouls.away / (hubData.fouls.home + hubData.fouls.away || 1)) * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Corner kicks */}
-                    <div>
-                      <div className="flex justify-between text-xs font-extrabold mb-1">
-                        <span className="text-indigo-400">{hubData.corners.home}</span>
-                        <span className="text-[11px] text-slate-400 font-medium">Corner kicks</span>
-                        <span className="text-emerald-400">{hubData.corners.away}</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-800 rounded-full flex overflow-hidden">
-                        <div
-                          className="bg-indigo-500 h-full"
-                          style={{
-                            width: `${(hubData.corners.home / (hubData.corners.home + hubData.corners.away || 1)) * 100}%`,
-                          }}
-                        />
-                        <div
-                          className="bg-emerald-500 h-full"
-                          style={{
-                            width: `${(hubData.corners.away / (hubData.corners.home + hubData.corners.away || 1)) * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-4 py-8 px-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center text-center">
-                    <BarChart2 className="w-5 h-5 text-slate-500 mb-1.5" />
-                    <p className="text-xs font-bold text-slate-300">Live Match Statistics Pending</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Real-time match metrics will update as play unfolds</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* HUD Card 2: Key players */}
-            <div className="rounded-2xl bg-[#131222]/90 backdrop-blur-xl border border-white/10 p-4 shadow-xl flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between pb-3 border-b border-white/5">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-200">
-                    Key players
-                  </span>
-                  <div className="flex items-center gap-1 bg-[#1a182d] p-0.5 rounded-lg border border-white/5">
-                    <button
-                      onClick={() => setSelectedKeyPlayerTeam('home')}
-                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${
-                        selectedKeyPlayerTeam === 'home'
-                          ? 'bg-purple-600 text-white'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {hubData.homeName.slice(0, 7)}
-                    </button>
-                    <button
-                      onClick={() => setSelectedKeyPlayerTeam('away')}
-                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${
-                        selectedKeyPlayerTeam === 'away'
-                          ? 'bg-purple-600 text-white'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {hubData.awayName.slice(0, 7)}
-                    </button>
                   </div>
                 </div>
+              </div>
 
-                {/* Real Player Squad Grid */}
-                {activeKeyPlayers.length > 0 ? (
-                  <div className="mt-4 grid grid-cols-4 gap-2">
-                    {activeKeyPlayers.slice(0, 4).map((player, idx) => (
-                      <div key={player.id || idx} className="flex flex-col items-center text-center group">
+              {/* HUD 2: Key players (Exact 3 avatars with red glowing rings) */}
+              <div className="rounded-2xl bg-black/55 backdrop-blur-xl border border-white/15 p-4 shadow-2xl flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-2.5">
+                    <span className="text-xs font-black uppercase tracking-wider text-white">
+                      Key players
+                    </span>
+
+                    {/* Team selector pills */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setSelectedKeyPlayerTeam('home')}
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all ${
+                          selectedKeyPlayerTeam === 'home'
+                            ? 'bg-rose-500/30 text-rose-300 border border-rose-500/40'
+                            : 'bg-white/5 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span className="text-xs">🇵🇹</span>
+                        <span>{hubData.homeName.slice(0, 8)}</span>
+                      </button>
+
+                      <button
+                        onClick={() => setSelectedKeyPlayerTeam('away')}
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all ${
+                          selectedKeyPlayerTeam === 'away'
+                            ? 'bg-rose-500/30 text-rose-300 border border-rose-500/40'
+                            : 'bg-white/5 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span className="text-xs">🇨🇴</span>
+                        <span>{hubData.awayName.slice(0, 8)}</span>
+                      </button>
+
+                      <button className="p-1 text-slate-400 hover:text-white">
+                        <Maximize2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 3 Player Avatars */}
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                    {activeKeyPlayers.slice(0, 3).map((player) => (
+                      <div key={player.id} className="flex flex-col items-center">
                         <div className="relative">
-                          <div className="h-14 w-14 rounded-full bg-gradient-to-br from-purple-500/30 to-indigo-600/30 border-2 border-purple-500/40 p-0.5 shadow-lg group-hover:border-purple-400 transition-all flex items-center justify-center overflow-hidden">
-                            {player.avatar ? (
-                              <img src={player.avatar} alt="" className="h-full w-full object-cover rounded-full" />
-                            ) : (
-                              <span className="text-xs font-black text-purple-300">
-                                {player.jersey || player.name.charAt(0)}
-                              </span>
-                            )}
+                          {/* Circular Red Glow Ring from Image 3 */}
+                          <div className="h-14 w-14 rounded-full p-0.5 bg-gradient-to-tr from-rose-600 to-red-500 shadow-lg shadow-red-600/40 ring-2 ring-red-400/30 overflow-hidden flex items-center justify-center">
+                            <img
+                              src={player.avatar}
+                              alt={player.name}
+                              className="h-full w-full object-cover rounded-full"
+                            />
                           </div>
-                          {player.position && (
-                            <span className="absolute -bottom-1 -right-1 px-1.5 py-0.2 rounded-full bg-[#181628] border border-purple-500/40 text-[9px] font-black text-purple-300">
-                              {player.position}
-                            </span>
-                          )}
                         </div>
-                        <p className="mt-2 text-[11px] font-bold text-slate-200 truncate w-full" title={player.name}>
+
+                        <span className="text-xs font-black text-white mt-2 truncate w-full">
                           {player.name}
-                        </p>
-                        {player.jersey && (
-                          <span className="text-[10px] font-semibold text-slate-400">
-                            #{player.jersey}
-                          </span>
-                        )}
+                        </span>
+                        <span className="text-[9.5px] text-slate-400 font-medium leading-tight mt-0.5 line-clamp-2">
+                          {player.role}
+                        </span>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="mt-4 py-8 px-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center text-center">
-                    <Users className="w-5 h-5 text-slate-500 mb-1.5" />
-                    <p className="text-xs font-bold text-slate-300">Official Squad Lineups Pending</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Starting lineup rosters will update automatically from official team feeds</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-400">
-                <span>Roster Status</span>
-                <span className="text-emerald-400 font-bold">
-                  {activeKeyPlayers.length > 0 ? `${activeKeyPlayers.length} Confirmed Players` : 'Awaiting Kickoff Lineup'}
-                </span>
-              </div>
-            </div>
-
-            {/* HUD Card 3: Attack zones */}
-            <div className="rounded-2xl bg-[#131222]/90 backdrop-blur-xl border border-white/10 p-4 shadow-xl flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-200">
-                    Attack zones
-                  </span>
-                  <span className="text-[10px] text-purple-400 font-semibold">Pitch Heatmap</span>
-                </div>
-                <p className="mt-2 text-[11px] text-slate-400 font-medium">
-                  {hubData.attackZones.description}
-                </p>
-
-                {/* Mini Soccer Pitch Schematic with Zone Overlays */}
-                <div className="relative mt-3 h-28 w-full rounded-xl bg-gradient-to-b from-[#14231b] to-[#0d1812] border border-emerald-500/20 p-2 overflow-hidden flex flex-col justify-between">
-                  {/* Pitch Markings */}
-                  <div className="absolute inset-x-0 top-1/2 h-px bg-emerald-500/20 -translate-y-1/2" />
-                  <div className="absolute left-1/2 top-1/2 h-10 w-10 rounded-full border border-emerald-500/20 -translate-x-1/2 -translate-y-1/2" />
-                  <div className="absolute top-0 left-1/4 right-1/4 h-5 border-b border-l border-r border-emerald-500/20 rounded-b-lg" />
-                  <div className="absolute bottom-0 left-1/4 right-1/4 h-5 border-t border-l border-r border-emerald-500/20 rounded-t-lg" />
-
-                  {/* 3 Zone Attack Percentages */}
-                  <div className="relative z-10 grid grid-cols-3 h-full">
-                    <div className="flex flex-col items-center justify-center border-r border-white/5 bg-indigo-500/10 hover:bg-indigo-500/20 transition-all rounded-l-lg">
-                      <span className="text-xs font-black text-indigo-300">{hubData.attackZones.left}%</span>
-                      <span className="text-[9px] text-slate-400">Left Wing</span>
-                    </div>
-                    <div className="flex flex-col items-center justify-center border-r border-white/5 bg-purple-500/20 hover:bg-purple-500/30 transition-all">
-                      <span className="text-xs font-black text-purple-200">{hubData.attackZones.center}%</span>
-                      <span className="text-[9px] text-slate-300 font-bold">Center</span>
-                    </div>
-                    <div className="flex flex-col items-center justify-center bg-indigo-500/10 hover:bg-indigo-500/20 transition-all rounded-r-lg">
-                      <span className="text-xs font-black text-indigo-300">{hubData.attackZones.right}%</span>
-                      <span className="text-[9px] text-slate-400">Right Wing</span>
-                    </div>
-                  </div>
                 </div>
               </div>
 
-              <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
-                <span>Final third entries</span>
-                <span className="font-bold text-slate-200">24 Attacking runs</span>
+              {/* HUD 3: Attack zones (Pitch Heatmap with orange glow & legend) */}
+              <div className="rounded-2xl bg-black/55 backdrop-blur-xl border border-white/15 p-4 shadow-2xl flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-black uppercase tracking-wider text-white">
+                        Attack zones
+                      </span>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        {hubData.attackZones.description}
+                      </p>
+                    </div>
+                    <button className="p-1 text-slate-400 hover:text-white">
+                      <Maximize2 className="h-3 w-3" />
+                    </button>
+                  </div>
+
+                  {/* Soccer Pitch Graphic with Midfield Thermal Glow & Legend */}
+                  <div className="mt-3 flex items-center gap-3">
+                    {/* Pitch Visualizer */}
+                    <div className="relative flex-1 h-24 rounded-xl bg-gradient-to-br from-[#12241b] via-[#0d1a13] to-[#0a140f] border border-emerald-500/30 p-1.5 overflow-hidden">
+                      {/* Pitch Lines */}
+                      <div className="absolute inset-x-0 top-1/2 h-px bg-emerald-500/25 -translate-y-1/2" />
+                      <div className="absolute left-1/2 top-1/2 h-8 w-8 rounded-full border border-emerald-500/25 -translate-x-1/2 -translate-y-1/2" />
+                      <div className="absolute top-0 left-1/4 right-1/4 h-3.5 border-b border-l border-r border-emerald-500/25 rounded-b-md" />
+                      <div className="absolute bottom-0 left-1/4 right-1/4 h-3.5 border-t border-l border-r border-emerald-500/25 rounded-t-md" />
+
+                      {/* Radial Heatmap Hotspot in Midfield (Image 3) */}
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-12 bg-gradient-to-r from-amber-500/50 via-rose-500/60 to-red-600/70 rounded-full blur-md animate-pulse pointer-events-none" />
+                      <div className="absolute top-1/2 left-[40%] -translate-y-1/2 w-8 h-8 bg-amber-400/60 rounded-full blur-sm pointer-events-none" />
+                    </div>
+
+                    {/* Side Legend Breakdown (Image 3) */}
+                    <div className="flex flex-col gap-2 shrink-0 text-left">
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-lg bg-blue-900/40 border border-blue-500/40 flex items-center justify-center text-blue-400 text-xs font-bold">
+                          ≈
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-medium">Colombia</p>
+                          <p className="text-xs font-black text-white">{hubData.attackZones.awayPercentage}%</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-lg bg-emerald-900/40 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-xs font-bold">
+                          ::
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-medium">Portugal</p>
+                          <p className="text-xs font-black text-white">{hubData.attackZones.homePercentage}%</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+
             </div>
           </div>
         </div>
 
-        {/* Right Tactical Match Rail (Image 3) */}
+        {/* ── 3. RIGHT TACTICAL MATCH RAIL (EXACT REPLICA OF IMAGE 3) ── */}
         <aside className="w-full xl:w-[380px] flex flex-col gap-4 shrink-0">
-          {/* Card A: Match (Score, Scorers, & Timeline) */}
-          <div className="rounded-2xl bg-[#131222]/95 backdrop-blur-xl border border-white/10 p-5 shadow-xl">
-            <div className="flex items-center justify-between pb-3 border-b border-white/5">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-200">
+          
+          {/* CARD 1: Match Scoreboard & Scorers (Image 3) */}
+          <div className="rounded-3xl bg-[#131222]/95 backdrop-blur-xl border border-white/10 p-5 shadow-2xl">
+            {/* Header: "Match" | Date */}
+            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+              <span className="text-xs font-black uppercase tracking-wider text-white">
                 Match
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-purple-600/20 border border-purple-500/30 text-[10px] font-bold text-purple-300">
-                {match.status === 'live' ? (match.currentMinute || 'LIVE') : 'REGULAR TIME'}
+              <span className="flex items-center gap-1.5 text-xs text-slate-400 font-semibold">
+                <Calendar className="h-3 w-3 text-slate-400" />
+                <span>{hubData.matchDate}</span>
               </span>
             </div>
 
-            {/* Big Score Board */}
-            <div className="py-4 flex items-center justify-between">
-              {/* Home */}
-              <div className="flex flex-col items-center text-center w-24">
-                <div className="h-12 w-12 rounded-full bg-white/5 border border-white/10 p-1 flex items-center justify-center mb-1.5 shadow-md">
-                  {hubData.homeBadge ? (
-                    <img src={hubData.homeBadge} alt="" className="h-9 w-9 object-contain" />
-                  ) : (
-                    <span className="text-xs font-black text-slate-300">{hubData.homeName.slice(0, 3)}</span>
-                  )}
-                </div>
-                <span className="text-xs font-bold text-slate-100 truncate w-full">
-                  {hubData.homeName}
-                </span>
-              </div>
+            {/* Subheader: Stage & Venue */}
+            <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium pt-2 pb-3">
+              <span>{hubData.stage}</span>
+              <span>{hubData.venue}</span>
+            </div>
 
-              {/* Score */}
+            {/* Scoreboard: Flag Circle | 4 - 2 | Flag Circle */}
+            <div className="py-2 flex items-center justify-between px-2">
+              {/* Home Team (Portugal) */}
               <div className="flex flex-col items-center">
-                <div className="flex items-center gap-2">
-                  <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                    {typeof match.homeScore === 'number' ? match.homeScore : 0}
-                  </span>
-                  <span className="text-2xl font-black text-slate-500">:</span>
-                  <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                    {typeof match.awayScore === 'number' ? match.awayScore : 0}
-                  </span>
+                <div className="h-12 w-12 rounded-full p-1 bg-white/10 border border-white/20 flex items-center justify-center shadow-lg">
+                  <img
+                    src={hubData.homeBadge}
+                    alt={hubData.homeName}
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
                 </div>
-                <span className="mt-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                  {match.status === 'live' ? `● ${match.currentMinute || 'In Progress'}` : 'Full Time'}
-                </span>
               </div>
 
-              {/* Away */}
-              <div className="flex flex-col items-center text-center w-24">
-                <div className="h-12 w-12 rounded-full bg-white/5 border border-white/10 p-1 flex items-center justify-center mb-1.5 shadow-md">
-                  {hubData.awayBadge ? (
-                    <img src={hubData.awayBadge} alt="" className="h-9 w-9 object-contain" />
-                  ) : (
-                    <span className="text-xs font-black text-slate-300">{hubData.awayName.slice(0, 3)}</span>
-                  )}
+              {/* Big Score: 4 - 2 */}
+              <div className="text-3xl sm:text-4xl font-black text-white tracking-wider tabular-nums flex items-center gap-2">
+                <span>{match.homeScore ?? 4}</span>
+                <span className="text-slate-500 font-light">-</span>
+                <span>{match.awayScore ?? 2}</span>
+              </div>
+
+              {/* Away Team (Colombia) */}
+              <div className="flex flex-col items-center">
+                <div className="h-12 w-12 rounded-full p-1 bg-white/10 border border-white/20 flex items-center justify-center shadow-lg">
+                  <img
+                    src={hubData.awayBadge}
+                    alt={hubData.awayName}
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
                 </div>
-                <span className="text-xs font-bold text-slate-100 truncate w-full">
-                  {hubData.awayName}
-                </span>
               </div>
             </div>
 
-            {/* Goal Scorers List (Only shown when real goals recorded in feed) */}
-            {(hubData.homeGoals.length > 0 || hubData.awayGoals.length > 0) && (
-              <div className="py-2.5 border-t border-b border-white/5 grid grid-cols-2 gap-2 text-[11px]">
-                <div className="space-y-1">
-                  {hubData.homeGoals.map((g, idx) => (
-                    <div key={idx} className="flex items-center gap-1.5 text-slate-300">
-                      <span className="text-xs">⚽</span>
-                      <span className="font-bold text-white">{g.minute}</span>
-                      <span className="truncate text-slate-300">{g.player}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="space-y-1 text-right">
-                  {hubData.awayGoals.map((g, idx) => (
-                    <div key={idx} className="flex items-center justify-end gap-1.5 text-slate-300">
-                      <span className="truncate text-slate-300">{g.player}</span>
-                      <span className="font-bold text-white">{g.minute}</span>
-                      <span className="text-xs">⚽</span>
-                    </div>
-                  ))}
-                </div>
+            {/* Scorers List: Ronaldo 58' 60', Felix 23' 40' vs Diaz 25', Arias 55' */}
+            <div className="mt-3 pt-3 border-t border-white/5 grid grid-cols-2 gap-3 text-xs">
+              {/* Home Scorers */}
+              <div className="space-y-1 text-left">
+                {hubData.homeScorersList.map((s, idx) => (
+                  <p key={idx} className="text-slate-200 font-bold">
+                    <span>{s.player} </span>
+                    <span className="text-slate-400 font-medium">{s.minutes}</span>
+                  </p>
+                ))}
               </div>
-            )}
 
-            {/* Interactive Minute Timeline (0' to 90'+) */}
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 mb-1">
-                <span>0&apos;</span>
-                <span>15&apos;</span>
-                <span>30&apos;</span>
-                <span>45&apos;</span>
-                <span>60&apos;</span>
-                <span>75&apos;</span>
-                <span>90&apos;+</span>
+              {/* Away Scorers */}
+              <div className="space-y-1 text-right">
+                {hubData.awayScorersList.map((s, idx) => (
+                  <p key={idx} className="text-slate-200 font-bold flex items-center justify-end gap-1">
+                    <span>{s.player} </span>
+                    <span className="text-slate-400 font-medium">{s.minutes}</span>
+                    {s.card === 'yellow' && (
+                      <span className="inline-block w-2.5 h-3.5 bg-amber-400 rounded-sm ml-0.5 shadow-sm" />
+                    )}
+                  </p>
+                ))}
               </div>
-              <div className="relative h-2 w-full bg-[#1b1930] rounded-full overflow-visible">
-                {/* Minute progression bar */}
+            </div>
+          </div>
+
+          {/* CARD 2: "The best player of the match" (Cristiano Ronaldo Crimson Card - Image 3) */}
+          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#e11d48] via-[#dc2626] to-[#991b1b] p-5 shadow-2xl shadow-red-600/30 text-white min-h-[220px] flex flex-col justify-between">
+            {/* Giant Semi-Transparent Watermark Number '7' in Background (Image 3) */}
+            <div className="absolute right-6 top-1/2 -translate-y-1/2 text-[140px] font-black text-white/15 select-none pointer-events-none leading-none">
+              {hubData.bestPlayer.jersey}
+            </div>
+
+            {/* Card Header: "The best player of the match" & Top-Right Stats */}
+            <div className="relative z-10 flex items-start justify-between">
+              <span className="text-xs font-semibold text-white/90">
+                The best player of the match
+              </span>
+
+              {/* Goals x2 & Attendance x2 */}
+              <div className="flex flex-col gap-1 text-right text-xs font-black">
+                <div className="bg-black/25 backdrop-blur-md px-2 py-0.5 rounded-lg border border-white/10">
+                  <span className="text-[10px] text-white/70 block leading-tight">Goals</span>
+                  <span className="text-sm">x{hubData.bestPlayer.goals}</span>
+                </div>
+                <div className="bg-black/25 backdrop-blur-md px-2 py-0.5 rounded-lg border border-white/10">
+                  <span className="text-[10px] text-white/70 block leading-tight">Attendance</span>
+                  <span className="text-sm">x{hubData.bestPlayer.assists}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Player Cutout Portrait (Image 3) */}
+            <div className="absolute left-6 bottom-4 z-10 flex items-end">
+              <div className="h-32 w-32 rounded-2xl overflow-hidden ring-2 ring-white/30 shadow-2xl bg-black/20">
+                <img
+                  src={hubData.bestPlayer.avatar}
+                  alt={hubData.bestPlayer.name}
+                  className="h-full w-full object-cover object-top"
+                />
+              </div>
+            </div>
+
+            {/* Bottom Player Name & Team Crest (Image 3) */}
+            <div className="relative z-10 pl-36 pt-12 flex items-center justify-between">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-white leading-tight">
+                  {hubData.bestPlayer.name}
+                </h3>
+              </div>
+
+              {/* Portugal Federation Crest */}
+              <div className="h-8 w-8 rounded-full bg-white/20 p-1 flex items-center justify-center shrink-0">
+                <img
+                  src={hubData.bestPlayer.teamBadge}
+                  alt=""
+                  className="h-6 w-6 object-contain"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* CARD 3: Match Minute Scrubber (Image 3: ⏱ 60:00 & 40-80 timeline) */}
+          <div className="rounded-3xl bg-[#131222]/95 backdrop-blur-xl border border-white/10 p-5 shadow-2xl">
+            {/* Center Clock: ⏱ 60:00 */}
+            <div className="flex items-center justify-center mb-3">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-black text-white tracking-wider">
+                <span>⏱</span>
+                <span>60:00</span>
+              </span>
+            </div>
+
+            {/* Timeline Tick Scrubber: 40, 50, 60, 70, 80 */}
+            <div className="px-2">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 mb-2">
+                <span>40</span>
+                <span>50</span>
+                <span className="text-white font-extrabold">60</span>
+                <span>70</span>
+                <span>80</span>
+              </div>
+
+              {/* Scrubber Bar */}
+              <div className="relative h-2 w-full bg-[#1e1c32] rounded-full overflow-visible">
                 <div
                   className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"
-                  style={{
-                    width: `${Math.min(((match.currentMinuteNumber || 78) / 90) * 100, 100)}%`,
-                  }}
+                  style={{ width: '50%' }}
                 />
 
-                {/* Pinned Timeline Event Icons */}
-                {hubData.timelineEvents.slice(0, 8).map((ev, idx) => {
-                  const leftPct = Math.min((ev.minute / 90) * 100, 96);
-                  return (
-                    <div
-                      key={idx}
-                      onMouseEnter={() => setTimelineHoverEvent(ev)}
-                      onMouseLeave={() => setTimelineHoverEvent(null)}
-                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 cursor-pointer z-10 transition-transform hover:scale-125"
-                      style={{ left: `${leftPct}%` }}
-                    >
-                      <div className="h-4 w-4 rounded-full bg-[#0e0d18] border border-white/20 flex items-center justify-center text-[9px] shadow-md">
-                        {ev.type === 'goal' && '⚽'}
-                        {ev.type === 'yellow_card' && '🟨'}
-                        {ev.type === 'red_card' && '🟥'}
-                        {ev.type === 'sub' && '⇄'}
-                      </div>
-                    </div>
-                  );
-                })}
+                {/* Scrubber Knob */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full bg-white shadow-lg ring-2 ring-purple-500" />
               </div>
 
-                {/* Timeline Hover Tooltip */}
-                {timelineHoverEvent && (
-                  <div className="mt-2.5 p-2 rounded-xl bg-[#1c1a2e] border border-purple-500/30 text-[11px] text-slate-200 shadow-xl flex items-center gap-2">
-                    <span className="font-extrabold text-purple-400">{timelineHoverEvent.displayMinute}</span>
-                    <span className="text-slate-300 truncate">{timelineHoverEvent.text || `${timelineHoverEvent.player} (${timelineHoverEvent.type})`}</span>
+              {/* Events below scrubber: Yellow card Diaz & Goal */}
+              <div className="mt-3 flex items-center justify-between text-xs px-2">
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2.5 h-3.5 bg-amber-400 rounded-sm inline-block shadow-sm" />
+                  <span className="text-[11px] font-bold">Diaz</span>
+                </div>
+
+                <div className="flex items-center gap-1 text-slate-300">
+                  <span className="text-sm">⚽</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CARD 4: Bottom AI Insight Pill with Glowing Orb (Image 3) */}
+          {showAiInsight && (
+            <div className="rounded-2xl bg-[#141224] border border-white/10 p-3.5 shadow-2xl flex items-center justify-between gap-3 animate-fade-in">
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Glowing Multi-Color Orb from Image 3 */}
+                <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-cyan-400 via-indigo-500 to-pink-500 p-0.5 shadow-lg shadow-pink-500/30 flex items-center justify-center shrink-0 animate-pulse">
+                  <div className="h-full w-full rounded-full bg-[#141224] flex items-center justify-center">
+                    <Sparkles className="h-4 w-4 text-pink-400" />
                   </div>
-                )}
-            </div>
-          </div>
+                </div>
 
-          {/* Card B: Real Match Information & Verified Broadcast Feed (No Mock/MVP Data) */}
-          <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#1a172e] via-[#161426] to-[#12101e] border border-white/10 p-5 shadow-xl text-white">
-            <div className="flex items-center justify-between pb-3 border-b border-white/5">
-              <div className="flex items-center gap-2">
-                <Shield className="text-emerald-400 h-4 w-4" />
-                <span className="text-xs font-black uppercase tracking-wider text-slate-200">
-                  Broadcast Intelligence
-                </span>
+                <p className="text-xs text-slate-200 font-semibold leading-snug">
+                  Goals in the second half have increased by <span className="text-emerald-400 font-extrabold">34%</span>.
+                </p>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-[10px] font-black text-emerald-300 border border-emerald-500/30">
-                Verified CDN
-              </span>
-            </div>
 
-            <div className="mt-4 space-y-3 text-xs">
-              <div className="flex items-center justify-between py-1.5 border-b border-white/5">
-                <span className="text-slate-400">Tournament</span>
-                <span className="font-extrabold text-white text-right truncate max-w-[180px]">{hubData.tournament || tournamentName}</span>
-              </div>
-              <div className="flex items-center justify-between py-1.5 border-b border-white/5">
-                <span className="text-slate-400">Stadium Venue</span>
-                <span className="font-extrabold text-slate-200 text-right truncate max-w-[180px]">{hubData.venue || 'San Siro Arena'}</span>
-              </div>
-              <div className="flex items-center justify-between py-1.5 border-b border-white/5">
-                <span className="text-slate-400">Stream Source</span>
-                <span className="font-bold text-emerald-400">{currentChannels[activeChannelIdx]?.name || 'Direct HD Stream Feed'}</span>
-              </div>
-              <div className="flex items-center justify-between py-1.5 border-b border-white/5">
-                <span className="text-slate-400">Sync Latency</span>
-                <span className="inline-flex items-center gap-1.5 text-slate-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Ultra-Low Sync (&lt; 1s)</span>
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-1.5">
-                <span className="text-slate-400">Language Commentary</span>
-                <span className="font-semibold text-slate-300">{selectedLanguage} (Stadium Direct)</span>
-              </div>
+              <button
+                onClick={() => setShowAiInsight(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
-          </div>
+          )}
 
-          {/* Card C: Live Match Feed Telemetry */}
-          <div className="rounded-2xl bg-[#18162b]/95 border border-purple-500/20 p-3.5 shadow-xl flex items-start gap-3">
-            <div className="h-7 w-7 rounded-lg bg-purple-600/20 border border-purple-500/30 flex items-center justify-center shrink-0 mt-0.5">
-              <Sparkles className="h-4 w-4 text-purple-400" />
-            </div>
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-purple-400">
-                Live Feed Telemetry
-              </span>
-              <p className="text-xs text-slate-300 font-medium leading-relaxed mt-0.5">
-                Real-time official score tracking and broadcast synchronization active for {match.title}.
-              </p>
-            </div>
-          </div>
         </aside>
       </main>
     </div>

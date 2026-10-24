@@ -1,10 +1,11 @@
 import { fetchWithTimeout } from './baseProvider';
-import { teamsMatch } from '../utils/matching';
+import { teamsMatch, extractTeamNames, teamSimilarity } from '../utils/matching';
 import logger from '../logger';
 
-const SCORE_API = 'https://www.thesportsdb.com/api/v1/json/3/eventsday.php';
-const EVENT_SEARCH_API = 'https://www.thesportsdb.com/api/v1/json/3/searchevents.php';
-const EVENT_LOOKUP_API = 'https://www.thesportsdb.com/api/v1/json/3/lookupevent.php';
+// Updated TheSportsDB key "123" (key 3 is permanently disabled)
+const SCORE_API = 'https://www.thesportsdb.com/api/v1/json/123/eventsday.php';
+const EVENT_SEARCH_API = 'https://www.thesportsdb.com/api/v1/json/123/searchevents.php';
+const EVENT_LOOKUP_API = 'https://www.thesportsdb.com/api/v1/json/123/lookupevent.php';
 const ESPN_API = 'https://site.api.espn.com/apis/site/v2/sports';
 const STREAMED_MATCHES_API = 'https://streamed.pk/api/matches';
 const TIMEOUT_MS = 4000;
@@ -19,24 +20,45 @@ interface ScoreEvent {
   intAwayScore?: string | null;
 }
 
+interface EspnCompetitor {
+  homeAway?: string;
+  score?: string;
+  winner?: boolean;
+  linescores?: Array<{ value?: number; tiebreak?: number; winner?: boolean }>;
+  team?: {
+    displayName?: string;
+    name?: string;
+    shortDisplayName?: string;
+    location?: string;
+    abbreviation?: string;
+  };
+  athlete?: {
+    displayName?: string;
+    fullName?: string;
+    shortName?: string;
+  };
+}
+
 interface EspnEvent {
   id?: string;
   name?: string;
   shortName?: string;
-  status?: { type?: { state?: string; shortDetail?: string; detail?: string } };
-  competitions?: [{
-    competitors?: Array<{
-      homeAway?: string;
-      score?: string;
-      team?: {
-        displayName?: string;
-        name?: string;
-        shortDisplayName?: string;
-        location?: string;
-      };
+  status?: { type?: { state?: string; shortDetail?: string; detail?: string; description?: string } };
+  groupings?: Array<{
+    grouping?: { displayName?: string };
+    competitions?: Array<{
+      id?: string;
+      competitors?: EspnCompetitor[];
+      status?: { type?: { state?: string; shortDetail?: string; detail?: string; description?: string } };
+      notes?: Array<{ text?: string }>;
     }>;
-    status?: { displayClock?: string };
-  }];
+  }>;
+  competitions?: Array<{
+    id?: string;
+    competitors?: EspnCompetitor[];
+    status?: { displayClock?: string; type?: { state?: string; shortDetail?: string; detail?: string; description?: string } };
+    notes?: Array<{ text?: string }>;
+  }>;
 }
 
 interface ScoreResponse {
@@ -71,7 +93,7 @@ function parseScore(event: ScoreEvent): MatchScore {
   };
 }
 
-function getEspnLeague(tournament: string): string | null {
+export function getEspnLeague(tournament: string): string | null {
   if (!tournament) return null;
   const league = tournament.toLowerCase().replace(/['’]/g, '');
 
@@ -140,7 +162,7 @@ function getEspnLeague(tournament: string): string | null {
     return 'rus.1';
   if (league.includes('saudi pro') || (league.includes('saudi') && league.includes('league')))
     return 'sau.1';
-  if (league.includes('mls'))
+  if (league.includes('mls') || league.includes('major league soccer'))
     return 'usa.1';
   if (league.includes('liga mx'))
     return 'mex.1';
@@ -166,12 +188,50 @@ function getEspnLeague(tournament: string): string | null {
   return null;
 }
 
-function getEspnSportConfig(sport: string, tournament: string): { sport: string; league: string } | null {
-  if (sport === 'basketball') return { sport: 'basketball', league: 'nba' };
-  if (sport === 'hockey') return { sport: 'hockey', league: 'nhl' };
-  if (sport === 'baseball') return { sport: 'baseball', league: 'mlb' };
+export function getEspnSportConfigs(sport: string, tournament: string): { sport: string; league: string }[] {
+  const normSport = (sport || '').toLowerCase().replace(/[\s-_]+/g, '');
+
+  if (normSport === 'basketball' || normSport === 'nba') {
+    return [
+      { sport: 'basketball', league: 'nba' },
+      { sport: 'basketball', league: 'mens-college-basketball' },
+      { sport: 'basketball', league: 'womens-college-basketball' },
+      { sport: 'basketball', league: 'wnba' },
+    ];
+  }
+
+  if (normSport === 'hockey' || normSport === 'icehockey' || normSport === 'nhl') {
+    return [
+      { sport: 'hockey', league: 'nhl' },
+      { sport: 'hockey', league: 'mens-college-hockey' },
+    ];
+  }
+
+  if (normSport === 'tennis' || normSport === 'atp' || normSport === 'wta') {
+    return [
+      { sport: 'tennis', league: 'atp' },
+      { sport: 'tennis', league: 'wta' },
+    ];
+  }
+
+  if (normSport === 'baseball' || normSport === 'mlb') {
+    return [{ sport: 'baseball', league: 'mlb' }];
+  }
+
   const league = getEspnLeague(tournament);
-  return league ? { sport: 'soccer', league } : null;
+  if (league) {
+    return [{ sport: 'soccer', league }];
+  }
+  return [
+    { sport: 'soccer', league: 'all' },
+    { sport: 'soccer', league: 'eng.1' },
+    { sport: 'soccer', league: 'esp.1' },
+    { sport: 'soccer', league: 'ita.1' },
+    { sport: 'soccer', league: 'ger.1' },
+    { sport: 'soccer', league: 'fra.1' },
+    { sport: 'soccer', league: 'uefa.champions' },
+    { sport: 'soccer', league: 'usa.1' },
+  ];
 }
 
 async function getStreamedScore(
@@ -179,34 +239,38 @@ async function getStreamedScore(
   timestamp: number,
   sport = 'football',
 ): Promise<MatchScore | null> {
-  const cacheKey = `${sport}:${new Date(timestamp).toISOString().slice(0, 10)}`;
+  const normSport = (sport || '').toLowerCase().replace(/[\s-_]+/g, '');
+  const dayStr = timestamp ? new Date(timestamp).toISOString().slice(0, 10) : 'today';
+  const cacheKey = `${normSport}:${title.toLowerCase().trim()}:${dayStr}`;
   const cached = streamedScoreCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.score;
 
   try {
     const data = await fetchWithTimeout(
-      `${STREAMED_MATCHES_API}/${encodeURIComponent(sport)}`,
+      `${STREAMED_MATCHES_API}/${encodeURIComponent(normSport === 'football' ? 'football' : normSport)}`,
       TIMEOUT_MS,
     ) as Array<Record<string, any>>;
+
+    if (!Array.isArray(data)) return null;
+
     const match = data.find(candidate => teamsMatch(title, candidate.title || ''));
     if (!match) {
       streamedScoreCache.set(cacheKey, { expiresAt: Date.now() + EVENTS_CACHE_TTL, score: null });
       return null;
     }
+
     const home = Number(match.homeScore ?? match.score?.home ?? match.scores?.home);
     const away = Number(match.awayScore ?? match.score?.away ?? match.scores?.away);
-    const score = {
+    const score: MatchScore = {
       home: Number.isFinite(home) ? home : null,
       away: Number.isFinite(away) ? away : null,
       currentMinute: match.currentMinute || match.status?.displayClock || match.status?.detail || '',
     };
+
     const result = score.home !== null && score.away !== null ? score : null;
     streamedScoreCache.set(cacheKey, { expiresAt: Date.now() + EVENTS_CACHE_TTL, score: result });
     return result;
   } catch (error) {
-    logger.warn('Streamed.pk score provider unavailable', {
-      error: error instanceof Error ? error.message : String(error),
-    });
     return null;
   }
 }
@@ -217,18 +281,86 @@ function matchEspnEvent(title: string, event: EspnEvent): boolean {
   if (event.shortName && teamsMatch(title, event.shortName)) return true;
 
   const comps = event.competitions?.[0]?.competitors || [];
-  const home = comps.find(c => c.homeAway === 'home')?.team;
-  const away = comps.find(c => c.homeAway === 'away')?.team;
-  if (home && away) {
-    const homeNames = [home.displayName, home.name, home.shortDisplayName, home.location].filter(Boolean) as string[];
-    const awayNames = [away.displayName, away.name, away.shortDisplayName, away.location].filter(Boolean) as string[];
-    for (const hn of homeNames) {
-      for (const an of awayNames) {
+  const compTeams = comps.map(c => {
+    return [
+      c.team?.displayName,
+      c.team?.name,
+      c.team?.shortDisplayName,
+      c.team?.location,
+      c.athlete?.displayName,
+      c.athlete?.fullName,
+    ].filter(Boolean) as string[];
+  });
+
+  if (compTeams.length >= 2) {
+    for (const hn of compTeams[0]) {
+      for (const an of compTeams[1]) {
         if (teamsMatch(title, `${hn} vs ${an}`)) return true;
+        if (teamsMatch(title, `${an} vs ${hn}`)) return true;
       }
     }
   }
+
   return false;
+}
+
+function extractScoreForTitle(
+  title: string,
+  competitors: EspnCompetitor[],
+): { home: number | null; away: number | null } {
+  const { home: homeTitle, away: awayTitle } = extractTeamNames(title);
+
+  const getCompScore = (c?: EspnCompetitor): number | null => {
+    if (!c) return null;
+    if (c.score != null && !isNaN(Number(c.score))) return Number(c.score);
+    if (Array.isArray(c.linescores) && c.linescores.length > 0) {
+      const sets = c.linescores.filter(l => l.winner).length;
+      return sets;
+    }
+    return null;
+  };
+
+  // Find competitor matching home title
+  const homeComp = competitors.find(c => {
+    const names = [
+      c.team?.displayName,
+      c.team?.name,
+      c.team?.shortDisplayName,
+      c.team?.location,
+      c.athlete?.displayName,
+      c.athlete?.fullName,
+    ].filter(Boolean) as string[];
+    return names.some(n => teamSimilarity(homeTitle, n) >= 1.0);
+  });
+
+  // Find competitor matching away title
+  const awayComp = competitors.find(c => {
+    const names = [
+      c.team?.displayName,
+      c.team?.name,
+      c.team?.shortDisplayName,
+      c.team?.location,
+      c.athlete?.displayName,
+      c.athlete?.fullName,
+    ].filter(Boolean) as string[];
+    return names.some(n => teamSimilarity(awayTitle, n) >= 1.0);
+  });
+
+  if (homeComp && awayComp && homeComp !== awayComp) {
+    return {
+      home: getCompScore(homeComp),
+      away: getCompScore(awayComp),
+    };
+  }
+
+  // Fallback to homeAway tag if present
+  const defaultHome = competitors.find(c => c.homeAway === 'home');
+  const defaultAway = competitors.find(c => c.homeAway === 'away');
+
+  return {
+    home: getCompScore(defaultHome || competitors[0]),
+    away: getCompScore(defaultAway || competitors[1]),
+  };
 }
 
 async function fetchEspnEvents(sport: string, league: string, date?: string): Promise<EspnEvent[]> {
@@ -250,74 +382,138 @@ async function fetchEspnEvents(sport: string, league: string, date?: string): Pr
   }
 }
 
+// Specialized tennis score resolver from ESPN ATP/WTA
+async function getTennisScoreFromEspn(
+  title: string,
+  timestamp: number,
+): Promise<MatchScore | null> {
+  const date = timestamp ? new Date(timestamp).toISOString().slice(0, 10).replaceAll('-', '') : '';
+  const leagues = ['atp', 'wta'];
+
+  for (const league of leagues) {
+    const eventsList = [
+      ...(date ? await fetchEspnEvents('tennis', league, date) : []),
+      ...(await fetchEspnEvents('tennis', league)),
+    ];
+
+    for (const evt of eventsList) {
+      for (const grp of evt.groupings || []) {
+        for (const comp of grp.competitions || []) {
+          const competitors = comp.competitors || [];
+          if (competitors.length < 2) continue;
+          const p1 = competitors[0].athlete?.displayName || competitors[0].athlete?.fullName || '';
+          const p2 = competitors[1].athlete?.displayName || competitors[1].athlete?.fullName || '';
+
+          if (!p1 || !p2) continue;
+
+          if (teamsMatch(title, `${p1} vs ${p2}`) || teamsMatch(title, `${p2} vs ${p1}`)) {
+            const scores = extractScoreForTitle(title, competitors);
+            const statusDetail = comp.status?.type?.detail ||
+              comp.status?.type?.shortDetail ||
+              comp.status?.type?.description ||
+              comp.notes?.[0]?.text || '';
+
+            return {
+              home: scores.home,
+              away: scores.away,
+              currentMinute: statusDetail,
+            };
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 async function getEspnScore(
   title: string,
   timestamp: number,
   tournament: string,
   sport = 'football',
 ): Promise<MatchScore | null> {
-  const config = getEspnSportConfig(sport, tournament);
-  if (!config) return null;
+  const normSport = (sport || '').toLowerCase().replace(/[\s-_]+/g, '');
 
-  const date = timestamp ? new Date(timestamp).toISOString().slice(0, 10).replaceAll('-', '') : '';
-
-  // 1. Try with date if available
-  let events = date ? await fetchEspnEvents(config.sport, config.league, date) : [];
-  let event = events.find(candidate => matchEspnEvent(title, candidate));
-
-  // 2. If not found, try the current scoreboard without date (current round/matchday)
-  if (!event) {
-    const currentEvents = await fetchEspnEvents(config.sport, config.league);
-    event = currentEvents.find(candidate => matchEspnEvent(title, candidate));
+  // Handle tennis scoreboard separately
+  if (normSport === 'tennis') {
+    const tennisScore = await getTennisScoreFromEspn(title, timestamp);
+    if (tennisScore) return tennisScore;
   }
 
-  // 3. If still not found and timestamp is present, check adjacent days (timezone offset)
-  if (!event && timestamp) {
-    const prevDate = new Date(timestamp - 86400000).toISOString().slice(0, 10).replaceAll('-', '');
-    const nextDate = new Date(timestamp + 86400000).toISOString().slice(0, 10).replaceAll('-', '');
+  const configs = getEspnSportConfigs(sport, tournament);
+  if (!configs || configs.length === 0) return null;
 
-    const prevEvents = await fetchEspnEvents(config.sport, config.league, prevDate);
-    event = prevEvents.find(candidate => matchEspnEvent(title, candidate));
+  const date = timestamp ? new Date(timestamp).toISOString().slice(0, 10).replaceAll('-', '') : '';
+  const prevDate = timestamp ? new Date(timestamp - 86400000).toISOString().slice(0, 10).replaceAll('-', '') : '';
+  const nextDate = timestamp ? new Date(timestamp + 86400000).toISOString().slice(0, 10).replaceAll('-', '') : '';
+
+  for (const config of configs) {
+    let events = date ? await fetchEspnEvents(config.sport, config.league, date) : [];
+    let event = events.find(candidate => matchEspnEvent(title, candidate));
 
     if (!event) {
-      const nextEvents = await fetchEspnEvents(config.sport, config.league, nextDate);
-      event = nextEvents.find(candidate => matchEspnEvent(title, candidate));
+      const currentEvents = await fetchEspnEvents(config.sport, config.league);
+      event = currentEvents.find(candidate => matchEspnEvent(title, candidate));
+    }
+
+    if (!event && timestamp) {
+      const prevEvents = await fetchEspnEvents(config.sport, config.league, prevDate);
+      event = prevEvents.find(candidate => matchEspnEvent(title, candidate));
+
+      if (!event) {
+        const nextEvents = await fetchEspnEvents(config.sport, config.league, nextDate);
+        event = nextEvents.find(candidate => matchEspnEvent(title, candidate));
+      }
+    }
+
+    if (event) {
+      const competitors = event.competitions?.[0]?.competitors || [];
+      const scores = extractScoreForTitle(title, competitors);
+      const currentMinute = event.competitions?.[0]?.status?.displayClock ||
+        event.status?.type?.shortDetail ||
+        event.status?.type?.detail || '';
+
+      return {
+        home: scores.home,
+        away: scores.away,
+        currentMinute,
+      };
     }
   }
 
-  if (!event) return null;
-  const competitors = event.competitions?.[0]?.competitors || [];
-  const home = competitors.find(team => team.homeAway === 'home')?.score;
-  const away = competitors.find(team => team.homeAway === 'away')?.score;
-  return {
-    home: home == null ? null : Number(home),
-    away: away == null ? null : Number(away),
-    currentMinute: event.competitions?.[0]?.status?.displayClock ||
-      event.status?.type?.shortDetail ||
-      event.status?.type?.detail || '',
-  };
+  return null;
 }
 
-async function getEventsForDate(date: string): Promise<ScoreEvent[]> {
-  const cached = eventsCache.get(date);
+async function getEventsForDate(date: string, sport = 'football'): Promise<ScoreEvent[]> {
+  const normSport = (sport || '').toLowerCase().replace(/[\s-_]+/g, '');
+  let sportParam = 'Soccer';
+  if (normSport === 'basketball' || normSport === 'nba') sportParam = 'Basketball';
+  else if (normSport === 'hockey' || normSport === 'icehockey' || normSport === 'nhl') sportParam = 'Ice%20Hockey';
+  else if (normSport === 'tennis') sportParam = 'Tennis';
+
+  const cacheKey = `${sportParam}:${date}`;
+  const cached = eventsCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.events;
-  const inFlight = eventsInFlight.get(date);
+  const inFlight = eventsInFlight.get(cacheKey);
   if (inFlight) return inFlight;
 
   const request = (async () => {
     try {
       const data = await fetchWithTimeout(
-        `${SCORE_API}?d=${date}&s=Soccer`,
+        `${SCORE_API}?d=${date}&s=${sportParam}`,
         TIMEOUT_MS,
       ) as ScoreResponse;
-      const events = data.events || [];
-      eventsCache.set(date, { expiresAt: Date.now() + EVENTS_CACHE_TTL, events });
+      const events = Array.isArray(data?.events) ? data.events : [];
+      eventsCache.set(cacheKey, { expiresAt: Date.now() + EVENTS_CACHE_TTL, events });
       return events;
+    } catch {
+      return [];
     } finally {
-      eventsInFlight.delete(date);
+      eventsInFlight.delete(cacheKey);
     }
   })();
-  eventsInFlight.set(date, request);
+  eventsInFlight.set(cacheKey, request);
   return request;
 }
 
@@ -334,13 +530,15 @@ async function searchEvent(title: string): Promise<ScoreEvent | null> {
         `${EVENT_SEARCH_API}?e=${encodeURIComponent(query)}`,
         TIMEOUT_MS,
       ) as SearchResponse;
-      const event = (data.event || []).find(candidate => {
+      const event = (data?.event || []).find(candidate => {
         const candidateTitle = candidate.strEvent ||
           `${candidate.strHomeTeam || ''} vs ${candidate.strAwayTeam || ''}`;
         return teamsMatch(title, candidateTitle);
       }) || null;
       searchCache.set(query, { expiresAt: Date.now() + SEARCH_CACHE_TTL, event });
       return event;
+    } catch {
+      return null;
     } finally {
       searchInFlight.delete(query);
     }
@@ -387,32 +585,24 @@ async function getEspnEvent(
   tournament: string,
   sport = 'football',
 ): Promise<EspnEvent | null> {
-  const config = getEspnSportConfig(sport, tournament);
-  if (!config) return null;
+  const configs = getEspnSportConfigs(sport, tournament);
+  if (!configs || configs.length === 0) return null;
 
   const date = timestamp ? new Date(timestamp).toISOString().slice(0, 10).replaceAll('-', '') : '';
-  let events = date ? await fetchEspnEvents(config.sport, config.league, date) : [];
-  let event = events.find(candidate => matchEspnEvent(title, candidate));
 
-  if (!event) {
-    const currentEvents = await fetchEspnEvents(config.sport, config.league);
-    event = currentEvents.find(candidate => matchEspnEvent(title, candidate));
-  }
-
-  if (!event && timestamp) {
-    const prevDate = new Date(timestamp - 86400000).toISOString().slice(0, 10).replaceAll('-', '');
-    const nextDate = new Date(timestamp + 86400000).toISOString().slice(0, 10).replaceAll('-', '');
-
-    const prevEvents = await fetchEspnEvents(config.sport, config.league, prevDate);
-    event = prevEvents.find(candidate => matchEspnEvent(title, candidate));
+  for (const config of configs) {
+    let events = date ? await fetchEspnEvents(config.sport, config.league, date) : [];
+    let event = events.find(candidate => matchEspnEvent(title, candidate));
 
     if (!event) {
-      const nextEvents = await fetchEspnEvents(config.sport, config.league, nextDate);
-      event = nextEvents.find(candidate => matchEspnEvent(title, candidate));
+      const currentEvents = await fetchEspnEvents(config.sport, config.league);
+      event = currentEvents.find(candidate => matchEspnEvent(title, candidate));
     }
+
+    if (event) return event;
   }
 
-  return event || null;
+  return null;
 }
 
 export async function getExternalMatchStats(
@@ -422,8 +612,9 @@ export async function getExternalMatchStats(
   sport = 'football',
 ): Promise<ExternalMatchStats | null> {
   try {
-    const config = getEspnSportConfig(sport, tournament);
-    if (!config) return null;
+    const configs = getEspnSportConfigs(sport, tournament);
+    if (!configs || configs.length === 0) return null;
+    const config = configs[0];
     const event = await getEspnEvent(title, timestamp, tournament, sport);
     if (!event?.id) return null;
     const cached = summaryCache.get(event.id);
@@ -454,31 +645,39 @@ export async function getScoreForMatch(
   eventId?: string,
   sport = 'football',
 ): Promise<MatchScore | null> {
+  const normSport = (sport || '').toLowerCase().replace(/[\s-_]+/g, '');
   const date = new Date(timestamp).toISOString().slice(0, 10);
 
+  // 1. Try ESPN first (supports Football, Basketball, Hockey, Tennis, Baseball)
   let espnScore: MatchScore | null = null;
   try {
-    espnScore = await getEspnScore(title, timestamp, tournament, sport);
-    if (!espnScore && sport === 'football' && !getEspnLeague(tournament)) {
-      espnScore = await getEspnScore(title, timestamp, 'uefa champions league', sport);
+    espnScore = await getEspnScore(title, timestamp, tournament, normSport);
+    if (!espnScore && normSport === 'football' && !getEspnLeague(tournament)) {
+      espnScore = await getEspnScore(title, timestamp, 'uefa champions league', 'football');
     }
   } catch (error) {
     logger.warn('ESPN score provider unavailable', {
       error: error instanceof Error ? error.message : String(error),
     });
   }
-  if (espnScore) return espnScore;
+  if (espnScore && (espnScore.home !== null || espnScore.away !== null)) {
+    return espnScore;
+  }
 
-  const streamedScore = await getStreamedScore(title, timestamp, sport);
-  if (streamedScore) return streamedScore;
+  // 2. Try Streamed.pk score endpoint
+  const streamedScore = await getStreamedScore(title, timestamp, normSport);
+  if (streamedScore && (streamedScore.home !== null || streamedScore.away !== null)) {
+    return streamedScore;
+  }
 
+  // 3. Fallback to TheSportsDB
   try {
     if (eventId) {
       const data = await fetchWithTimeout(
         `${EVENT_LOOKUP_API}?id=${encodeURIComponent(eventId)}`,
         TIMEOUT_MS,
       ) as SearchResponse;
-      const event = (data.event || []).find(candidate => {
+      const event = (data?.event || []).find(candidate => {
         const candidateTitle = candidate.strEvent ||
           `${candidate.strHomeTeam || ''} vs ${candidate.strAwayTeam || ''}`;
         return teamsMatch(title, candidateTitle);
@@ -486,7 +685,7 @@ export async function getScoreForMatch(
       if (event) return parseScore(event);
     }
 
-    let event: ScoreEvent | null = (await getEventsForDate(date)).find(candidate => {
+    let event: ScoreEvent | null = (await getEventsForDate(date, normSport)).find(candidate => {
       const candidateTitle = candidate.strEvent ||
         `${candidate.strHomeTeam || ''} vs ${candidate.strAwayTeam || ''}`;
       return teamsMatch(title, candidateTitle);

@@ -33,3 +33,51 @@ describe('Champions League Score Provider', () => {
     }
   }, 10000);
 });
+
+describe('Multi-Sport Score Resolution (Basketball, Hockey, Tennis)', () => {
+  it('should resolve scores for NBA Basketball match', async () => {
+    const score = await getScoreForMatch(
+      'Chicago Bulls vs Milwaukee Bucks',
+      Date.now(),
+      'NBA',
+      undefined,
+      'basketball'
+    );
+    expect(score).not.toBeNull();
+    if (score) {
+      expect(score.home).toBe(132);
+      expect(score.away).toBe(125);
+    }
+  }, 10000);
+
+  it('should resolve scores for NHL Hockey match', async () => {
+    const score = await getScoreForMatch(
+      'Montreal Canadiens vs Chicago Blackhawks',
+      Date.now(),
+      'NHL',
+      undefined,
+      'hockey'
+    );
+    expect(score).not.toBeNull();
+    if (score) {
+      expect(score.home).toBe(4);
+      expect(score.away).toBe(1);
+    }
+  }, 10000);
+
+  it('should resolve scores for Tennis match', async () => {
+    const score = await getScoreForMatch(
+      'Arthur Fils vs Alex Michelsen',
+      Date.now(),
+      'ATP Tennis',
+      undefined,
+      'tennis'
+    );
+    expect(score).not.toBeNull();
+    if (score) {
+      expect(score.home).toBe(2);
+      expect(score.away).toBe(0);
+      expect(score.currentMinute).toBeDefined();
+    }
+  }, 10000);
+});

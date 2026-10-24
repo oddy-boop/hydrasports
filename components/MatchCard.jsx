@@ -176,7 +176,7 @@ export default function MatchCard({ match, tab }) {
 
           {/* Big Center Score */}
           <div className="flex flex-col items-center justify-center shrink-0 min-w-[70px]">
-            {status === 'live' || status === 'finished' ? (
+            {status === 'live' || status === 'finished' || (displayHomeScore != null && displayAwayScore != null) ? (
               <span className="text-2xl sm:text-3xl font-black text-white tracking-wider tabular-nums">
                 {displayHomeScore ?? 0} : {displayAwayScore ?? 0}
               </span>

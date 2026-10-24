@@ -58,7 +58,7 @@ export async function getStandingsForLeague(leagueQuery = 'serie a'): Promise<Le
   const slug = LEAGUE_SLUG_MAP[normalized] || 'ita.1';
 
   const cache = getCacheManager();
-  return cache.swr(`standings_${slug}`, async () => {
+  return cache.swr(`standings_v2_${slug}`, async () => {
     try {
       const url = `https://site.api.espn.com/apis/v2/sports/soccer/${slug}/standings`;
       const data = await fetchWithTimeout(url, 5000);
@@ -112,7 +112,7 @@ export async function getStandingsForLeague(leagueQuery = 'serie a'): Promise<Le
       return {
         leagueName,
         season,
-        entries: entries.slice(0, 15), // Top 15 teams
+        entries: entries, // Full league table (all 20 teams)
       };
     } catch (err: any) {
       logger.error('Failed to fetch real league standings from ESPN', { slug, error: err.message });
