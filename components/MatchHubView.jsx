@@ -343,10 +343,100 @@ export default function MatchHubView({
   const mfList = currentStarters.filter(p => p.positionGroup === 'MF');
   const fwList = currentStarters.filter(p => p.positionGroup === 'FW');
 
+  const renderMatchScoreboardCard = () => (
+    <div className="rounded-3xl bg-[#131222]/95 backdrop-blur-xl border border-white/10 p-4 sm:p-5 shadow-2xl w-full">
+      {/* Header: "Match Scoreboard" | Date */}
+      <div className="flex items-center justify-between pb-2 border-b border-white/5">
+        <span className="text-xs font-black uppercase tracking-wider text-white">
+          Match Scoreboard
+        </span>
+        <span className="flex items-center gap-1.5 text-xs text-slate-400 font-semibold">
+          <Calendar className="h-3 w-3 text-slate-400" />
+          <span>{hubData.matchDate}</span>
+        </span>
+      </div>
+
+      {/* Subheader: Stage & Venue */}
+      <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium pt-2 pb-2">
+        <span>{hubData.stage}</span>
+        <span className="truncate max-w-[150px]">{hubData.venue}</span>
+      </div>
+
+      {/* Scoreboard: Team Crest | Score | Team Crest */}
+      <div className="py-2 flex items-center justify-between px-1 sm:px-2">
+        {/* Home Team */}
+        <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+          <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl p-1 bg-white/10 border border-white/20 flex items-center justify-center shadow-lg overflow-hidden shrink-0">
+            <img
+              src={hubData.homeBadge}
+              alt={hubData.homeName}
+              className="max-h-9 max-w-9 sm:max-h-10 sm:max-w-10 object-contain drop-shadow"
+            />
+          </div>
+          <span className="text-[11px] font-bold text-white text-center truncate max-w-[90px] sm:max-w-[120px]">
+            {hubData.homeName}
+          </span>
+        </div>
+
+        {/* Score */}
+        <div className="text-3xl sm:text-4xl font-black text-white tracking-wider tabular-nums flex items-center gap-2 px-2 shrink-0">
+          <span>{match.homeScore ?? 0}</span>
+          <span className="text-slate-500 font-light">-</span>
+          <span>{match.awayScore ?? 0}</span>
+        </div>
+
+        {/* Away Team */}
+        <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+          <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl p-1 bg-white/10 border border-white/20 flex items-center justify-center shadow-lg overflow-hidden shrink-0">
+            <img
+              src={hubData.awayBadge}
+              alt={hubData.awayName}
+              className="max-h-9 max-w-9 sm:max-h-10 sm:max-w-10 object-contain drop-shadow"
+            />
+          </div>
+          <span className="text-[11px] font-bold text-white text-center truncate max-w-[90px] sm:max-w-[120px]">
+            {hubData.awayName}
+          </span>
+        </div>
+      </div>
+
+      {/* Scorers List: Strictly Real Match Goals */}
+      <div className="mt-2.5 pt-2.5 border-t border-white/5">
+        {hubData.homeScorersList.length > 0 || hubData.awayScorersList.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            {/* Home Scorers */}
+            <div className="space-y-1 text-left">
+              {hubData.homeScorersList.map((s, idx) => (
+                <p key={idx} className="text-slate-200 font-bold truncate">
+                  <span>{s.player} </span>
+                  <span className="text-purple-400 font-mono text-[11px]">{s.minutes}</span>
+                </p>
+              ))}
+            </div>
+
+            {/* Away Scorers */}
+            <div className="space-y-1 text-right">
+              {hubData.awayScorersList.map((s, idx) => (
+                <p key={idx} className="text-slate-200 font-bold truncate">
+                  <span>{s.player} </span>
+                  <span className="text-blue-400 font-mono text-[11px]">{s.minutes}</span>
+                </p>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-[11px] text-slate-500 text-center font-medium italic py-1">
+            No goals scored in this fixture yet
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div 
       ref={containerRef}
-      className={`min-h-screen w-full bg-[#0a0914] text-white flex flex-col font-sans selection:bg-purple-600 selection:text-white ${
+      className={`min-h-screen w-full max-w-full overflow-x-hidden bg-[#0a0914] text-white flex flex-col font-sans selection:bg-purple-600 selection:text-white ${
         isCssFullscreen ? '!fixed !inset-0 !z-[999999] !w-screen !h-[100dvh] !overflow-y-auto' : ''
       }`}
     >
@@ -362,22 +452,22 @@ export default function MatchHubView({
       )}
 
       {/* ── 1. TOP HEADER ── */}
-      <header className="sticky top-0 z-40 h-[68px] w-full bg-[#121020]/95 backdrop-blur-xl border-b border-white/[0.08] px-4 md:px-6 flex items-center justify-between shadow-lg">
+      <header className="sticky top-0 z-40 h-[68px] w-full max-w-full bg-[#121020]/95 backdrop-blur-xl border-b border-white/[0.08] px-3 sm:px-6 flex items-center justify-between shadow-lg">
         {/* Left: Tournament Badge & Return link */}
-        <div className="flex items-center gap-3 sm:gap-6">
+        <div className="flex items-center gap-2 sm:gap-6 min-w-0">
           <Link
             href="/"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-bold border border-white/10 transition-all group"
+            className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-bold border border-white/10 transition-all group shrink-0"
           >
             <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 text-purple-400 transition-transform" />
             <span className="hidden sm:inline">Hub</span>
           </Link>
 
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 ring-1 ring-amber-300/40">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 ring-1 ring-amber-300/40 shrink-0">
               <Trophy className="h-4 w-4 text-[#1a1100]" />
             </div>
-            <span className="text-xs sm:text-sm font-black tracking-wider text-white uppercase truncate max-w-[160px] sm:max-w-none">
+            <span className="text-xs sm:text-sm font-black tracking-wider text-white uppercase truncate max-w-[130px] sm:max-w-none">
               {tournamentName}
             </span>
           </div>
@@ -450,28 +540,33 @@ export default function MatchHubView({
       </header>
 
       {/* ── 2. MAIN BROADCAST CANVAS & TACTICAL RAIL ── */}
-      <main className="flex-1 w-full max-w-[1720px] mx-auto p-3 sm:p-5 flex flex-col xl:flex-row gap-5 items-start">
+      <main className="flex-1 w-full max-w-[1720px] mx-auto p-3 sm:p-5 flex flex-col xl:flex-row gap-5 items-start min-w-0">
         
         {/* Left / Center: Video Stream + Unobstructed Controls + Tactical Panels Below */}
-        <div className="flex-1 flex flex-col gap-5 min-w-0">
+        <div className="flex-1 flex flex-col gap-4 sm:gap-5 min-w-0 w-full">
           
+          {/* ON MOBILE / TABLET (< xl): Match Scoreboard rendered directly on TOP of the stream */}
+          <div className="block xl:hidden w-full">
+            {renderMatchScoreboardCard()}
+          </div>
+
           {/* Main Broadcast Container (Video Stream & Servers) */}
-          <div className="w-full rounded-3xl overflow-hidden bg-[#0d0c15] border border-white/10 shadow-2xl flex flex-col p-3 sm:p-4">
+          <div className="w-full rounded-3xl overflow-hidden bg-[#0d0c15] border border-white/10 shadow-2xl flex flex-col p-3 sm:p-4 min-w-0">
             
             {/* Top Match Bar */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3 px-1">
-              <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-600/90 text-white text-[11px] font-black uppercase tracking-wider animate-pulse">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3 px-1 min-w-0 gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <span className="flex items-center gap-1.5 px-2 sm:px-2.5 py-0.5 rounded-full bg-red-600/90 text-white text-[10px] sm:text-[11px] font-black uppercase tracking-wider animate-pulse shrink-0">
                   <span className="h-1.5 w-1.5 rounded-full bg-white" />
                   <span>Live Broadcast</span>
                 </span>
-                <h2 className="text-sm sm:text-base font-extrabold text-white truncate drop-shadow">
+                <h2 className="text-xs sm:text-base font-extrabold text-white truncate drop-shadow min-w-0">
                   {hubData.homeName} vs {hubData.awayName}
                 </h2>
               </div>
 
               {match.currentMinute && (
-                <span className="text-xs font-mono font-bold text-purple-300 bg-purple-950/60 border border-purple-500/30 px-2 py-0.5 rounded-lg">
+                <span className="text-xs font-mono font-bold text-purple-300 bg-purple-950/60 border border-purple-500/30 px-2 py-0.5 rounded-lg shrink-0">
                   ⏱ {match.currentMinute}
                 </span>
               )}
@@ -509,11 +604,11 @@ export default function MatchHubView({
           <div className="w-full rounded-3xl bg-[#131124] border border-white/10 p-4 sm:p-6 shadow-2xl flex flex-col gap-4">
             
             {/* Tactical Navigation Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
-              <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10 w-full min-w-0">
+              <div className="flex items-center gap-1.5 overflow-x-auto py-1 no-scrollbar w-full sm:w-auto min-w-0 -mx-1 px-1">
                 <button
                   onClick={() => setTacticalTab('lineups')}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                     tacticalTab === 'lineups'
                       ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
                       : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -530,7 +625,7 @@ export default function MatchHubView({
 
                 <button
                   onClick={() => setTacticalTab('subs')}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                     tacticalTab === 'subs'
                       ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
                       : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -547,7 +642,7 @@ export default function MatchHubView({
 
                 <button
                   onClick={() => setTacticalTab('discipline')}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                     tacticalTab === 'discipline'
                       ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
                       : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -564,7 +659,7 @@ export default function MatchHubView({
 
                 <button
                   onClick={() => setTacticalTab('stats')}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                     tacticalTab === 'stats'
                       ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
                       : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -581,7 +676,7 @@ export default function MatchHubView({
 
                 <button
                   onClick={() => setTacticalTab('zones')}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                     tacticalTab === 'zones'
                       ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
                       : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -598,7 +693,7 @@ export default function MatchHubView({
               </div>
 
               {/* Team Switcher Toggle */}
-              <div className="flex items-center gap-1 bg-[#1a172e] p-1 rounded-xl border border-white/10">
+              <div className="flex items-center gap-1 bg-[#1a172e] p-1 rounded-xl border border-white/10 shrink-0 self-start sm:self-auto">
                 <button
                   onClick={() => setSelectedTeamTab('home')}
                   className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -608,7 +703,7 @@ export default function MatchHubView({
                   }`}
                 >
                   <img src={hubData.homeBadge} alt="" className="h-4 w-4 object-contain" />
-                  <span className="truncate max-w-[100px]">{hubData.homeName}</span>
+                  <span className="truncate max-w-[80px] sm:max-w-[100px]">{hubData.homeName}</span>
                 </button>
 
                 <button
@@ -862,7 +957,7 @@ export default function MatchHubView({
                     </div>
                   </div>
                 ) : (
-                  <div className="lg:col-span-6 rounded-2xl bg-gradient-to-b from-[#092e1e] to-[#041910] border border-emerald-500/30 p-4 relative shadow-inner overflow-hidden min-h-[380px] flex flex-col justify-between">
+                  <div className="lg:col-span-6 rounded-2xl bg-gradient-to-b from-[#092e1e] to-[#041910] border border-emerald-500/30 p-2 sm:p-4 relative shadow-inner overflow-hidden min-h-[380px] flex flex-col justify-between">
                     {/* Pitch markings */}
                     <div className="absolute inset-0 opacity-20 pointer-events-none">
                       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-20 border-b border-x border-white rounded-b-2xl" />
@@ -885,7 +980,7 @@ export default function MatchHubView({
                     {/* Dynamic Pitch Rows accurately arranged by formation (e.g. 4-2-3-1, 4-3-3, 3-5-2) */}
                     <div className="relative z-10 flex-1 flex flex-col justify-around py-3 gap-2">
                       {outfieldRows.map((rowPlayers, rIdx) => (
-                        <div key={rIdx} className="flex items-center justify-around w-full px-2">
+                        <div key={rIdx} className="flex items-center justify-around w-full px-1 sm:px-2">
                           {rowPlayers.map((p, pIdx) => {
                             const cleanName = p.name?.toLowerCase().trim();
                             const faceUrl = playerFaces[cleanName] || p.avatar;
@@ -904,7 +999,7 @@ export default function MatchHubView({
                                 title={`Click to view profile & market value: ${p.name} #${p.jersey} (${p.position})`} 
                                 className="flex flex-col items-center group relative cursor-pointer"
                               >
-                                <div className="relative h-10 w-10 sm:h-11 sm:w-11 rounded-full border-2 border-white/85 bg-gradient-to-tr from-[#1a103c] via-[#2d1b69] to-[#4c1d95] flex items-center justify-center shadow-lg group-hover:scale-115 group-hover:border-purple-400 group-hover:shadow-[0_0_15px_rgba(168,85,247,0.5)] transition-all duration-300">
+                                <div className="relative h-9 w-9 sm:h-11 sm:w-11 rounded-full border-2 border-white/85 bg-gradient-to-tr from-[#1a103c] via-[#2d1b69] to-[#4c1d95] flex items-center justify-center shadow-lg group-hover:scale-115 group-hover:border-purple-400 group-hover:shadow-[0_0_15px_rgba(168,85,247,0.5)] transition-all duration-300">
                                   {faceUrl ? (
                                     <img
                                       src={faceUrl}
@@ -916,23 +1011,23 @@ export default function MatchHubView({
                                       }}
                                     />
                                   ) : null}
-                                  <span className="text-[11px] font-black text-white absolute inset-0 flex items-center justify-center -z-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                                  <span className="text-[10px] sm:text-[11px] font-black text-white absolute inset-0 flex items-center justify-center -z-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                                     {p.jersey}
                                   </span>
 
                                   {/* Live Match Rating Badge on Player Side (FotMob / Sofascore style) */}
                                   <span 
-                                    className={`absolute -bottom-1 -right-1.5 px-1 min-w-[20px] h-4 rounded-full border border-black/40 text-[8.5px] font-black flex items-center justify-center shadow-md leading-none ${ratingObj.colorClass}`}
+                                    className={`absolute -bottom-1 -right-1 sm:-right-1.5 px-0.5 sm:px-1 min-w-[18px] sm:min-w-[20px] h-3.5 sm:h-4 rounded-full border border-black/40 text-[8px] sm:text-[8.5px] font-black flex items-center justify-center shadow-md leading-none ${ratingObj.colorClass}`}
                                     title={`Match Rating: ${ratingObj.rating.toFixed(1)} (${ratingObj.label})`}
                                   >
                                     {ratingObj.rating.toFixed(1)}
                                   </span>
                                 </div>
 
-                                <span className="text-[9.5px] font-bold text-white mt-1 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md truncate max-w-[95px] border border-white/10 shadow text-center flex items-center justify-center gap-1 group-hover:border-purple-400/50 group-hover:text-purple-200 transition-colors">
-                                  <span>{p.name.split(' ').slice(-1)[0]}</span>
+                                <span className="text-[8px] sm:text-[9.5px] font-bold text-white mt-1 px-1 sm:px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md truncate max-w-[62px] sm:max-w-[95px] border border-white/10 shadow text-center flex items-center justify-center gap-0.5 sm:gap-1 group-hover:border-purple-400/50 group-hover:text-purple-200 transition-colors">
+                                  <span className="truncate">{p.name.split(' ').slice(-1)[0]}</span>
                                   {p.position && (
-                                    <span className="text-[7.5px] text-purple-300 font-black uppercase opacity-90">{p.position}</span>
+                                    <span className="text-[7px] sm:text-[7.5px] text-purple-300 font-black uppercase opacity-90 hidden xs:inline">{p.position}</span>
                                   )}
                                 </span>
                               </div>
@@ -961,7 +1056,7 @@ export default function MatchHubView({
                               title={`Click to view profile & market value: ${p.name} #${p.jersey} (Goalkeeper)`} 
                               className="flex flex-col items-center group relative cursor-pointer"
                             >
-                              <div className="relative h-10 w-10 sm:h-11 sm:w-11 rounded-full border-2 border-emerald-300 bg-gradient-to-tr from-[#064e3b] to-[#047857] flex items-center justify-center shadow-lg group-hover:scale-115 group-hover:border-emerald-200 transition-all duration-300">
+                              <div className="relative h-9 w-9 sm:h-11 sm:w-11 rounded-full border-2 border-emerald-300 bg-gradient-to-tr from-[#064e3b] to-[#047857] flex items-center justify-center shadow-lg group-hover:scale-115 group-hover:border-emerald-200 transition-all duration-300">
                                 {faceUrl ? (
                                   <img
                                     src={faceUrl}
@@ -973,22 +1068,22 @@ export default function MatchHubView({
                                     }}
                                   />
                                 ) : null}
-                                <span className="text-[11px] font-black text-white absolute inset-0 flex items-center justify-center -z-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                                <span className="text-[10px] sm:text-[11px] font-black text-white absolute inset-0 flex items-center justify-center -z-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                                   {p.jersey}
                                 </span>
 
                                 {/* Live Match Rating Badge on Goalkeeper Side */}
                                 <span 
-                                  className={`absolute -bottom-1 -right-1.5 px-1 min-w-[20px] h-4 rounded-full border border-black/40 text-[8.5px] font-black flex items-center justify-center shadow-md leading-none ${ratingObj.colorClass}`}
+                                  className={`absolute -bottom-1 -right-1 sm:-right-1.5 px-0.5 sm:px-1 min-w-[18px] sm:min-w-[20px] h-3.5 sm:h-4 rounded-full border border-black/40 text-[8px] sm:text-[8.5px] font-black flex items-center justify-center shadow-md leading-none ${ratingObj.colorClass}`}
                                   title={`Match Rating: ${ratingObj.rating.toFixed(1)} (${ratingObj.label})`}
                                 >
                                   {ratingObj.rating.toFixed(1)}
                                 </span>
                               </div>
 
-                              <span className="text-[9.5px] font-bold text-emerald-200 mt-1 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md truncate max-w-[95px] border border-emerald-500/30 shadow text-center flex items-center justify-center gap-1 group-hover:border-emerald-400 group-hover:text-emerald-100 transition-colors">
-                                <span>{p.name.split(' ').slice(-1)[0]}</span>
-                                <span className="text-[7.5px] text-emerald-400 font-black uppercase opacity-90">GK</span>
+                              <span className="text-[8px] sm:text-[9.5px] font-bold text-emerald-200 mt-1 px-1 sm:px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md truncate max-w-[62px] sm:max-w-[95px] border border-emerald-500/30 shadow text-center flex items-center justify-center gap-0.5 sm:gap-1 group-hover:border-emerald-400 group-hover:text-emerald-100 transition-colors">
+                                <span className="truncate">{p.name.split(' ').slice(-1)[0]}</span>
+                                <span className="text-[7px] sm:text-[7.5px] text-emerald-400 font-black uppercase opacity-90 hidden xs:inline">GK</span>
                               </span>
                             </div>
                           );
@@ -1412,95 +1507,11 @@ export default function MatchHubView({
         </div>
 
         {/* ── 4. RIGHT TACTICAL MATCH RAIL (INDEPENDENTLY SCROLLABLE ON DESKTOP) ── */}
-        <aside className="w-full xl:w-[380px] 2xl:w-[400px] flex flex-col gap-4 shrink-0 xl:sticky xl:top-[80px] xl:max-h-[calc(100vh-96px)] xl:overflow-y-auto xl:pr-1.5 custom-vertical-scrollbar">
+        <aside className="w-full xl:w-[380px] 2xl:w-[400px] flex flex-col gap-4 shrink-0 xl:sticky xl:top-[80px] xl:max-h-[calc(100vh-96px)] xl:overflow-y-auto xl:pr-1.5 custom-vertical-scrollbar min-w-0">
           
-          {/* CARD 1: Match Scoreboard & Scorers (Real Data Strictly) */}
-          <div className="rounded-3xl bg-[#131222]/95 backdrop-blur-xl border border-white/10 p-5 shadow-2xl">
-            {/* Header: "Match" | Date */}
-            <div className="flex items-center justify-between pb-2 border-b border-white/5">
-              <span className="text-xs font-black uppercase tracking-wider text-white">
-                Match Scoreboard
-              </span>
-              <span className="flex items-center gap-1.5 text-xs text-slate-400 font-semibold">
-                <Calendar className="h-3 w-3 text-slate-400" />
-                <span>{hubData.matchDate}</span>
-              </span>
-            </div>
-
-            {/* Subheader: Stage & Venue */}
-            <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium pt-2 pb-3">
-              <span>{hubData.stage}</span>
-              <span className="truncate max-w-[150px]">{hubData.venue}</span>
-            </div>
-
-            {/* Scoreboard: Team Crest | Score | Team Crest */}
-            <div className="py-2 flex items-center justify-between px-2">
-              {/* Home Team */}
-              <div className="flex flex-col items-center gap-1.5">
-                <div className="h-12 w-12 rounded-2xl p-1 bg-white/10 border border-white/20 flex items-center justify-center shadow-lg overflow-hidden">
-                  <img
-                    src={hubData.homeBadge}
-                    alt={hubData.homeName}
-                    className="max-h-10 max-w-10 object-contain drop-shadow"
-                  />
-                </div>
-                <span className="text-[11px] font-bold text-white text-center truncate max-w-[80px]">
-                  {hubData.homeName}
-                </span>
-              </div>
-
-              {/* Score */}
-              <div className="text-3xl sm:text-4xl font-black text-white tracking-wider tabular-nums flex items-center gap-2">
-                <span>{match.homeScore ?? 0}</span>
-                <span className="text-slate-500 font-light">-</span>
-                <span>{match.awayScore ?? 0}</span>
-              </div>
-
-              {/* Away Team */}
-              <div className="flex flex-col items-center gap-1.5">
-                <div className="h-12 w-12 rounded-2xl p-1 bg-white/10 border border-white/20 flex items-center justify-center shadow-lg overflow-hidden">
-                  <img
-                    src={hubData.awayBadge}
-                    alt={hubData.awayName}
-                    className="max-h-10 max-w-10 object-contain drop-shadow"
-                  />
-                </div>
-                <span className="text-[11px] font-bold text-white text-center truncate max-w-[80px]">
-                  {hubData.awayName}
-                </span>
-              </div>
-            </div>
-
-            {/* Scorers List: Strictly Real Match Goals */}
-            <div className="mt-3 pt-3 border-t border-white/5">
-              {hubData.homeScorersList.length > 0 || hubData.awayScorersList.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  {/* Home Scorers */}
-                  <div className="space-y-1 text-left">
-                    {hubData.homeScorersList.map((s, idx) => (
-                      <p key={idx} className="text-slate-200 font-bold truncate">
-                        <span>{s.player} </span>
-                        <span className="text-purple-400 font-mono text-[11px]">{s.minutes}</span>
-                      </p>
-                    ))}
-                  </div>
-
-                  {/* Away Scorers */}
-                  <div className="space-y-1 text-right">
-                    {hubData.awayScorersList.map((s, idx) => (
-                      <p key={idx} className="text-slate-200 font-bold truncate">
-                        <span>{s.player} </span>
-                        <span className="text-blue-400 font-mono text-[11px]">{s.minutes}</span>
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[11px] text-slate-500 text-center font-medium italic py-1">
-                  No goals scored in this fixture yet
-                </p>
-              )}
-            </div>
+          {/* CARD 1: Match Scoreboard & Scorers (Visible on desktop xl:) */}
+          <div className="hidden xl:block w-full">
+            {renderMatchScoreboardCard()}
           </div>
 
           {/* CARD 2: Star Player / Man of the Match (Strictly from this fixture!) */}

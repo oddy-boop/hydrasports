@@ -605,24 +605,24 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
       </div>
 
       {!videoOnly && (
-        <div className="flex flex-col xl:flex-row items-stretch gap-4 w-full mt-4">
+        <div className="flex flex-col xl:flex-row items-stretch gap-3 sm:gap-4 w-full mt-3 sm:mt-4 min-w-0">
           {/* Dynamic Action Toolbar (Refresh, Theater, Fullscreen) */}
-          <div className="flex-1 bg-[#181628] border border-white/10 p-4 rounded-2xl shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex-1 bg-[#181628] border border-white/10 p-3 sm:p-4 rounded-2xl shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 min-w-0">
             {/* Left Side: Broadcast Status */}
-            <div className="flex items-center gap-2.5 text-left bg-[#131120] p-2.5 rounded-xl border border-white/10">
+            <div className="flex items-center gap-2.5 text-left bg-[#131120] p-2 sm:p-2.5 rounded-xl border border-white/10 min-w-0">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-              <div className="flex flex-col text-left">
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+              <div className="flex flex-col text-left min-w-0">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 truncate">
                   Direct Live Stream
                 </span>
-                <span className="text-[10px] text-slate-400 mt-0.5 leading-none block font-medium">
+                <span className="text-[10px] text-slate-400 mt-0.5 leading-none block font-medium truncate">
                   Official feed with full audio & video playback
                 </span>
               </div>
             </div>
 
             {/* Right Side: Viewport Controls Group */}
-            <div className="flex items-center gap-2 bg-[#131120] p-1.5 rounded-xl border border-white/10 justify-end flex-wrap">
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-[#131120] p-1.5 rounded-xl border border-white/10 justify-end flex-wrap min-w-0">
               {/* Resolution / Quality selector dropdown (Allows picking low res for slow internet) */}
               <div className="relative">
                 <button
@@ -739,7 +739,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
           </div>
 
           {/* Dedicated Servers Selection Panel */}
-          <div className="flex-[1.3] bg-[#181628] border border-white/10 p-4 rounded-2xl shadow-xl">
+          <div className="flex-[1.3] bg-[#181628] border border-white/10 p-3 sm:p-4 rounded-2xl shadow-xl min-w-0">
             {allChannels.length > 0 ? (
               <div className="flex flex-col gap-2.5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 flex-wrap">
