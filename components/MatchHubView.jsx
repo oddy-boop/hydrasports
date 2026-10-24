@@ -14,6 +14,7 @@ import {
   Bell,
   ArrowLeft,
   Maximize2,
+  Minimize2,
   RefreshCw,
   Heart,
   TrendingUp,
@@ -95,13 +96,79 @@ export default function MatchHubView({
   const currentChannels = channels.length > 0 ? channels : [{ name: 'Server 1', url: streamUrl, proxiedUrl: streamUrl }];
   const currentStreamUrl = currentChannels[activeChannelIdx]?.proxiedUrl || currentChannels[activeChannelIdx]?.url || streamUrl;
 
-  const toggleFullscreen = () => {
-    if (!containerRef.current) return;
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
-    } else {
-      containerRef.current.requestFullscreen().catch(() => {});
+  const [isCssFullscreen, setIsCssFullscreen] = useState(false);
+
+  // Sync fullscreen change events
+  useEffect(() => {
+    const handleFsChange = () => {
+      const doc = document;
+      const isFs = Boolean(
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement
+      );
+      if (!isFs && isCssFullscreen) {
+        setIsCssFullscreen(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+    };
+  }, [isCssFullscreen]);
+
+  const toggleFullscreen = async () => {
+    if (isCssFullscreen) {
+      setIsCssFullscreen(false);
+      return;
     }
+
+    const doc = document;
+    const isFs = Boolean(
+      doc.fullscreenElement ||
+      doc.webkitFullscreenElement ||
+      doc.mozFullScreenElement
+    );
+    if (isFs) {
+      if (doc.exitFullscreen) doc.exitFullscreen().catch(() => {});
+      else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
+      return;
+    }
+
+    // 1. Try HTML5 Fullscreen API
+    const el = containerRef.current;
+    if (el) {
+      try {
+        if (el.requestFullscreen) {
+          await el.requestFullscreen();
+          return;
+        } else if (el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen();
+          return;
+        } else if (el.mozRequestFullScreen) {
+          el.mozRequestFullScreen();
+          return;
+        }
+      } catch (err) {
+        console.warn('Standard fullscreen failed, falling back to CSS fullscreen', err);
+      }
+    }
+
+    // 2. Try iOS Safari native video fullscreen if video present
+    const video = containerRef.current?.querySelector('video');
+    if (video && typeof video.webkitEnterFullscreen === 'function') {
+      try {
+        video.webkitEnterFullscreen();
+        return;
+      } catch {
+        // continue to CSS fallback
+      }
+    }
+
+    // 3. Bulletproof Mobile CSS Fullscreen Fallback
+    setIsCssFullscreen(true);
   };
 
   const currentStarters = selectedTeamTab === 'home' ? (hubData.lineups?.home || []) : (hubData.lineups?.away || []);
@@ -122,6 +189,8 @@ export default function MatchHubView({
     const faceUrl = playerFaces[cleanName] || p.avatar;
     const details = buildPlayerFullDetails(p, teamName, teamBadge, faceUrl, {
       bestPlayerName: hubData.bestPlayer?.name,
+      bestPlayer: hubData.bestPlayer,
+      timelineEvents: hubData.timelineEvents,
       goalScorers: hubData.timelineEvents?.filter(e => e.type === 'goal').map(e => e.player || ''),
       yellowCards: hubData.timelineEvents?.filter(e => e.type === 'yellow_card').map(e => e.player || ''),
       isHome: isHomeTeam,
@@ -277,8 +346,21 @@ export default function MatchHubView({
   return (
     <div 
       ref={containerRef}
-      className="min-h-screen w-full bg-[#0a0914] text-white flex flex-col font-sans selection:bg-purple-600 selection:text-white"
+      className={`min-h-screen w-full bg-[#0a0914] text-white flex flex-col font-sans selection:bg-purple-600 selection:text-white ${
+        isCssFullscreen ? '!fixed !inset-0 !z-[999999] !w-screen !h-[100dvh] !overflow-y-auto' : ''
+      }`}
     >
+      {/* Floating Exit Fullscreen Button on Mobile when Fullscreen */}
+      {isCssFullscreen && (
+        <button
+          onClick={() => setIsCssFullscreen(false)}
+          className="fixed top-4 right-4 z-[1000000] px-3.5 py-2 rounded-full bg-black/85 backdrop-blur-md border border-white/20 text-white text-xs font-black shadow-2xl flex items-center gap-2 cursor-pointer hover:bg-purple-600 transition-all"
+        >
+          <Minimize2 className="w-3.5 h-3.5 text-purple-400" />
+          <span>Exit Fullscreen</span>
+        </button>
+      )}
+
       {/* ── 1. TOP HEADER ── */}
       <header className="sticky top-0 z-40 h-[68px] w-full bg-[#121020]/95 backdrop-blur-xl border-b border-white/[0.08] px-4 md:px-6 flex items-center justify-between shadow-lg">
         {/* Left: Tournament Badge & Return link */}
@@ -355,16 +437,20 @@ export default function MatchHubView({
         <div className="flex items-center gap-3">
           <button
             onClick={toggleFullscreen}
-            className="h-8 w-8 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer"
-            title="Toggle Fullscreen"
+            className={`h-8 w-8 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+              isCssFullscreen 
+                ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/30' 
+                : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300 hover:text-white'
+            }`}
+            title={isCssFullscreen ? "Exit Fullscreen" : "Toggle Fullscreen"}
           >
-            <Maximize2 className="h-4 w-4" />
+            {isCssFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>
         </div>
       </header>
 
       {/* ── 2. MAIN BROADCAST CANVAS & TACTICAL RAIL ── */}
-      <main className="flex-1 w-full max-w-[1720px] mx-auto p-3 sm:p-5 flex flex-col xl:flex-row gap-5">
+      <main className="flex-1 w-full max-w-[1720px] mx-auto p-3 sm:p-5 flex flex-col xl:flex-row gap-5 items-start">
         
         {/* Left / Center: Video Stream + Unobstructed Controls + Tactical Panels Below */}
         <div className="flex-1 flex flex-col gap-5 min-w-0">
@@ -1325,8 +1411,8 @@ export default function MatchHubView({
           </div>
         </div>
 
-        {/* ── 4. RIGHT TACTICAL MATCH RAIL (ZERO MOCK DATA) ── */}
-        <aside className="w-full xl:w-[380px] flex flex-col gap-4 shrink-0">
+        {/* ── 4. RIGHT TACTICAL MATCH RAIL (INDEPENDENTLY SCROLLABLE ON DESKTOP) ── */}
+        <aside className="w-full xl:w-[380px] 2xl:w-[400px] flex flex-col gap-4 shrink-0 xl:sticky xl:top-[80px] xl:max-h-[calc(100vh-96px)] xl:overflow-y-auto xl:pr-1.5 custom-vertical-scrollbar">
           
           {/* CARD 1: Match Scoreboard & Scorers (Real Data Strictly) */}
           <div className="rounded-3xl bg-[#131222]/95 backdrop-blur-xl border border-white/10 p-5 shadow-2xl">

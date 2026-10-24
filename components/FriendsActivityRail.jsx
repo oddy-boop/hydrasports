@@ -10,6 +10,7 @@ const SUPPORTED_LEAGUES_TABLE = [
   { id: 'La Liga', name: 'La Liga (ESP)' },
   { id: 'Serie A', name: 'Serie A (ITA)' },
   { id: 'Bundesliga', name: 'Bundesliga (GER)' },
+  { id: 'Champions League', name: 'UEFA Champions League' },
   { id: 'Ligue 1', name: 'Ligue 1 (FRA)' },
   { id: 'MLS', name: 'Major League Soccer (USA)' },
   { id: 'Eredivisie', name: 'Dutch Eredivisie (NED)' },
@@ -17,8 +18,20 @@ const SUPPORTED_LEAGUES_TABLE = [
   { id: 'SAF Primera', name: 'SAF Primera (ARG)' },
 ];
 
+const QUICK_LEAGUES = [
+  { id: 'Premier League', label: 'EPL' },
+  { id: 'La Liga', label: 'La Liga' },
+  { id: 'Serie A', label: 'Serie A' },
+  { id: 'Bundesliga', label: 'Bundesliga' },
+  { id: 'Champions League', label: 'UCL' },
+];
+
 export default function HydraSportsActivityRail() {
-  const { selectedLeague = 'Serie A', selectLeague } = useHydraSports();
+  const { selectedLeague = 'Premier League', selectLeague } = useHydraSports();
+  const [cardLeague, setCardLeague] = useState(
+    selectedLeague && selectedLeague !== 'All' ? selectedLeague : 'Premier League'
+  );
+  const [mobileTab, setMobileTab] = useState('standings');
   const [standings, setStandings] = useState([]);
   const [news, setNews] = useState([]);
   const [loadingStandings, setLoadingStandings] = useState(true);
@@ -26,18 +39,25 @@ export default function HydraSportsActivityRail() {
 
   // Full table modal state
   const [fullTableOpen, setFullTableOpen] = useState(false);
-  const [modalLeague, setModalLeague] = useState(selectedLeague && selectedLeague !== 'All' ? selectedLeague : 'Serie A');
+  const [modalLeague, setModalLeague] = useState(cardLeague);
   const [modalStandings, setModalStandings] = useState([]);
   const [loadingModalStandings, setLoadingModalStandings] = useState(false);
   const [selectedNewsArticle, setSelectedNewsArticle] = useState(null);
 
-  // Fetch real league standings for sidebar
+  // Sync cardLeague if selectedLeague from context changes and is not 'All'
+  useEffect(() => {
+    if (selectedLeague && selectedLeague !== 'All') {
+      setCardLeague(selectedLeague);
+    }
+  }, [selectedLeague]);
+
+  // Fetch real league standings for sidebar & mobile
   useEffect(() => {
     let cancelled = false;
     const fetchStandings = async () => {
       setLoadingStandings(true);
       try {
-        const query = selectedLeague && selectedLeague !== 'All' ? selectedLeague : 'Serie A';
+        const query = cardLeague || 'Premier League';
         const res = await fetch(`/api/standings?league=${encodeURIComponent(query)}`);
         if (!res.ok) throw new Error('Standings failed');
         const data = await res.json();
@@ -53,7 +73,7 @@ export default function HydraSportsActivityRail() {
 
     fetchStandings();
     return () => { cancelled = true; };
-  }, [selectedLeague]);
+  }, [cardLeague]);
 
   // Fetch standings for modal when modal is open or modalLeague changes
   useEffect(() => {
@@ -102,9 +122,7 @@ export default function HydraSportsActivityRail() {
     return () => { cancelled = true; };
   }, []);
 
-  const leagueTitle = selectedLeague && selectedLeague !== 'All' 
-    ? `${selectedLeague} Table` 
-    : 'Serie A Table';
+  const leagueTitle = `${cardLeague} Table`;
 
   const featuredNews = news[0] || {
     headline: 'European football round-up: Champions League contenders prepare for decisive week',
@@ -118,7 +136,7 @@ export default function HydraSportsActivityRail() {
         
         {/* ── CARD 1: League Standings ── */}
         <div className="rounded-2xl bg-[#1c1a2d] border border-white/[0.06] p-4 shadow-xl">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-[13px] font-extrabold text-white tracking-tight flex items-center gap-1.5 truncate">
               <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span className="truncate">{leagueTitle}</span>
@@ -128,7 +146,7 @@ export default function HydraSportsActivityRail() {
             <button
               type="button"
               onClick={() => {
-                setModalLeague(selectedLeague && selectedLeague !== 'All' ? selectedLeague : 'Serie A');
+                setModalLeague(cardLeague);
                 setFullTableOpen(true);
               }}
               className="text-[11px] font-extrabold text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1 shrink-0 cursor-pointer px-2 py-0.5 rounded-md hover:bg-purple-600/10"
@@ -137,6 +155,43 @@ export default function HydraSportsActivityRail() {
               <span>Full Table</span>
               <ExternalLink className="w-3 h-3" />
             </button>
+          </div>
+
+          {/* Quick League Selector Switcher Buttons & Dropdown */}
+          <div className="flex items-center gap-1.5 mb-3">
+            <div className="flex items-center gap-1 flex-1 overflow-x-auto no-scrollbar py-0.5">
+              {QUICK_LEAGUES.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => setCardLeague(l.id)}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold transition-all cursor-pointer shrink-0 ${
+                    cardLeague === l.id
+                      ? 'bg-purple-600 text-white shadow-sm shadow-purple-600/30'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-300'
+                  }`}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Dropdown Switcher for All Leagues */}
+            <div className="relative shrink-0">
+              <select
+                value={cardLeague}
+                onChange={(e) => setCardLeague(e.target.value)}
+                className="h-6 px-1.5 pr-5 rounded-md bg-[#25223c] hover:bg-[#2d2948] border border-white/10 text-[10px] font-bold text-slate-200 outline-none cursor-pointer appearance-none"
+                title="Switch Standings Table League"
+              >
+                {SUPPORTED_LEAGUES_TABLE.map((lg) => (
+                  <option key={lg.id} value={lg.id} className="bg-[#1c1a2d] text-white">
+                    {lg.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-2.5 h-2.5 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
 
           {/* Table Header */}
@@ -162,7 +217,7 @@ export default function HydraSportsActivityRail() {
                   key={row.team?.id || row.rank}
                   className="grid grid-cols-12 items-center text-[11px] py-1.5 px-1 rounded-lg hover:bg-white/[0.04] transition-colors font-medium text-slate-300 cursor-pointer"
                   onClick={() => {
-                    setModalLeague(selectedLeague && selectedLeague !== 'All' ? selectedLeague : 'Serie A');
+                    setModalLeague(cardLeague);
                     setFullTableOpen(true);
                   }}
                 >
@@ -189,7 +244,7 @@ export default function HydraSportsActivityRail() {
               <button
                 type="button"
                 onClick={() => {
-                  setModalLeague(selectedLeague && selectedLeague !== 'All' ? selectedLeague : 'Serie A');
+                  setModalLeague(cardLeague);
                   setFullTableOpen(true);
                 }}
                 className="w-full mt-2 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white text-[11px] font-bold text-center transition-all cursor-pointer border border-white/5"
@@ -273,6 +328,220 @@ export default function HydraSportsActivityRail() {
         </div>
 
       </aside>
+
+      {/* ── MOBILE SECTION: Standings & News (Visible only on < lg screens) ── */}
+      <section className="block lg:hidden w-full px-3 sm:px-5 py-6 bg-[#141221] border-t border-white/[0.08] space-y-4">
+        {/* Mobile Tab Switcher */}
+        <div className="flex items-center p-1 rounded-xl bg-[#1c1a2d] border border-white/[0.08]">
+          <button
+            type="button"
+            onClick={() => setMobileTab('standings')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-black transition-all cursor-pointer ${
+              mobileTab === 'standings'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-400" />
+            <span>League Standings</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab('news')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-black transition-all cursor-pointer ${
+              mobileTab === 'news'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Newspaper className="w-3.5 h-3.5 text-purple-400" />
+            <span>Sports News ({news.length || 0})</span>
+          </button>
+        </div>
+
+        {mobileTab === 'standings' && (
+          <div className="rounded-2xl bg-[#1c1a2d] border border-white/[0.06] p-4 shadow-xl">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-extrabold text-white tracking-tight flex items-center gap-1.5">
+                <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>{cardLeague} Table</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setModalLeague(cardLeague);
+                  setFullTableOpen(true);
+                }}
+                className="text-xs font-extrabold text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1 cursor-pointer px-2 py-1 rounded-md bg-purple-600/10"
+              >
+                <span>Full Table</span>
+                <ExternalLink className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Quick league pills & dropdown on mobile */}
+            <div className="flex items-center gap-1.5 mb-3 overflow-x-auto no-scrollbar py-1">
+              {QUICK_LEAGUES.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => setCardLeague(l.id)}
+                  className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer shrink-0 ${
+                    cardLeague === l.id
+                      ? 'bg-purple-600 text-white shadow-sm shadow-purple-600/30'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-300'
+                  }`}
+                >
+                  {l.label}
+                </button>
+              ))}
+
+              <div className="relative shrink-0 ml-auto">
+                <select
+                  value={cardLeague}
+                  onChange={(e) => setCardLeague(e.target.value)}
+                  className="h-7 px-2 pr-6 rounded-lg bg-[#25223c] border border-white/10 text-xs font-bold text-slate-200 outline-none cursor-pointer appearance-none"
+                  title="Switch League"
+                >
+                  {SUPPORTED_LEAGUES_TABLE.map((lg) => (
+                    <option key={lg.id} value={lg.id} className="bg-[#1c1a2d] text-white">
+                      {lg.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Table Header */}
+            <div className="grid grid-cols-12 text-[11px] font-bold text-slate-400 border-b border-white/[0.06] pb-2 mb-2 px-1">
+              <div className="col-span-2">Pos</div>
+              <div className="col-span-5">Team</div>
+              <div className="col-span-1 text-center">W</div>
+              <div className="col-span-1 text-center">D</div>
+              <div className="col-span-1 text-center">L</div>
+              <div className="col-span-2 text-right">Pts</div>
+            </div>
+
+            {loadingStandings ? (
+              <div className="py-8 flex flex-col items-center justify-center text-slate-400 gap-2">
+                <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
+                <span className="text-xs">Loading standings...</span>
+              </div>
+            ) : standings.length > 0 ? (
+              <div className="space-y-1">
+                {standings.slice(0, 10).map((row) => (
+                  <div
+                    key={row.team?.id || row.rank}
+                    onClick={() => {
+                      setModalLeague(cardLeague);
+                      setFullTableOpen(true);
+                    }}
+                    className="grid grid-cols-12 items-center text-xs py-2 px-1 rounded-lg hover:bg-white/[0.04] transition-colors font-medium text-slate-300 cursor-pointer"
+                  >
+                    <div className="col-span-2 font-bold text-slate-400 text-xs">
+                      {row.rank}
+                    </div>
+                    <div className="col-span-5 flex items-center gap-2 truncate pr-1">
+                      {row.team?.logo ? (
+                        <img src={row.team.logo} alt="" className="w-4 h-4 object-contain shrink-0" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full bg-slate-700 shrink-0" />
+                      )}
+                      <span className="truncate text-white text-xs font-semibold">
+                        {row.team?.displayName || row.team?.name}
+                      </span>
+                    </div>
+                    <div className="col-span-1 text-center text-slate-300 text-xs">{row.wins}</div>
+                    <div className="col-span-1 text-center text-slate-400 text-xs">{row.ties}</div>
+                    <div className="col-span-1 text-center text-slate-400 text-xs">{row.losses}</div>
+                    <div className="col-span-2 text-right font-black text-white text-xs text-purple-300">{row.points}</div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalLeague(cardLeague);
+                    setFullTableOpen(true);
+                  }}
+                  className="w-full mt-3 py-2 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 text-purple-300 text-xs font-bold text-center transition-all cursor-pointer border border-purple-500/20"
+                >
+                  View Complete Table ({standings.length} Teams) →
+                </button>
+              </div>
+            ) : (
+              <div className="py-6 text-center text-xs text-slate-400">
+                Standings resolving for current fixtures...
+              </div>
+            )}
+          </div>
+        )}
+
+        {mobileTab === 'news' && (
+          <div className="rounded-2xl bg-[#1c1a2d] border border-white/[0.06] p-4 shadow-xl flex flex-col space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-extrabold text-white tracking-tight flex items-center gap-2">
+                <Newspaper className="w-4 h-4 text-purple-400" />
+                <span>Latest Sports News</span>
+              </h3>
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                Live Feed
+              </span>
+            </div>
+
+            {/* Lead story */}
+            <div
+              onClick={() => setSelectedNewsArticle(featuredNews)}
+              className="relative rounded-xl overflow-hidden bg-slate-900 border border-white/[0.06] group cursor-pointer"
+            >
+              <div className="relative aspect-video w-full overflow-hidden">
+                <img
+                  src={featuredNews.image}
+                  alt={featuredNews.headline}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0e0c18] via-[#0e0c18]/60 to-transparent" />
+              </div>
+              <div className="p-3 relative z-10 -mt-10">
+                <h4 className="text-xs font-black text-white leading-snug">
+                  {featuredNews.headline}
+                </h4>
+                <p className="text-[10.5px] text-slate-400 mt-1 line-clamp-2">
+                  {featuredNews.description}
+                </p>
+                <span className="text-[10px] text-purple-400 font-bold mt-2 flex items-center gap-1">
+                  <span>Read full story</span>
+                  <ChevronRight className="w-3 h-3" />
+                </span>
+              </div>
+            </div>
+
+            {/* Additional stories */}
+            {news.slice(1, 8).map((item, idx) => (
+              <div
+                key={item.id || idx}
+                onClick={() => setSelectedNewsArticle(item)}
+                className="flex items-start gap-2.5 p-2 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04] cursor-pointer"
+              >
+                {item.image && (
+                  <div className="w-16 h-12 rounded-lg overflow-hidden bg-slate-800 shrink-0 border border-white/10">
+                    <img src={item.image} alt="" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-200 line-clamp-2 leading-snug">
+                    {item.headline}
+                  </p>
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    {item.published ? new Date(item.published).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sports Feed'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* ── FULL STANDINGS MODAL ── */}
       {fullTableOpen && (

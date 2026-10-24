@@ -77,4 +77,61 @@ describe('playerProfiles utility', () => {
     expect(details.height).toBeDefined();
     expect(details.contractUntil).toBeDefined();
   });
+
+  it('accurately parses real fixture events for goals, assists, and cards', () => {
+    const exposito = buildPlayerFullDetails(
+      {
+        name: 'Edu Expósito',
+        jersey: '8',
+        position: 'MF',
+        positionGroup: 'MF',
+        starter: true,
+      },
+      'Espanyol',
+      'https://example.com/badge.png',
+      '',
+      {
+        bestPlayer: {
+          name: 'Edu Expósito',
+          goals: 1,
+          assists: 0,
+        },
+        timelineEvents: [
+          { minute: 62, displayMinute: "62'", type: 'goal', player: 'Edu Expósito', text: 'Goal! Edu Expósito' },
+          { minute: 69, displayMinute: "69'", type: 'goal', player: 'Jeanuël Belocian', text: 'Goal! Jeanuël Belocian' },
+          { minute: 90, displayMinute: "90'", type: 'yellow_card', player: 'Edu Expósito', text: 'Yellow Card Edu Expósito' },
+        ],
+      }
+    );
+
+    // Should accurately match fixture events
+    expect(exposito.stats.goals).toBe(1);
+    expect(exposito.stats.assists).toBe(0);
+    expect(exposito.stats.yellowCards).toBe(1);
+    expect(exposito.stats.redCards).toBe(0);
+    expect(exposito.stats.shotsOnTarget).toBeGreaterThanOrEqual(1);
+    expect(exposito.stats.shots).toBeGreaterThanOrEqual(exposito.stats.shotsOnTarget);
+    expect(exposito.age).toBe(30);
+    expect(exposito.nationality).toBe('Spain');
+  });
+
+  it('correctly calculates age in 2026 for players from their real birth date', () => {
+    const haaland = buildPlayerFullDetails(
+      { name: 'Erling Haaland', jersey: '9', positionGroup: 'FW' },
+      'Manchester City',
+      '',
+      ''
+    );
+    // Born July 21, 2000 => 26 in October 2026
+    expect(haaland.age).toBe(26);
+
+    const saka = buildPlayerFullDetails(
+      { name: 'Bukayo Saka', jersey: '7', positionGroup: 'FW' },
+      'Arsenal',
+      '',
+      ''
+    );
+    // Born September 5, 2001 => 25 in October 2026
+    expect(saka.age).toBe(25);
+  });
 });

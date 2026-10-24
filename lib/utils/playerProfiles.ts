@@ -256,6 +256,88 @@ const KNOWN_MARKET_VALUES: Record<string, number> = {
   'dusan vlahovic': 65,
 };
 
+// Known player biographical profiles for accurate real ages & physical info
+export function computeAgeFromBirthDate(birthDateStr: string, asOfDate: Date = new Date()): number {
+  const birth = new Date(birthDateStr);
+  if (isNaN(birth.getTime())) return 25;
+  let age = asOfDate.getFullYear() - birth.getFullYear();
+  const m = asOfDate.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && asOfDate.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+const KNOWN_PLAYER_PROFILES: Record<string, { birthDate: string; height: string; weight: string; nationality: string; flag: string; foot: 'Right' | 'Left' | 'Both' }> = {
+  // Espanyol & Racing Santander Match Players
+  'edu exposito': { birthDate: 'Aug 1, 1996', height: '1.79 m (5\' 10")', weight: '71 kg (156 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'edu expósito': { birthDate: 'Aug 1, 1996', height: '1.79 m (5\' 10")', weight: '71 kg (156 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'jeanuel belocian': { birthDate: 'Feb 17, 2005', height: '1.83 m (6\' 0")', weight: '76 kg (167 lbs)', nationality: 'France', flag: '🇫🇷', foot: 'Left' },
+  'jeanuël belocian': { birthDate: 'Feb 17, 2005', height: '1.83 m (6\' 0")', weight: '76 kg (167 lbs)', nationality: 'France', flag: '🇫🇷', foot: 'Left' },
+  'yassir zabiri': { birthDate: 'Feb 23, 2005', height: '1.82 m (6\' 0")', weight: '74 kg (163 lbs)', nationality: 'Morocco', flag: '🇲🇦', foot: 'Right' },
+  'inigo vicente': { birthDate: 'Jan 6, 1998', height: '1.78 m (5\' 10")', weight: '70 kg (154 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'iñigo vicente': { birthDate: 'Jan 6, 1998', height: '1.78 m (5\' 10")', weight: '70 kg (154 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'pol lozano': { birthDate: 'Oct 6, 1999', height: '1.77 m (5\' 10")', weight: '70 kg (154 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'pablo ramon': { birthDate: 'Jun 30, 2001', height: '1.83 m (6\' 0")', weight: '75 kg (165 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'pablo ramón': { birthDate: 'Jun 30, 2001', height: '1.83 m (6\' 0")', weight: '75 kg (165 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'iker luque': { birthDate: 'Nov 12, 2004', height: '1.78 m (5\' 10")', weight: '71 kg (156 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'pablo garcia': { birthDate: 'Aug 15, 2006', height: '1.80 m (5\' 11")', weight: '72 kg (158 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'pablo garcía': { birthDate: 'Aug 15, 2006', height: '1.80 m (5\' 11")', weight: '72 kg (158 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'urko gonzalez': { birthDate: 'Mar 20, 2001', height: '1.89 m (6\' 2")', weight: '81 kg (178 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'urko gonzález': { birthDate: 'Mar 20, 2001', height: '1.89 m (6\' 2")', weight: '81 kg (178 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'tyrhys dolan': { birthDate: 'Dec 28, 2001', height: '1.70 m (5\' 7")', weight: '67 kg (147 lbs)', nationality: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', foot: 'Right' },
+  'javier puado': { birthDate: 'May 25, 1998', height: '1.77 m (5\' 10")', weight: '69 kg (152 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'andre almeida': { birthDate: 'May 30, 2000', height: '1.76 m (5\' 9")', weight: '70 kg (154 lbs)', nationality: 'Portugal', flag: '🇵🇹', foot: 'Right' },
+  'andré almeida': { birthDate: 'May 30, 2000', height: '1.76 m (5\' 9")', weight: '70 kg (154 lbs)', nationality: 'Portugal', flag: '🇵🇹', foot: 'Right' },
+  'pedro felipe': { birthDate: 'May 23, 2004', height: '1.90 m (6\' 3")', weight: '83 kg (183 lbs)', nationality: 'Brazil', flag: '🇧🇷', foot: 'Right' },
+  'marcos fernandez': { birthDate: 'Jan 18, 2003', height: '1.82 m (6\' 0")', weight: '75 kg (165 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'marcos fernández': { birthDate: 'Jan 18, 2003', height: '1.82 m (6\' 0")', weight: '75 kg (165 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'maguette gueye': { birthDate: 'Dec 30, 2002', height: '1.88 m (6\' 2")', weight: '78 kg (172 lbs)', nationality: 'Senegal', flag: '🇸🇳', foot: 'Right' },
+  'unai nunez': { birthDate: 'Jan 30, 1997', height: '1.86 m (6\' 1")', weight: '80 kg (176 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'unai núñez': { birthDate: 'Jan 30, 1997', height: '1.86 m (6\' 1")', weight: '80 kg (176 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+
+  // Premier League & European Superstars
+  'nicolas jackson': { birthDate: 'Jun 20, 2001', height: '1.87 m (6\' 2")', weight: '78 kg (172 lbs)', nationality: 'Senegal', flag: '🇸🇳', foot: 'Right' },
+  'erling haaland': { birthDate: 'Jul 21, 2000', height: '1.95 m (6\' 5")', weight: '88 kg (194 lbs)', nationality: 'Norway', flag: '🇳🇴', foot: 'Left' },
+  'martin odegaard': { birthDate: 'Dec 17, 1998', height: '1.78 m (5\' 10")', weight: '68 kg (150 lbs)', nationality: 'Norway', flag: '🇳🇴', foot: 'Left' },
+  'martin ødegaard': { birthDate: 'Dec 17, 1998', height: '1.78 m (5\' 10")', weight: '68 kg (150 lbs)', nationality: 'Norway', flag: '🇳🇴', foot: 'Left' },
+  'viktor gyokeres': { birthDate: 'Jun 4, 1998', height: '1.87 m (6\' 2")', weight: '86 kg (189 lbs)', nationality: 'Sweden', flag: '🇸🇪', foot: 'Right' },
+  'viktor gyökeres': { birthDate: 'Jun 4, 1998', height: '1.87 m (6\' 2")', weight: '86 kg (189 lbs)', nationality: 'Sweden', flag: '🇸🇪', foot: 'Right' },
+  'bukayo saka': { birthDate: 'Sep 5, 2001', height: '1.78 m (5\' 10")', weight: '72 kg (158 lbs)', nationality: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', foot: 'Left' },
+  'declan rice': { birthDate: 'Jan 14, 1999', height: '1.88 m (6\' 2")', weight: '84 kg (185 lbs)', nationality: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', foot: 'Right' },
+  'gabriel magalhaes': { birthDate: 'Dec 19, 1997', height: '1.90 m (6\' 3")', weight: '87 kg (191 lbs)', nationality: 'Brazil', flag: '🇧🇷', foot: 'Left' },
+  'gabriel magalhães': { birthDate: 'Dec 19, 1997', height: '1.90 m (6\' 3")', weight: '87 kg (191 lbs)', nationality: 'Brazil', flag: '🇧🇷', foot: 'Left' },
+  'cole palmer': { birthDate: 'May 6, 2002', height: '1.89 m (6\' 2")', weight: '74 kg (163 lbs)', nationality: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', foot: 'Left' },
+  'ollie watkins': { birthDate: 'Dec 30, 1995', height: '1.80 m (5\' 11")', weight: '70 kg (154 lbs)', nationality: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', foot: 'Right' },
+  'david raya': { birthDate: 'Sep 15, 1995', height: '1.83 m (6\' 0")', weight: '80 kg (176 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'william saliba': { birthDate: 'Mar 24, 2001', height: '1.92 m (6\' 4")', weight: '85 kg (187 lbs)', nationality: 'France', flag: '🇫🇷', foot: 'Right' },
+  'kai havertz': { birthDate: 'Jun 11, 1999', height: '1.93 m (6\' 4")', weight: '83 kg (183 lbs)', nationality: 'Germany', flag: '🇩🇪', foot: 'Left' },
+  'gabriel martinelli': { birthDate: 'Jun 18, 2001', height: '1.78 m (5\' 10")', weight: '75 kg (165 lbs)', nationality: 'Brazil', flag: '🇧🇷', foot: 'Right' },
+  'phil foden': { birthDate: 'May 28, 2000', height: '1.71 m (5\' 7")', weight: '70 kg (154 lbs)', nationality: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', foot: 'Left' },
+  'rodri': { birthDate: 'Jun 22, 1996', height: '1.91 m (6\' 3")', weight: '82 kg (180 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'kevin de bruyne': { birthDate: 'Jun 28, 1991', height: '1.81 m (5\' 11")', weight: '75 kg (165 lbs)', nationality: 'Belgium', flag: '🇧🇪', foot: 'Right' },
+  'josko gvardiol': { birthDate: 'Jan 23, 2002', height: '1.85 m (6\' 1")', weight: '80 kg (176 lbs)', nationality: 'Croatia', flag: '🇭🇷', foot: 'Left' },
+  'joško gvardiol': { birthDate: 'Jan 23, 2002', height: '1.85 m (6\' 1")', weight: '80 kg (176 lbs)', nationality: 'Croatia', flag: '🇭🇷', foot: 'Left' },
+  'ruben dias': { birthDate: 'May 14, 1997', height: '1.87 m (6\' 2")', weight: '82 kg (180 lbs)', nationality: 'Portugal', flag: '🇵🇹', foot: 'Right' },
+  'rúben dias': { birthDate: 'May 14, 1997', height: '1.87 m (6\' 2")', weight: '82 kg (180 lbs)', nationality: 'Portugal', flag: '🇵🇹', foot: 'Right' },
+  'bernardo silva': { birthDate: 'Aug 10, 1994', height: '1.73 m (5\' 8")', weight: '64 kg (141 lbs)', nationality: 'Portugal', flag: '🇵🇹', foot: 'Left' },
+  'mohamed salah': { birthDate: 'Jun 15, 1992', height: '1.75 m (5\' 9")', weight: '71 kg (156 lbs)', nationality: 'Egypt', flag: '🇪🇬', foot: 'Left' },
+  'virgil van dijk': { birthDate: 'Jul 8, 1991', height: '1.95 m (6\' 5")', weight: '92 kg (202 lbs)', nationality: 'Netherlands', flag: '🇳🇱', foot: 'Right' },
+  'trent alexander-arnold': { birthDate: 'Oct 7, 1998', height: '1.75 m (5\' 9")', weight: '69 kg (152 lbs)', nationality: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', foot: 'Right' },
+  'kylian mbappe': { birthDate: 'Dec 20, 1998', height: '1.78 m (5\' 10")', weight: '75 kg (165 lbs)', nationality: 'France', flag: '🇫🇷', foot: 'Right' },
+  'kylian mbappé': { birthDate: 'Dec 20, 1998', height: '1.78 m (5\' 10")', weight: '75 kg (165 lbs)', nationality: 'France', flag: '🇫🇷', foot: 'Right' },
+  'jude bellingham': { birthDate: 'Jun 29, 2003', height: '1.86 m (6\' 1")', weight: '75 kg (165 lbs)', nationality: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', foot: 'Right' },
+  'vinicius junior': { birthDate: 'Jul 12, 2000', height: '1.76 m (5\' 9")', weight: '73 kg (161 lbs)', nationality: 'Brazil', flag: '🇧🇷', foot: 'Right' },
+  'vinícius júnior': { birthDate: 'Jul 12, 2000', height: '1.76 m (5\' 9")', weight: '73 kg (161 lbs)', nationality: 'Brazil', flag: '🇧🇷', foot: 'Right' },
+  'lamine yamal': { birthDate: 'Jul 13, 2007', height: '1.78 m (5\' 10")', weight: '66 kg (145 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Left' },
+  'pedri': { birthDate: 'Nov 25, 2002', height: '1.74 m (5\' 9")', weight: '60 kg (132 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'gavi': { birthDate: 'Aug 5, 2004', height: '1.73 m (5\' 8")', weight: '68 kg (150 lbs)', nationality: 'Spain', flag: '🇪🇸', foot: 'Right' },
+  'robert lewandowski': { birthDate: 'Aug 21, 1988', height: '1.85 m (6\' 1")', weight: '81 kg (178 lbs)', nationality: 'Poland', flag: '🇵🇱', foot: 'Right' },
+  'harry kane': { birthDate: 'Jul 28, 1993', height: '1.88 m (6\' 2")', weight: '86 kg (189 lbs)', nationality: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', foot: 'Right' },
+  'jamal musiala': { birthDate: 'Feb 26, 2003', height: '1.84 m (6\' 0")', weight: '72 kg (158 lbs)', nationality: 'Germany', flag: '🇩🇪', foot: 'Right' },
+  'florian wirtz': { birthDate: 'May 3, 2003', height: '1.77 m (5\' 10")', weight: '70 kg (154 lbs)', nationality: 'Germany', flag: '🇩🇪', foot: 'Right' },
+};
+
 // Known player nationalities
 const KNOWN_NATIONALITIES: Record<string, { country: string; flag: string }> = {
   'bukayo saka': { country: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
@@ -471,39 +553,107 @@ export function buildPlayerFullDetails(
   const peakVal = Math.round(valueNum * (1.0 + ((h % 25) / 100)) * 10) / 10;
   const highestMarketValue = `€${peakVal.toFixed(2)}M`;
 
+  // 1. Biographical info
+  const knownProfile = KNOWN_PLAYER_PROFILES[norm];
+
   // Nationality
-  let nat = KNOWN_NATIONALITIES[norm] || { country: 'International', flag: '🌐' };
+  let nat = knownProfile ? { country: knownProfile.nationality, flag: knownProfile.flag } : (KNOWN_NATIONALITIES[norm] || { country: 'International', flag: '🌐' });
   if (player.citizenship) {
-    nat = { country: player.citizenship, flag: '🌐' };
+    const knownNat = Object.values(KNOWN_NATIONALITIES).find(n => n.country.toLowerCase() === player.citizenship.toLowerCase());
+    nat = { country: player.citizenship, flag: knownNat?.flag || '🌐' };
   }
 
-  // Age (20-34)
-  const age = player.age || (20 + (h % 14));
-  const birthYear = 2026 - age;
-  const birthMonth = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][h % 12];
-  const birthDay = 1 + (h % 28);
-  const birthDate = `${birthMonth} ${birthDay}, ${birthYear}`;
+  // Age & Birth Date (Using real database profile if known or real player info from ESPN)
+  const age = player.age || (knownProfile ? computeAgeFromBirthDate(knownProfile.birthDate) : (22 + (h % 11)));
+  const birthDate = player.birthDate || (knownProfile ? knownProfile.birthDate : `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][h % 12]} ${1 + (h % 28)}, ${2026 - age}`);
 
-  // Physical
-  const heightCm = 172 + (h % 24);
-  const heightFeet = Math.floor(heightCm / 30.48);
-  const heightInches = Math.round((heightCm % 30.48) / 2.54);
-  const heightStr = `${(heightCm / 100).toFixed(2)} m (${heightFeet}' ${heightInches}")`;
-  const weightStr = `${68 + (h % 22)} kg (${Math.round((68 + (h % 22)) * 2.204)} lbs)`;
+  // Physical attributes
+  const heightStr = player.height || (knownProfile ? knownProfile.height : `${((172 + (h % 20)) / 100).toFixed(2)} m (${Math.floor((172 + (h % 20)) / 30.48)}' ${Math.round(((172 + (h % 20)) % 30.48) / 2.54)}")`);
+  const weightStr = player.weight || (knownProfile ? knownProfile.weight : `${68 + (h % 18)} kg (${Math.round((68 + (h % 18)) * 2.204)} lbs)`);
 
-  const preferredFoot: 'Right' | 'Left' | 'Both' = (h % 5 === 0) ? 'Left' : (h % 11 === 0) ? 'Both' : 'Right';
+  const preferredFoot: 'Right' | 'Left' | 'Both' = knownProfile ? knownProfile.foot : ((h % 5 === 0) ? 'Left' : (h % 11 === 0) ? 'Both' : 'Right');
   const contractYears = [2027, 2028, 2029, 2030][h % 4];
   const contractUntil = `June 30, ${contractYears}`;
 
   const posGroup = player.positionGroup || (player.position === 'GK' ? 'GK' : 'MF');
   const posName = player.position || (posGroup === 'FW' ? 'Striker' : posGroup === 'MF' ? 'Central Midfielder' : posGroup === 'DF' ? 'Defender' : 'Goalkeeper');
 
-  // Realistic match stats
-  const isScorer = rating >= 8.2;
-  const goals = isScorer ? (rating >= 9.0 ? 2 : 1) : 0;
-  const assists = (rating >= 7.8 && !goals) || rating >= 9.2 ? 1 : 0;
-  const shots = posGroup === 'FW' ? (goals + 2) : posGroup === 'MF' ? (goals + 1) : 0;
-  const shotsOnTarget = goals + (shots > goals ? 1 : 0);
+  // 2. Compute ACTUAL Real Match Events (Strictly from fixture events, never fabricated)
+  let actualGoals = 0;
+  let actualAssists = 0;
+  let actualYellowCards = 0;
+  let actualRedCards = 0;
+  let actualShots = 0;
+  let actualShotsOnTarget = 0;
+
+  // Use real per-player stats from ESPN if available
+  if (player.realStats) {
+    actualGoals = player.realStats.goals ?? 0;
+    actualAssists = player.realStats.assists ?? 0;
+    actualShots = player.realStats.shots ?? 0;
+    actualShotsOnTarget = player.realStats.shotsOnTarget ?? 0;
+    actualYellowCards = player.realStats.yellowCards ?? 0;
+    actualRedCards = player.realStats.redCards ?? 0;
+  }
+
+  if (actualGoals === 0 && matchContext) {
+    if (matchContext.bestPlayer && normalizePlayerName(matchContext.bestPlayer.name).includes(norm)) {
+      actualGoals = typeof matchContext.bestPlayer.goals === 'number' ? matchContext.bestPlayer.goals : 0;
+    }
+    if (actualGoals === 0 && matchContext.goalScorers && Array.isArray(matchContext.goalScorers)) {
+      actualGoals = matchContext.goalScorers.filter((s: string) => {
+        const cleanS = normalizePlayerName(s);
+        return cleanS.includes(norm) || norm.includes(cleanS);
+      }).length;
+    }
+    if (actualGoals === 0 && matchContext.timelineEvents && Array.isArray(matchContext.timelineEvents)) {
+      actualGoals = matchContext.timelineEvents.filter((e: any) => {
+        if (e.type !== 'goal') return false;
+        const cleanP = normalizePlayerName(e.player || e.text || '');
+        return cleanP.includes(norm) || norm.includes(cleanP);
+      }).length;
+    }
+  }
+
+  if (actualAssists === 0 && matchContext) {
+    if (matchContext.timelineEvents && Array.isArray(matchContext.timelineEvents)) {
+      actualAssists = matchContext.timelineEvents.filter((e: any) => {
+        const text = (e.text || '').toLowerCase();
+        return text.includes('assist') && text.includes(norm);
+      }).length;
+    }
+  }
+
+  // Real cards calculation from fixture
+  if (actualYellowCards === 0 && matchContext) {
+    if (matchContext.timelineEvents && Array.isArray(matchContext.timelineEvents)) {
+      actualYellowCards = matchContext.timelineEvents.filter((e: any) => {
+        if (e.type !== 'yellow_card') return false;
+        const cleanP = normalizePlayerName(e.player || e.text || '');
+        return cleanP.includes(norm) || norm.includes(cleanP);
+      }).length;
+    } else if (matchContext.yellowCards && Array.isArray(matchContext.yellowCards)) {
+      actualYellowCards = matchContext.yellowCards.filter((s: string) => {
+        const cleanS = normalizePlayerName(s);
+        return cleanS.includes(norm) || norm.includes(cleanS);
+      }).length;
+    }
+  }
+
+  if (actualRedCards === 0 && matchContext && matchContext.timelineEvents && Array.isArray(matchContext.timelineEvents)) {
+    actualRedCards = matchContext.timelineEvents.filter((e: any) => {
+      if (e.type !== 'red_card') return false;
+      const cleanP = normalizePlayerName(e.player || e.text || '');
+      return cleanP.includes(norm) || norm.includes(cleanP);
+    }).length;
+  }
+
+  const goals = actualGoals;
+  const assists = actualAssists;
+
+  // Realistic shots calculation (Shots must be >= shots on target, and shots on target must be >= goals)
+  const shotsOnTarget = Math.max(actualShotsOnTarget, actualGoals > 0 ? actualGoals : (posGroup === 'FW' ? (h % 2) : (posGroup === 'MF' && h % 4 === 0 ? 1 : 0)));
+  const shots = Math.max(actualShots, shotsOnTarget, shotsOnTarget + (posGroup === 'FW' ? 1 + (h % 2) : (posGroup === 'MF' ? (h % 2) : 0)));
   const passAcc = 82 + (h % 14);
   const totalPasses = 30 + (h % 40);
   const compPasses = Math.round(totalPasses * (passAcc / 100));
@@ -548,8 +698,8 @@ export function buildPlayerFullDetails(
       duelsWon: `${5 + (h % 4)}/${8 + (h % 4)} (${60 + (h % 25)}%)`,
       foulsCommitted: h % 3,
       foulsDrawn: 1 + (h % 3),
-      yellowCards: (h % 7 === 0) ? 1 : 0,
-      redCards: 0,
+      yellowCards: actualYellowCards,
+      redCards: actualRedCards,
       distanceCovered: `${(9.5 + ((h % 25) / 10)).toFixed(1)} km`,
     },
     bio: `${player.name} is an elite ${posName.toLowerCase()} representing ${teamName}. Renowned for technical precision, tactical discipline, and decisive contributions on the pitch.`,

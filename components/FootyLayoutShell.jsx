@@ -32,7 +32,7 @@ export default function FootyLayoutShell({ children }) {
         {/* Main Center Column */}
         <div className="dashboard-column">
           {/* Main Content + Right Live Activity Rail */}
-          <div className="dashboard-main">
+          <div className="dashboard-main flex-col lg:flex-row">
             <main className="dashboard-content">
               {children}
             </main>

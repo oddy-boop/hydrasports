@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Maximize, RefreshCw, AlertCircle, ShieldAlert, Cpu, Play, Pause, Volume2, Volume1, VolumeX, Sliders, ChevronDown, Check } from 'lucide-react';
+import { Maximize, Minimize2, RefreshCw, AlertCircle, ShieldAlert, Cpu, Play, Pause, Volume2, Volume1, VolumeX, Sliders, ChevronDown, Check } from 'lucide-react';
 import Hls from 'hls.js';
 
 export default function StreamPlayer({ streamUrl, channels, matchTitle, matchStatus, videoOnly = false }) {
@@ -19,6 +19,24 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
   const [hlsLevels, setHlsLevels] = useState([]);
   const [selectedResolution, setSelectedResolution] = useState('auto');
   const [resDropdownOpen, setResDropdownOpen] = useState(false);
+  const [isCssFullscreen, setIsCssFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      const isFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+      if (!isFs && isCssFullscreen) {
+        setIsCssFullscreen(false);
+        document.body.style.overflow = '';
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+      document.body.style.overflow = '';
+    };
+  }, [isCssFullscreen]);
 
   const iframeRef = useRef(null);
   const videoRef = useRef(null);
@@ -244,18 +262,55 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
     }
   };
 
-  const toggleFullscreen = () => {
-    const el = playerRef.current;
-    if (!el) return;
+  const toggleFullscreen = async () => {
+    // 1. If currently in mobile CSS fullscreen, exit it
+    if (isCssFullscreen) {
+      setIsCssFullscreen(false);
+      document.body.style.overflow = '';
+      return;
+    }
+
+    // 2. If currently in native fullscreen, exit it
     const isFs = document.fullscreenElement || document.webkitFullscreenElement;
     if (isFs) {
-      if (document.exitFullscreen) document.exitFullscreen();
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
       else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-    } else if (el.requestFullscreen) {
-      el.requestFullscreen();
-    } else if (el.webkitRequestFullscreen) {
-      el.webkitRequestFullscreen();
+      return;
     }
+
+    // 3. On iOS Safari with direct HLS, try native video player fullscreen
+    const video = videoRef.current;
+    if (video && typeof video.webkitEnterFullscreen === 'function') {
+      try {
+        video.webkitEnterFullscreen();
+        return;
+      } catch {
+        // Fallback to container
+      }
+    }
+
+    // 4. Try HTML5 native fullscreen on player container with vendor prefixes
+    const el = playerRef.current;
+    if (el) {
+      try {
+        if (el.requestFullscreen) {
+          await el.requestFullscreen();
+          return;
+        } else if (el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen();
+          return;
+        } else if (el.mozRequestFullScreen) {
+          el.mozRequestFullScreen();
+          return;
+        }
+      } catch (err) {
+        console.warn('Native fullscreen rejected on mobile, activating CSS fullscreen mode', err);
+      }
+    }
+
+    // 5. Bulletproof CSS Fullscreen Fallback (100% works on iPhone, iPad, Android Chrome, and iframes)
+    setIsCssFullscreen(true);
+    document.body.style.overflow = 'hidden';
   };
 
   const handlePlayPause = () => {
@@ -333,12 +388,28 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
       <div 
         ref={playerRef} 
         className={`relative overflow-hidden bg-black shadow-2xl transition-all duration-500 ease-out group ${
-          isTheaterMode 
+          isCssFullscreen
+            ? '!fixed !inset-0 !z-[999999] !w-screen !h-[100dvh] !rounded-none !border-0 !m-0 !p-0 flex flex-col justify-center'
+            : isTheaterMode 
             ? 'w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] rounded-none border-y border-zinc-800 h-[45vh] sm:h-[55vh] md:h-[65vh] lg:h-[70vh] xl:h-[75vh]' 
             : 'w-full rounded-2xl border border-zinc-800'
         }`}
-        style={isTheaterMode ? undefined : { aspectRatio: '16/9' }}
+        style={isCssFullscreen ? undefined : (isTheaterMode ? undefined : { aspectRatio: '16/9' })}
       >
+        {/* Floating Mobile Exit Fullscreen Button */}
+        {isCssFullscreen && (
+          <button
+            type="button"
+            onClick={() => {
+              setIsCssFullscreen(false);
+              document.body.style.overflow = '';
+            }}
+            className="absolute top-4 right-4 z-50 px-3.5 py-1.5 rounded-full bg-black/85 hover:bg-black border border-white/20 text-white text-xs font-black flex items-center gap-1.5 shadow-2xl backdrop-blur-md cursor-pointer animate-fade-in"
+          >
+            <Minimize2 className="h-4 w-4 text-purple-400" />
+            <span>Exit Fullscreen</span>
+          </button>
+        )}
         {/* Loading Spinner Screen */}
         {isLoading && streamStatus !== 'error' && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#050508]">

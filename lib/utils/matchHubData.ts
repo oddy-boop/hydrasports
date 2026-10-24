@@ -35,6 +35,22 @@ export interface PlayerInfo {
   starter: boolean;
   subbedIn?: boolean;
   subbedOut?: boolean;
+  age?: number;
+  birthDate?: string;
+  citizenship?: string;
+  height?: string;
+  weight?: string;
+  realStats?: {
+    goals?: number;
+    assists?: number;
+    shots?: number;
+    shotsOnTarget?: number;
+    yellowCards?: number;
+    redCards?: number;
+    foulsCommitted?: number;
+    foulsSuffered?: number;
+    saves?: number;
+  };
 }
 
 export interface KeyPlayer {
@@ -185,6 +201,31 @@ function extractPlayerFromRoster(r: any, idx: number, isHome: boolean, teamName:
     role = idx === 0 ? 'Anchor GK' : posGroup === 'FW' ? 'Key attacking threat' : posGroup === 'MF' ? 'Playmaker & engine' : 'Defensive pillar';
   }
 
+  // Extract real ESPN stats if available on the athlete
+  const statsList = Array.isArray(r.stats) ? r.stats : [];
+  const getRosterStat = (queryName: string): number => {
+    const found = statsList.find((s: any) => s.name === queryName);
+    return found ? (parseFloat(found.value) || parseFloat(found.displayValue) || 0) : 0;
+  };
+
+  const realStats = statsList.length > 0 ? {
+    goals: getRosterStat('totalGoals'),
+    assists: getRosterStat('goalAssists'),
+    shots: getRosterStat('totalShots'),
+    shotsOnTarget: getRosterStat('shotsOnTarget'),
+    yellowCards: getRosterStat('yellowCards'),
+    redCards: getRosterStat('redCards'),
+    foulsCommitted: getRosterStat('foulsCommitted'),
+    foulsSuffered: getRosterStat('foulsSuffered'),
+    saves: getRosterStat('saves'),
+  } : undefined;
+
+  const age = athlete.age !== undefined && athlete.age !== null ? Number(athlete.age) : undefined;
+  const birthDate = athlete.displayDOB || athlete.dateOfBirth || undefined;
+  const citizenship = athlete.citizenship || athlete.birthPlace?.country || undefined;
+  const height = athlete.displayHeight || athlete.height ? String(athlete.displayHeight || athlete.height) : undefined;
+  const weight = athlete.displayWeight || athlete.weight ? String(athlete.displayWeight || athlete.weight) : undefined;
+
   return {
     id: String(athlete.id || `${teamName}-${idx}`),
     name,
@@ -197,6 +238,12 @@ function extractPlayerFromRoster(r: any, idx: number, isHome: boolean, teamName:
     starter: isStarter,
     subbedIn: Boolean(r.subbedIn),
     subbedOut: Boolean(r.subbedOut),
+    age,
+    birthDate,
+    citizenship,
+    height,
+    weight,
+    realStats,
   };
 }
 
@@ -638,7 +685,7 @@ export function parseMatchHubData(match: any, stats: any) {
         teamBadge: topAthlete.team?.id ? (topAthlete.team.id === stats?.boxscore?.teams?.[0]?.team?.id ? homeBadge : awayBadge) : homeBadge,
         teamName: topAthlete.team?.displayName || homeName,
         goals: parseInt(topAthlete.displayValue || topAthlete.value || '0', 10) || (sport === 'basketball' ? 24 : 1),
-        assists: 1,
+        assists: sport === 'basketball' ? 5 : 0,
       };
     }
   }
@@ -656,6 +703,13 @@ export function parseMatchHubData(match: any, stats: any) {
     const realJersey = matched?.jersey || (info.jersey && info.jersey !== '10' ? info.jersey : '11');
     const realAvatar = matched?.avatar || info.avatar || '';
 
+    // Calculate real assists strictly from commentary / timeline events
+    const realAssists = timelineEvents.filter(e => {
+      const text = (e.text || '').toLowerCase();
+      const matchedName = (matched?.name || '').toLowerCase();
+      return text.includes('assist') && (text.includes(cleanScorer) || (matchedName && text.includes(matchedName)));
+    }).length;
+
     bestPlayer = {
       name: matched?.name || scorerName,
       jersey: realJersey,
@@ -663,7 +717,7 @@ export function parseMatchHubData(match: any, stats: any) {
       teamBadge: matched ? (homeStarters.includes(matched) || homeSubstitutes.includes(matched) ? homeBadge : awayBadge) : info.teamBadge,
       teamName: matched ? (homeStarters.includes(matched) || homeSubstitutes.includes(matched) ? homeName : awayName) : info.teamName,
       goals: info.count,
-      assists: 1,
+      assists: realAssists,
       statLabel,
       secondaryLabel,
     };
