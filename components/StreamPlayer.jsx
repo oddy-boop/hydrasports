@@ -105,7 +105,10 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
     proxiedTargetUrl.includes('.m3u8') ||
     proxiedTargetUrl.includes('.mpd') ||
     proxiedTargetUrl.includes('/hls/') ||
-    proxiedTargetUrl.includes('.mp4')
+    proxiedTargetUrl.includes('.mp4') ||
+    activeCh?.provider?.includes('hls') ||
+    activeCh?.provider?.includes('tennis') ||
+    activeCh?.name?.includes('HLS')
   );
 
   // For direct HLS, use rawTargetUrl directly so Hls.js loads the master playlist and segments seamlessly
