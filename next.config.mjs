@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    agentUpgrade: 'security',
+  },
+
   // Reduce dev file-system overhead on slow drives (suppresses benchmark warning)
   devIndicators: false,
 
