@@ -22,7 +22,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
   const [isCssFullscreen, setIsCssFullscreen] = useState(false);
 
   // Ad Shield Protection (Blocks 3rd party stream player popups & top-level redirects)
-  const [adShieldMode, setAdShieldMode] = useState('strict'); // 'strict' | 'standard' | 'off'
+  const [adShieldMode, setAdShieldMode] = useState('standard'); // 'strict' | 'standard' | 'off'
   const [adShieldDropdownOpen, setAdShieldDropdownOpen] = useState(false);
   const [blockedRedirectCount, setBlockedRedirectCount] = useState(0);
 
@@ -52,10 +52,8 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
     activeCh?.name?.includes('HLS')
   );
 
-  // For direct HLS, use rawTargetUrl directly so Hls.js loads the master playlist and segments seamlessly
-  const currentUrl = isDirectHls
-    ? (rawTargetUrl || proxiedTargetUrl || streamUrl)
-    : (proxiedTargetUrl || rawTargetUrl || streamUrl);
+  // Directly load the target URL for both direct HLS and embed players to avoid broken 302 redirect hopping
+  const currentUrl = rawTargetUrl || proxiedTargetUrl || streamUrl;
 
   useEffect(() => {
     const handleFsChange = () => {
