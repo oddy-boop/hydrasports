@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Maximize, Minimize2, RefreshCw, AlertCircle, ShieldAlert, ShieldCheck, Cpu, Play, Pause, Volume2, Volume1, VolumeX, Sliders, ChevronDown, Check } from 'lucide-react';
+import { Maximize, Minimize2, RefreshCw, AlertCircle, ShieldAlert, Cpu, Play, Pause, Volume2, Volume1, VolumeX, Sliders, ChevronDown, Check } from 'lucide-react';
 import Hls from 'hls.js';
 import { adsConfig } from '@/lib/adsConfig';
 
@@ -11,7 +11,6 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
   const [isLoading, setIsLoading] = useState(true);
   const [streamStatus, setStreamStatus] = useState('loading');
   const [loadTimeout, setLoadTimeout] = useState(null);
-  const [aggressiveAdBlock, setAggressiveAdBlock] = useState(true);
   
   // Custom video state hooks
   const [isPlaying, setIsPlaying] = useState(false);
@@ -79,34 +78,6 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
-
-  // Aggressive ad-shield popup blocker: intercept window.open calls from malicious embeds
-  useEffect(() => {
-    if (!aggressiveAdBlock || typeof window === 'undefined') return;
-
-    const originalWindowOpen = window.open;
-    window.open = function(url, target, features) {
-      if (url && typeof url === 'string') {
-        const lower = url.toLowerCase();
-        // Allow intentional social shares or user actions
-        if (
-          lower.includes('twitter.com') ||
-          lower.includes('x.com') ||
-          lower.includes('whatsapp.com') ||
-          lower.includes('t.me') ||
-          lower.includes('facebook.com')
-        ) {
-          return originalWindowOpen.call(window, url, target, features);
-        }
-      }
-      console.warn('[Aggressive Ad-Shield] Intercepted and blocked stream popup redirect:', url);
-      return null;
-    };
-
-    return () => {
-      window.open = originalWindowOpen;
-    };
-  }, [aggressiveAdBlock]);
 
   const handleLoad = () => {
     setIsLoading(false);
@@ -543,28 +514,17 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
           />
         ) : (
           <iframe
-            key={`${currentUrl}_${aggressiveAdBlock ? 'shielded' : 'open'}`}
+            key={currentUrl}
             ref={iframeRef}
             src={currentUrl}
             className="absolute inset-0 block h-full w-full min-h-0 border-0 bg-black"
             allowFullScreen
             allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-            sandbox={aggressiveAdBlock ? "allow-scripts allow-same-origin allow-presentation allow-forms" : undefined}
             loading="eager"
             referrerPolicy="no-referrer-when-downgrade"
             onLoad={handleLoad}
             onError={handleError}
           />
-        )}
-
-        {/* Aggressive Ad-Shield Active Indicator (Third-party Embeds) */}
-        {!isDirectHls && aggressiveAdBlock && streamStatus === 'active' && (
-          <div className="absolute top-3 right-3 z-20 pointer-events-none">
-            <span className="flex items-center gap-1.5 rounded-full bg-black/75 border border-emerald-500/40 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 shadow-xl backdrop-blur-md">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Ad-Shield: Aggressive
-            </span>
-          </div>
         )}
 
         {/* Play Icon Center Overlay (When Paused) */}
@@ -770,22 +730,6 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
                   </div>
                 )}
               </div>
-
-              {/* Aggressive Ad-Shield Toggle Button */}
-              <button
-                type="button"
-                onClick={() => setAggressiveAdBlock(prev => !prev)}
-                className={`rounded-lg px-3 py-1.5 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold border cursor-pointer ${
-                  aggressiveAdBlock
-                    ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300 shadow-sm shadow-emerald-500/10'
-                    : 'border-amber-500/40 bg-amber-500/10 text-amber-300 shadow-sm'
-                }`}
-                title={aggressiveAdBlock ? "Aggressive Ad-Shield: 100% of stream popups, redirects, and ads blocked" : "Ad-Shield: Off (Click to activate Aggressive Ad-Blocking)"}
-              >
-                <ShieldCheck className={`h-3.5 w-3.5 ${aggressiveAdBlock ? 'text-emerald-400' : 'text-amber-400'}`} />
-                <span className="hidden sm:inline">Ad-Shield:</span>
-                <span>{aggressiveAdBlock ? "Aggressive" : "Off"}</span>
-              </button>
 
               {/* Refresh button */}
               <button
