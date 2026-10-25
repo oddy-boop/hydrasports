@@ -68,7 +68,11 @@ const providers = [
 
 export async function getMatchDetails(matchId: string): Promise<Match | null> {
   const matches = await getMatches();
-  const listedMatch = matches.find(match => match.id === matchId || match.id.toLowerCase() === matchId.toLowerCase());
+  const listedMatch = matches.find(match =>
+    match.id === matchId ||
+    match.id.toLowerCase() === matchId.toLowerCase() ||
+    (match.mergedIds && match.mergedIds.includes(matchId))
+  );
   if (listedMatch) return listedMatch;
 
   // Try directly from StreamedPkProvider in case of partial cached batch
@@ -87,7 +91,18 @@ export async function getMatchDetails(matchId: string): Promise<Match | null> {
     try {
       const espnMatches = await espn.fetchMatches();
       const eMatch = espnMatches.find(m => m.id === matchId || m.id.toLowerCase() === matchId.toLowerCase());
-      if (eMatch) return eMatch;
+      if (eMatch) {
+        // Find if this eMatch was merged into a match in matches list
+        const mergedInMatches = matches.find(m => m.sport === eMatch.sport && teamsMatch(m.title, eMatch.title));
+        if (mergedInMatches) {
+          return {
+            ...mergedInMatches,
+            id: matchId,
+            sources: mergedInMatches.sources?.length > 0 ? mergedInMatches.sources : eMatch.sources,
+          };
+        }
+        return eMatch;
+      }
     } catch {}
   }
 
@@ -200,8 +215,12 @@ export async function getMatches(): Promise<Match[]> {
           ? (getTeamLeague(existing.homeTeam.name || match.homeTeam.name) || getTeamLeague(existing.awayTeam.name || match.awayTeam.name) || rawT || 'League Match')
           : rawT;
 
+        const currentMerged = existing.mergedIds || [existing.id];
+        const newMerged = currentMerged.includes(match.id) ? currentMerged : [...currentMerged, match.id];
+
         mergedList[existingIdx] = {
           ...existing,
+          mergedIds: newMerged,
           tournament: resolvedTournament,
           timestamp: finalTimestamp,
           homeScore: isFuture ? null : (existing.homeScore ?? match.homeScore),

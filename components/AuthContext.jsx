@@ -16,26 +16,25 @@ export function AuthProvider({ children }) {
     try {
       const stored = localStorage.getItem('hydra_user');
       if (stored) {
-        setUser(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        if (parsed?.name === 'Miguel Fox') {
+          // Clear legacy default profile
+          localStorage.removeItem('hydra_user');
+          setUser(null);
+        } else {
+          setUser(parsed);
+        }
       } else {
-        // Default user profile matching Image 1 & Image 3 ("Miguel Fox")
-        const defaultUser = {
-          name: 'Miguel Fox',
-          email: 'miguel.fox@fifa.com',
-          avatar: '/images/hydra/avatar_naufal.png',
-          gender: 'Male',
-        };
-        setUser(defaultUser);
-        localStorage.setItem('hydra_user', JSON.stringify(defaultUser));
+        setUser(null);
       }
     } catch {}
   }, []);
 
   const signup = ({ name, email, gender, password }) => {
     const newUser = {
-      name: name || 'Football Fan',
-      email: email || 'fan@fifaid.com',
-      gender: gender || 'Male',
+      name: name || 'Sports Fan',
+      email: email || '',
+      gender: gender || '',
       avatar: '/images/hydra/avatar_naufal.png',
     };
     setUser(newUser);
@@ -46,9 +45,10 @@ export function AuthProvider({ children }) {
   };
 
   const login = ({ email, password }) => {
+    const defaultName = email ? (email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1)) : 'Sports Fan';
     const existing = {
-      name: email ? (email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1)) : 'Miguel Fox',
-      email: email || 'miguel.fox@fifa.com',
+      name: defaultName,
+      email: email || '',
       avatar: '/images/hydra/avatar_naufal.png',
     };
     setUser(existing);

@@ -43,6 +43,7 @@ export interface Match {
   provider: string;
   upstreamCategory: string;
   popular: boolean;
+  mergedIds?: string[];
 }
 
 export interface MatchStats {

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMatchDetails } from '@/lib/streamEngine';
 import {
-  getMatchMessages,
+  getMatchMessagesAsync,
   addMatchMessage,
+  broadcastMessage,
   purgeMatchChat,
   recordViewerPresence,
   getViewerCount,
@@ -50,7 +51,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const viewerId = searchParams.get('viewerId') || request.headers.get('x-forwarded-for') || 'guest';
     const viewerCount = recordViewerPresence(matchId, viewerId);
-    const messages = getMatchMessages(matchId);
+    const messages = await getMatchMessagesAsync(matchId);
 
     return NextResponse.json(
       {
@@ -124,6 +125,9 @@ export async function POST(
     });
 
     rateLimitMap.set(clientIp, now);
+
+    // Broadcast in real-time to global match channel so all online visitors receive it immediately
+    await broadcastMessage(matchId, message);
 
     return NextResponse.json({ success: true, message }, { status: 201 });
   } catch (err: any) {

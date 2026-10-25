@@ -1946,6 +1946,10 @@ export default function MatchHubView({
 
           {sidebarTab === 'chat' ? (
             <div className="flex flex-col gap-4 w-full min-w-0">
+              {/* Scoreboard is displayed ON TOP of the chat container */}
+              <div className="w-full">
+                {renderMatchScoreboardCard()}
+              </div>
               <LiveMatchChat
                 matchId={match.id}
                 homeTeam={hubData.homeName}
@@ -1953,9 +1957,6 @@ export default function MatchHubView({
                 matchStatus={match.status}
                 currentMinute={match.currentMinute}
               />
-              <div className="hidden xl:block w-full">
-                {renderMatchScoreboardCard()}
-              </div>
             </div>
           ) : (
             <>
