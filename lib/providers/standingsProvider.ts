@@ -126,16 +126,25 @@ const FALLBACK_LEAGUE_TABLES: Record<string, { leagueName: string; entries: Stan
   },
 };
 
-export async function getStandingsForLeague(leagueQuery = 'serie a', seasonYear = '2024'): Promise<LeagueStandings> {
+export function getCurrentSeasonYear(): string {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  // European football seasons start in July/August
+  const activeSeasonStart = now.getMonth() >= 6 ? currentYear : currentYear - 1;
+  return String(activeSeasonStart);
+}
+
+export async function getStandingsForLeague(leagueQuery = 'serie a', seasonYear?: string): Promise<LeagueStandings> {
   const normalized = leagueQuery.toLowerCase().trim();
   const slug = LEAGUE_SLUG_MAP[normalized] || 'ita.1';
   const fallback = FALLBACK_LEAGUE_TABLES[slug] || FALLBACK_LEAGUE_TABLES['ita.1'];
 
-  // Clean season parameter (e.g. "2024", "2023", etc.)
-  const cleanSeason = seasonYear ? String(seasonYear).trim().slice(0, 4) : '2024';
+  const defaultSeason = getCurrentSeasonYear();
+  // Clean season parameter (e.g. "2026", "2025", "2024", etc.)
+  const cleanSeason = seasonYear && seasonYear !== 'current' ? String(seasonYear).trim().slice(0, 4) : defaultSeason;
 
   const cache = getCacheManager();
-  return cache.swr(`standings_v4_${slug}_${cleanSeason}`, async () => {
+  return cache.swr(`standings_v5_${slug}_${cleanSeason}`, async () => {
     try {
       const url = `https://site.api.espn.com/apis/v2/sports/soccer/${slug}/standings?season=${cleanSeason}`;
       // Fast 3s timeout prevents hanging requests
@@ -154,8 +163,9 @@ export async function getStandingsForLeague(leagueQuery = 'serie a', seasonYear 
         entriesRaw = data.standings?.entries || [];
       }
       const leagueName = data.name || fallback.leagueName;
-      const nextYr = parseInt(cleanSeason, 10) + 1;
-      const season = `${cleanSeason}/${nextYr}`;
+      const returnedYear = String(data.season?.year || cleanSeason);
+      const nextYr = parseInt(returnedYear, 10) + 1;
+      const season = `${returnedYear}/${nextYr}`;
 
       if (!Array.isArray(entriesRaw) || entriesRaw.length === 0) {
         throw new Error('Empty entries in ESPN standings');

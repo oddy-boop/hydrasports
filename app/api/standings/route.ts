@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const league = searchParams.get('league') || 'serie a';
-  const season = searchParams.get('season') || '2024';
+  const league = searchParams.get('league') || 'premier league';
+  const season = searchParams.get('season') || undefined;
 
   try {
     const data = await getStandingsForLeague(league, season);

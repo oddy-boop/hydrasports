@@ -19,13 +19,28 @@ const SUPPORTED_LEAGUES_TABLE = [
   { id: 'SAF Primera', name: 'SAF Primera (ARG)' },
 ];
 
-export const AVAILABLE_SEASONS = [
-  { id: '2024', label: '2024/25' },
-  { id: '2023', label: '2023/24' },
-  { id: '2022', label: '2022/23' },
-  { id: '2021', label: '2021/22' },
-  { id: '2020', label: '2020/21' },
-];
+export function getDynamicSeasons() {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  // Football seasons kick off in July/August
+  const activeSeasonStart = now.getMonth() >= 6 ? currentYear : currentYear - 1;
+
+  const seasons = [];
+  // Generate dynamically: current season and past 7 seasons
+  for (let year = activeSeasonStart; year >= activeSeasonStart - 7; year--) {
+    const nextYearTwoDigits = String(year + 1).slice(-2);
+    const isCurrent = year === activeSeasonStart;
+    seasons.push({
+      id: String(year),
+      label: isCurrent ? `${year}/${nextYearTwoDigits} (Current)` : `${year}/${nextYearTwoDigits}`,
+      year,
+      isCurrent,
+    });
+  }
+  return seasons;
+}
+
+export const AVAILABLE_SEASONS = getDynamicSeasons();
 
 const QUICK_LEAGUES = [
   { id: 'Premier League', label: 'EPL' },
@@ -41,7 +56,7 @@ export default function HydraSportsActivityRail() {
     selectedLeague && selectedLeague !== 'All' ? selectedLeague : 'Premier League'
   );
   const [mobileTab, setMobileTab] = useState('standings');
-  const [selectedSeason, setSelectedSeason] = useState('2024');
+  const [selectedSeason, setSelectedSeason] = useState(AVAILABLE_SEASONS[0]?.id || '2026');
   const [standings, setStandings] = useState([]);
   const [news, setNews] = useState([]);
   const [loadingStandings, setLoadingStandings] = useState(true);

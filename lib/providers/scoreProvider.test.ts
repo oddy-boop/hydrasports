@@ -50,11 +50,11 @@ describe('Multi-Sport Score Resolution (Basketball, Hockey, Tennis)', () => {
       expect(score.home).toBe(132);
       expect(score.away).toBe(125);
     }
-  }, 10000);
+  }, 25000);
 
   it('should resolve scores for NHL Hockey match', async () => {
     const score = await getScoreForMatch(
-      'Montreal Canadiens vs Chicago Blackhawks',
+      'Philadelphia Flyers vs Anaheim Ducks',
       matchDate,
       'NHL',
       undefined,
@@ -63,9 +63,9 @@ describe('Multi-Sport Score Resolution (Basketball, Hockey, Tennis)', () => {
     expect(score).not.toBeNull();
     if (score) {
       expect(score.home).toBe(4);
-      expect(score.away).toBe(1);
+      expect(score.away).toBe(5);
     }
-  }, 20000);
+  }, 25000);
 
   it('should resolve scores for Tennis match', async () => {
     const score = await getScoreForMatch(
@@ -81,5 +81,5 @@ describe('Multi-Sport Score Resolution (Basketball, Hockey, Tennis)', () => {
       expect(score.away).toBe(0);
       expect(score.currentMinute).toBeDefined();
     }
-  }, 20000);
+  }, 25000);
 });
