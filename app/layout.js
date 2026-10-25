@@ -4,7 +4,6 @@ import { MiniPlayerProvider } from '@/components/MiniPlayerProvider';
 import { AuthProvider } from '@/components/AuthContext';
 import FootyLayoutShell from '@/components/FootyLayoutShell';
 import SocialBarAd from '@/components/SocialBarAd';
-import MonetagAd from '@/components/MonetagAd';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hydrasports.selamate.com';
 
@@ -88,10 +87,16 @@ export default function RootLayout({ children }) {
             }
           } catch (_) {}
         ` }} />
+        {/* Monetag MultiTag (Zone 301930) */}
+        <script
+          src="https://quge5.com/88/tag.min.js"
+          data-zone="301930"
+          async
+          data-cfasync="false"
+        />
       </head>
       <body className="app-shell bg-[#12111c] text-white" suppressHydrationWarning>
         <SocialBarAd />
-        <MonetagAd />
         <AuthProvider>
           <HydraProvider>
             <MiniPlayerProvider>
