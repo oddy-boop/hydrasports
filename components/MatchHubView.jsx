@@ -697,18 +697,13 @@ export default function MatchHubView({
       </header>
 
       {/* ── 2. MAIN BROADCAST CANVAS & TACTICAL RAIL ── */}
-      <main className="flex-1 w-full max-w-[1720px] mx-auto pt-[80px] p-3 sm:p-5 flex flex-col xl:flex-row gap-5 items-start min-w-0">
+      <main className="flex-1 w-full max-w-[1720px] mx-auto pt-[72px] sm:pt-[80px] p-2.5 sm:p-5 grid grid-cols-1 xl:grid-cols-[1fr_380px] 2xl:grid-cols-[1fr_400px] gap-4 sm:gap-5 items-start min-w-0">
         
-        {/* Left / Center: Video Stream + Unobstructed Controls + Tactical Panels Below */}
-        <div className="flex-1 flex flex-col gap-4 sm:gap-5 min-w-0 w-full">
-          
-          {/* ON MOBILE / TABLET (< xl): Match Scoreboard rendered directly on TOP of the stream */}
-          <div className="block xl:hidden w-full">
-            {renderMatchScoreboardCard()}
-          </div>
+        {/* SECTION 1: Video Broadcast Container & Servers */}
+        <section className="w-full xl:col-start-1 xl:row-start-1 min-w-0 flex flex-col gap-3 sm:gap-4">
 
           {/* Main Broadcast Container (Video Stream & Servers) */}
-          <div className="w-full rounded-3xl overflow-hidden bg-[#0d0c15] border border-white/10 shadow-2xl flex flex-col p-3 sm:p-4 min-w-0">
+          <div className="w-full rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0d0c15] border border-white/10 shadow-2xl flex flex-col p-2.5 sm:p-4 min-w-0">
             
             {/* Top Match Bar */}
             <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3 px-1 min-w-0 gap-2">
@@ -781,9 +776,261 @@ export default function MatchHubView({
           <div className="w-full max-w-full flex justify-center">
             <AdBanner slot="matchHub" className="!my-1" />
           </div>
+        </section>
 
-          {/* ── 3. TACTICAL MATCH TELEMETRY (PLACED CLEANLY BELOW VIDEO PLAYER) ── */}
-          <div className="w-full rounded-3xl bg-[#131124] border border-white/10 p-4 sm:p-6 shadow-2xl flex flex-col gap-4">
+        {/* ── SECTION 2: MATCH RAIL (MATCH HUB & LIVE CHAT) ── */}
+        {/* On Phone / Mobile: rendered DIRECTLY underneath the video player so fans can chat while watching */}
+        {/* On Desktop: sticky right-hand column */}
+        <aside className="w-full xl:col-start-2 xl:row-start-1 xl:row-span-2 flex flex-col gap-3.5 sm:gap-4 shrink-0 xl:sticky xl:top-[80px] xl:max-h-[calc(100vh-96px)] xl:overflow-y-auto xl:pr-1.5 no-scrollbar scrollbar-none min-w-0">
+          
+          {/* Top Rail Tab Switcher: Match Hub first, Live Chat second */}
+          <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-[#141224] border border-white/10 shrink-0">
+            <button
+              type="button"
+              onClick={() => setSidebarTab('stats')}
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                sidebarTab === 'stats'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-900/40'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Activity className="h-3.5 w-3.5 text-purple-300" />
+              <span>Match Hub</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSidebarTab('chat')}
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                sidebarTab === 'chat'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-900/40'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <MessageSquare className="h-3.5 w-3.5 text-purple-300" />
+              <span>Live Chat</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+            </button>
+          </div>
+
+          {/* TAB 1: Live Match Chat (Always mounted in DOM so switching tabs NEVER erases chat messages or input) */}
+          <div className={sidebarTab === 'chat' ? 'w-full min-w-0' : 'hidden'}>
+            <LiveMatchChat
+              matchId={match.id}
+              homeTeam={hubData.homeName}
+              awayTeam={hubData.awayName}
+              matchStatus={match.status}
+              currentMinute={match.currentMinute}
+            />
+          </div>
+
+          {/* TAB 2: Match Hub (Scoreboard, Man of the Match, Events Feed, AI Insight) */}
+          <div className={sidebarTab === 'stats' ? 'flex flex-col gap-4 w-full min-w-0' : 'hidden'}>
+            {/* CARD 1: Match Scoreboard & Scorers (Visible on both mobile & desktop) */}
+            <div className="w-full">
+              {renderMatchScoreboardCard()}
+            </div>
+
+            {/* CARD 2: Star Player / Man of the Match (Strictly from this fixture!) */}
+            <div 
+              onClick={() => handlePlayerClick({ name: hubData.bestPlayer.name, jersey: hubData.bestPlayer.jersey, avatar: hubData.bestPlayer.avatar, role: 'Featured Match Performer', starter: true }, hubData.bestPlayer.teamName === hubData.homeName)}
+              title={`Click to view full profile & market value for ${hubData.bestPlayer.name}`}
+              className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#7c3aed] via-[#6d28d9] to-[#4c1d95] p-5 shadow-2xl shadow-purple-600/30 text-white min-h-[200px] flex flex-col justify-between cursor-pointer hover:scale-[1.01] hover:shadow-purple-500/40 transition-all group"
+            >
+              {/* Watermark Jersey Number */}
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 text-[120px] font-black text-white/10 select-none pointer-events-none leading-none">
+                {hubData.bestPlayer.jersey}
+              </div>
+
+              {/* Card Header: "Featured Match Performer" & Goals / Assists */}
+              <div className="relative z-10 flex items-start justify-between">
+                <div>
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-purple-200 block">
+                    Featured Match Performer
+                  </span>
+                  <span className="text-[11px] text-purple-300 font-semibold">{hubData.bestPlayer.teamName}</span>
+                </div>
+
+                {/* Goals or Match Rating Pill */}
+                <div className="flex gap-1.5 text-right text-xs font-black">
+                  <div className="bg-black/30 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/15">
+                    <span className="text-[9px] text-purple-200 uppercase block leading-tight">
+                      {hubData.bestPlayer.goals > 0 ? (hubData.sport === 'basketball' ? 'Points' : 'Goals') : 'Rating'}
+                    </span>
+                    <span className="text-sm font-black text-emerald-400">
+                      {hubData.bestPlayer.goals > 0 ? hubData.bestPlayer.goals : '7.2'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom: Player Avatar & Jersey Badge + Name & Team Badge */}
+              {(() => {
+                const cleanBestName = hubData.bestPlayer?.name?.toLowerCase().trim();
+                const bestFaceUrl = playerFaces[cleanBestName] || hubData.bestPlayer?.avatar;
+                return (
+                  <div className="relative z-10 pt-4 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Player Face Photo with Jersey Number Badge overlay */}
+                      <div className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-2xl border-2 border-white/80 bg-black/40 shadow-xl overflow-visible shrink-0">
+                        <div className="h-full w-full rounded-2xl overflow-hidden bg-gradient-to-tr from-purple-900 to-indigo-950 flex items-center justify-center">
+                          {bestFaceUrl ? (
+                            <img
+                              src={bestFaceUrl}
+                              alt={hubData.bestPlayer.name}
+                              className="h-full w-full object-cover object-top"
+                              loading="lazy"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : null}
+                          <span className="text-sm font-black text-purple-300 absolute inset-0 flex items-center justify-center -z-0">
+                            #{hubData.bestPlayer.jersey}
+                          </span>
+                        </div>
+
+                        {/* Small Jersey Number Badge */}
+                        <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 min-w-[20px] rounded-lg bg-amber-400 text-slate-950 border border-white text-[9.5px] font-black flex items-center justify-center shadow-lg">
+                          #{hubData.bestPlayer.jersey}
+                        </span>
+                      </div>
+
+                      {/* Name, Jersey Chip and Team */}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-1.5 py-0.5 rounded bg-black/40 text-amber-300 font-mono text-[10px] font-black border border-white/15">
+                            #{hubData.bestPlayer.jersey}
+                          </span>
+                          <h3 className="text-base sm:text-lg font-black text-white leading-tight truncate">
+                            {hubData.bestPlayer.name}
+                          </h3>
+                        </div>
+                        <span className="text-xs text-purple-200 font-medium block truncate mt-0.5">
+                          {hubData.bestPlayer.teamName}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Team Badge */}
+                    <div className="h-10 w-10 rounded-2xl bg-white/20 p-1 flex items-center justify-center shrink-0 border border-white/30 overflow-hidden shadow-lg">
+                      <img
+                        src={hubData.bestPlayer.teamBadge}
+                        alt=""
+                        className="max-h-8 max-w-8 object-contain drop-shadow"
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* CARD 3: Match Minute & Timeline Progress */}
+            <div className="rounded-3xl bg-[#131222]/95 backdrop-blur-xl border border-white/10 p-5 shadow-2xl">
+              <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/5">
+                <span className="text-xs font-black uppercase tracking-wider text-white">
+                  Match Timeline
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-600/30 border border-purple-500/30 text-xs font-mono font-bold text-purple-300">
+                  <span>⏱</span>
+                  <span>{match.currentMinute || 'Live'}</span>
+                </span>
+              </div>
+
+              {/* Events summary */}
+              <div className="space-y-2 w-full">
+                {hubData.timelineEvents.length > 0 ? (
+                  hubData.timelineEvents.map((evt, idx) => {
+                    const isRed = evt.type === 'red_card';
+                    const isYellow = evt.type === 'yellow_card';
+                    const isGoal = evt.type === 'goal';
+                    const isOG = Boolean(evt.isOwnGoal || (evt.player && evt.player.includes('(OG)')) || evt.text?.toLowerCase().includes('own goal'));
+
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`flex items-center justify-between text-xs p-2 rounded-xl border transition-all ${
+                          isRed
+                            ? 'bg-rose-950/40 border-rose-500/40 shadow-sm shadow-rose-950/30'
+                            : isOG
+                            ? 'bg-red-950/30 border-red-500/30'
+                            : isGoal
+                            ? 'bg-emerald-950/30 border-emerald-500/30'
+                            : isYellow
+                            ? 'bg-amber-950/20 border-amber-500/20'
+                            : 'bg-white/5 border-white/5'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-mono text-purple-400 font-black text-xs shrink-0 w-8">
+                            {evt.displayMinute}
+                          </span>
+                          <span className="text-slate-200 font-semibold truncate flex items-center gap-1.5">
+                            {isRed ? (
+                              <span className="h-3.5 w-2.5 rounded-[2px] bg-red-600 border border-white inline-block shrink-0 shadow-sm" />
+                            ) : isYellow ? (
+                              <span className="h-3.5 w-2.5 rounded-[2px] bg-amber-400 border border-black/30 inline-block shrink-0 shadow-sm" />
+                            ) : isOG ? (
+                              <span className="text-red-400 font-black text-xs">⚽ (OG)</span>
+                            ) : isGoal ? (
+                              <span className="text-emerald-400 font-black text-xs">⚽</span>
+                            ) : (
+                              <span className="text-purple-400">🔄</span>
+                            )}
+                            <span className="truncate">{evt.player || evt.text}</span>
+                          </span>
+                        </div>
+
+                        {isOG && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-red-600/20 text-red-400 border border-red-500/30 shrink-0">
+                            Own Goal
+                          </span>
+                        )}
+                        {isRed && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-rose-600/20 text-rose-300 border border-rose-500/30 shrink-0">
+                            Sent Off
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-[11px] text-slate-500 text-center italic py-4">
+                    Match events will appear here in real-time
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* CARD 4: AI Match Insight */}
+            {showAiInsight && (
+              <div className="rounded-2xl bg-[#141224] border border-white/10 p-3.5 shadow-2xl flex items-center justify-between gap-3 animate-fade-in">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-cyan-400 via-indigo-500 to-pink-500 p-0.5 shadow-lg shadow-pink-500/30 flex items-center justify-center shrink-0 animate-pulse">
+                    <div className="h-full w-full rounded-full bg-[#141224] flex items-center justify-center">
+                      <Sparkles className="h-4 w-4 text-pink-400" />
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-200 font-semibold leading-snug">
+                    {hubData.attackZones.description}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setShowAiInsight(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+
+        </aside>
+
+        {/* ── SECTION 3: TACTICAL MATCH TELEMETRY (PLACED CLEANLY ON ROW 2) ── */}
+        <section className="w-full xl:col-start-1 xl:row-start-2 rounded-3xl bg-[#131124] border border-white/10 p-4 sm:p-6 shadow-2xl flex flex-col gap-4 min-w-0">
             
             {/* Tactical Navigation Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10 w-full min-w-0">
@@ -826,9 +1073,6 @@ export default function MatchHubView({
                           hubData.sport === 'hockey' ? 'Rink Attack Zones' :
                           hubData.sport === 'tennis' ? 'Court Placement' :
                           'Attack Zones & Keys'}
-                    </option>
-                    <option value="chat" className="bg-[#1b1930] text-purple-300 font-bold">
-                      💬 Live Stadium Chat
                     </option>
                   </select>
                   <ChevronDown className="w-4 h-4 text-purple-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1895,270 +2139,7 @@ export default function MatchHubView({
               </div>
             )}
 
-            {/* Live Stadium Group Chat (Active on Mobile / When Selected) */}
-            {tacticalTab === 'chat' && (
-              <div className="w-full">
-                <LiveMatchChat
-                  matchId={match.id}
-                  homeTeam={hubData.homeName}
-                  awayTeam={hubData.awayName}
-                  matchStatus={match.status}
-                  currentMinute={match.currentMinute}
-                />
-              </div>
-            )}
-
-          </div>
-        </div>
-
-        {/* ── 4. RIGHT TACTICAL MATCH RAIL (INDEPENDENTLY SCROLLABLE ON DESKTOP) ── */}
-        <aside className="w-full xl:w-[380px] 2xl:w-[400px] flex flex-col gap-4 shrink-0 xl:sticky xl:top-[80px] xl:max-h-[calc(100vh-96px)] xl:overflow-y-auto xl:pr-1.5 custom-vertical-scrollbar min-w-0">
-          
-          {/* Top Rail Tab Switcher: Match Hub first, Live Chat second */}
-          <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-[#141224] border border-white/10 shrink-0">
-            <button
-              type="button"
-              onClick={() => setSidebarTab('stats')}
-              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                sidebarTab === 'stats'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-900/40'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Activity className="h-3.5 w-3.5 text-purple-300" />
-              <span>Match Hub</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSidebarTab('chat')}
-              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                sidebarTab === 'chat'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-900/40'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <MessageSquare className="h-3.5 w-3.5 text-purple-300" />
-              <span>Live Chat</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-            </button>
-          </div>
-
-          {/* TAB 1: Live Match Chat (Always mounted in DOM so switching tabs NEVER erases chat messages or input) */}
-          <div className={sidebarTab === 'chat' ? 'w-full min-w-0' : 'hidden'}>
-            <LiveMatchChat
-              matchId={match.id}
-              homeTeam={hubData.homeName}
-              awayTeam={hubData.awayName}
-              matchStatus={match.status}
-              currentMinute={match.currentMinute}
-            />
-          </div>
-
-          {/* TAB 2: Match Hub (Scoreboard, Man of the Match, Events Feed, AI Insight) */}
-          <div className={sidebarTab === 'stats' ? 'flex flex-col gap-4 w-full min-w-0' : 'hidden'}>
-            {/* CARD 1: Match Scoreboard & Scorers (Visible on desktop xl:) */}
-            <div className="hidden xl:block w-full">
-              {renderMatchScoreboardCard()}
-            </div>
-
-          {/* CARD 2: Star Player / Man of the Match (Strictly from this fixture!) */}
-          <div 
-            onClick={() => handlePlayerClick({ name: hubData.bestPlayer.name, jersey: hubData.bestPlayer.jersey, avatar: hubData.bestPlayer.avatar, role: 'Featured Match Performer', starter: true }, hubData.bestPlayer.teamName === hubData.homeName)}
-            title={`Click to view full profile & market value for ${hubData.bestPlayer.name}`}
-            className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#7c3aed] via-[#6d28d9] to-[#4c1d95] p-5 shadow-2xl shadow-purple-600/30 text-white min-h-[200px] flex flex-col justify-between cursor-pointer hover:scale-[1.01] hover:shadow-purple-500/40 transition-all group"
-          >
-            {/* Watermark Jersey Number */}
-            <div className="absolute right-6 top-1/2 -translate-y-1/2 text-[120px] font-black text-white/10 select-none pointer-events-none leading-none">
-              {hubData.bestPlayer.jersey}
-            </div>
-
-            {/* Card Header: "Featured Match Performer" & Goals / Assists */}
-            <div className="relative z-10 flex items-start justify-between">
-              <div>
-                <span className="text-xs font-extrabold uppercase tracking-wider text-purple-200 block">
-                  Featured Match Performer
-                </span>
-                <span className="text-[11px] text-purple-300 font-semibold">{hubData.bestPlayer.teamName}</span>
-              </div>
-
-              {/* Goals or Match Rating Pill */}
-              <div className="flex gap-1.5 text-right text-xs font-black">
-                <div className="bg-black/30 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/15">
-                  <span className="text-[9px] text-purple-200 uppercase block leading-tight">
-                    {hubData.bestPlayer.goals > 0 ? (hubData.sport === 'basketball' ? 'Points' : 'Goals') : 'Rating'}
-                  </span>
-                  <span className="text-sm font-black text-emerald-400">
-                    {hubData.bestPlayer.goals > 0 ? hubData.bestPlayer.goals : '7.2'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom: Player Avatar & Jersey Badge + Name & Team Badge */}
-            {(() => {
-              const cleanBestName = hubData.bestPlayer?.name?.toLowerCase().trim();
-              const bestFaceUrl = playerFaces[cleanBestName] || hubData.bestPlayer?.avatar;
-              return (
-                <div className="relative z-10 pt-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    {/* Player Face Photo with Jersey Number Badge overlay */}
-                    <div className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-2xl border-2 border-white/80 bg-black/40 shadow-xl overflow-visible shrink-0">
-                      <div className="h-full w-full rounded-2xl overflow-hidden bg-gradient-to-tr from-purple-900 to-indigo-950 flex items-center justify-center">
-                        {bestFaceUrl ? (
-                          <img
-                            src={bestFaceUrl}
-                            alt={hubData.bestPlayer.name}
-                            className="h-full w-full object-cover object-top"
-                            loading="lazy"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                        ) : null}
-                        <span className="text-sm font-black text-purple-300 absolute inset-0 flex items-center justify-center -z-0">
-                          #{hubData.bestPlayer.jersey}
-                        </span>
-                      </div>
-
-                      {/* Small Jersey Number Badge */}
-                      <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 min-w-[20px] rounded-lg bg-amber-400 text-slate-950 border border-white text-[9.5px] font-black flex items-center justify-center shadow-lg">
-                        #{hubData.bestPlayer.jersey}
-                      </span>
-                    </div>
-
-                    {/* Name, Jersey Chip and Team */}
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 rounded bg-black/40 text-amber-300 font-mono text-[10px] font-black border border-white/15">
-                          #{hubData.bestPlayer.jersey}
-                        </span>
-                        <h3 className="text-base sm:text-lg font-black text-white leading-tight truncate">
-                          {hubData.bestPlayer.name}
-                        </h3>
-                      </div>
-                      <span className="text-xs text-purple-200 font-medium block truncate mt-0.5">
-                        {hubData.bestPlayer.teamName}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Team Badge */}
-                  <div className="h-10 w-10 rounded-2xl bg-white/20 p-1 flex items-center justify-center shrink-0 border border-white/30 overflow-hidden shadow-lg">
-                    <img
-                      src={hubData.bestPlayer.teamBadge}
-                      alt=""
-                      className="max-h-8 max-w-8 object-contain drop-shadow"
-                    />
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-
-          {/* CARD 3: Match Minute & Timeline Progress (Full natural length without artificial cutting) */}
-          <div className="rounded-3xl bg-[#131222]/95 backdrop-blur-xl border border-white/10 p-5 shadow-2xl">
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/5">
-              <span className="text-xs font-black uppercase tracking-wider text-white">
-                Match Timeline
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-600/30 border border-purple-500/30 text-xs font-mono font-bold text-purple-300">
-                <span>⏱</span>
-                <span>{match.currentMinute || 'Live'}</span>
-              </span>
-            </div>
-
-            {/* Events summary: Full length without cutting off */}
-            <div className="space-y-2 w-full">
-              {hubData.timelineEvents.length > 0 ? (
-                hubData.timelineEvents.map((evt, idx) => {
-                  const isRed = evt.type === 'red_card';
-                  const isYellow = evt.type === 'yellow_card';
-                  const isGoal = evt.type === 'goal';
-                  const isOG = Boolean(evt.isOwnGoal || (evt.player && evt.player.includes('(OG)')) || evt.text?.toLowerCase().includes('own goal'));
-
-                  return (
-                    <div 
-                      key={idx} 
-                      className={`flex items-center justify-between text-xs p-2 rounded-xl border transition-all ${
-                        isRed
-                          ? 'bg-rose-950/40 border-rose-500/40 shadow-sm shadow-rose-950/30'
-                          : isOG
-                          ? 'bg-red-950/30 border-red-500/30'
-                          : isGoal
-                          ? 'bg-emerald-950/30 border-emerald-500/30'
-                          : isYellow
-                          ? 'bg-amber-950/20 border-amber-500/20'
-                          : 'bg-white/5 border-white/5'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-mono text-purple-400 font-black text-xs shrink-0 w-8">
-                          {evt.displayMinute}
-                        </span>
-                        <span className="text-slate-200 font-semibold truncate flex items-center gap-1.5">
-                          {isRed ? (
-                            <span className="h-3.5 w-2.5 rounded-[2px] bg-red-600 border border-white inline-block shrink-0 shadow-sm" />
-                          ) : isYellow ? (
-                            <span className="h-3.5 w-2.5 rounded-[2px] bg-amber-400 border border-black/30 inline-block shrink-0 shadow-sm" />
-                          ) : isOG ? (
-                            <span className="text-red-400 font-black text-xs">⚽ (OG)</span>
-                          ) : isGoal ? (
-                            <span className="text-emerald-400 font-black text-xs">⚽</span>
-                          ) : (
-                            <span className="text-purple-400">🔄</span>
-                          )}
-                          <span className="truncate">{evt.player || evt.text}</span>
-                        </span>
-                      </div>
-
-                      {isOG && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-red-600/20 text-red-400 border border-red-500/30 shrink-0">
-                          Own Goal
-                        </span>
-                      )}
-                      {isRed && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-rose-600/20 text-rose-300 border border-rose-500/30 shrink-0">
-                          Sent Off
-                        </span>
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-[11px] text-slate-500 text-center italic py-4">
-                  Match events will appear here in real-time
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* CARD 4: AI Match Insight */}
-          {showAiInsight && (
-            <div className="rounded-2xl bg-[#141224] border border-white/10 p-3.5 shadow-2xl flex items-center justify-between gap-3 animate-fade-in">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-cyan-400 via-indigo-500 to-pink-500 p-0.5 shadow-lg shadow-pink-500/30 flex items-center justify-center shrink-0 animate-pulse">
-                  <div className="h-full w-full rounded-full bg-[#141224] flex items-center justify-center">
-                    <Sparkles className="h-4 w-4 text-pink-400" />
-                  </div>
-                </div>
-
-                <p className="text-xs text-slate-200 font-semibold leading-snug">
-                  {hubData.attackZones.description}
-                </p>
-              </div>
-
-              <button
-                onClick={() => setShowAiInsight(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
-          </div>
-
-        </aside>
+        </section>
       </main>
 
       {/* Interactive Player Details & Market Value Modal */}
