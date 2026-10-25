@@ -43,10 +43,16 @@ describe('Teams Matching Algorithm', () => {
     expect(teamsMatch('Real Madrid CF vs Barcelona', 'Barcelona vs Madrid')).toBe(true);
     expect(teamsMatch('Internazionale vs Fiorentina', 'Inter Milan vs Fiorentina')).toBe(true);
     expect(teamsMatch('PSG vs Marseille', 'Paris Saint-Germain vs Marseille')).toBe(true);
+    expect(teamsMatch('Man Utd vs Chelsea', 'Manchester United vs Chelsea')).toBe(true);
+    expect(teamsMatch('Wolves vs Arsenal', 'Wolverhampton Wanderers vs Arsenal')).toBe(true);
+    expect(teamsMatch('Spurs vs Everton', 'Tottenham Hotspur vs Everton')).toBe(true);
+    expect(teamsMatch('Bayern München vs BVB', 'Bayern Munich vs Borussia Dortmund')).toBe(true);
+    expect(teamsMatch('Sporting CP vs Benfica', 'Sporting Lisbon vs SL Benfica')).toBe(true);
   });
 
-  it('should reject different games', () => {
+  it('should reject different games and avoid city vs united false positives', () => {
     expect(teamsMatch('Liverpool vs Arsenal', 'Manchester United vs Chelsea')).toBe(false);
+    expect(teamsMatch('Manchester United vs Chelsea', 'Manchester City vs Chelsea')).toBe(false);
   });
 });
 

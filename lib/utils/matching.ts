@@ -209,25 +209,85 @@ export function getSignificantWords(name: string): string[] {
 }
 
 export const TEAM_SYNONYMS: [RegExp, string][] = [
+  // Italian Serie A
   [/\b(internazionale|inter milan|inter milano|inter m)\b/i, 'inter milan'],
-  [/\b(paris saint-germain|paris sg|paris saint germain|psg)\b/i, 'psg'],
+  [/\b(ac milan|milan)\b/i, 'milan'],
+  [/\b(as roma|roma)\b/i, 'roma'],
+  [/\b(ss lazio|lazio)\b/i, 'lazio'],
+  [/\b(ssc napoli|napoli)\b/i, 'napoli'],
+  [/\b(juventus|juve)\b/i, 'juventus'],
+  [/\b(hellas verona|verona)\b/i, 'verona'],
+
+  // English Premier League & Championship
   [/\b(manchester united|man utd|man united)\b/i, 'manchester united'],
   [/\b(manchester city|man city)\b/i, 'manchester city'],
   [/\b(tottenham hotspur|tottenham|spurs)\b/i, 'tottenham'],
   [/\b(wolverhampton wanderers|wolverhampton|wolves)\b/i, 'wolves'],
-  [/\b(atletico madrid|atlético madrid|atletico de madrid|atleti)\b/i, 'atletico madrid'],
-  [/\b(athletic bilbao|athletic club)\b/i, 'athletic bilbao'],
-  [/\b(bayern munchen|bayern munich|fc bayern)\b/i, 'bayern'],
-  [/\b(borussia dortmund|bvb dortmund|bvb)\b/i, 'dortmund'],
-  [/\b(bayer 04 leverkusen|bayer leverkusen|leverkusen)\b/i, 'leverkusen'],
-  [/\b(sporting cp|sporting lisbon|sporting clube)\b/i, 'sporting'],
-  [/\b(ac milan|milan)\b/i, 'milan'],
-  [/\b(as roma|roma)\b/i, 'roma'],
-  [/\b(juventus|juve)\b/i, 'juventus'],
-  [/\b(sl benfica|benfica)\b/i, 'benfica'],
   [/\b(newcastle united|newcastle)\b/i, 'newcastle'],
   [/\b(west ham united|west ham)\b/i, 'west ham'],
-  [/\b(brighton and hove albion|brighton)\b/i, 'brighton'],
+  [/\b(brighton and hove albion|brighton & hove albion|brighton)\b/i, 'brighton'],
+  [/\b(nottingham forest|nottm forest|nott'm forest)\b/i, 'nottingham forest'],
+  [/\b(afc bournemouth|bournemouth)\b/i, 'bournemouth'],
+  [/\b(sheffield united|sheff utd)\b/i, 'sheffield united'],
+  [/\b(sheffield wednesday|sheff wed)\b/i, 'sheffield wednesday'],
+  [/\b(west bromwich albion|west brom|wba)\b/i, 'west brom'],
+  [/\b(queens park rangers|qpr)\b/i, 'qpr'],
+
+  // Spanish La Liga
+  [/\b(atletico madrid|atlético madrid|atletico de madrid|atleti)\b/i, 'atletico madrid'],
+  [/\b(athletic bilbao|athletic club)\b/i, 'athletic bilbao'],
+  [/\b(real madrid cf|real madrid)\b/i, 'real madrid'],
+  [/\b(fc barcelona|barcelona|barca)\b/i, 'barcelona'],
+  [/\b(real betis balompie|real betis balompié|real betis|betis)\b/i, 'real betis'],
+  [/\b(celta de vigo|celta vigo|rc celta)\b/i, 'celta vigo'],
+  [/\b(rcd espanyol|espanyol)\b/i, 'espanyol'],
+  [/\b(rcd mallorca|mallorca)\b/i, 'mallorca'],
+  [/\b(ca osasuna|osasuna)\b/i, 'osasuna'],
+  [/\b(deportivo alaves|deportivo alavés|alaves|alavés)\b/i, 'alaves'],
+
+  // German Bundesliga
+  [/\b(bayern munchen|bayern münchen|bayern munich|fc bayern)\b/i, 'bayern'],
+  [/\b(borussia dortmund|bvb dortmund|bvb)\b/i, 'dortmund'],
+  [/\b(bayer 04 leverkusen|bayer leverkusen|leverkusen)\b/i, 'leverkusen'],
+  [/\b(borussia mönchengladbach|borussia monchengladbach|borussia mgladbach|m'gladbach|gladbach)\b/i, 'gladbach'],
+  [/\b(rb leipzig|rasenballsport leipzig|leipzig)\b/i, 'leipzig'],
+  [/\b(eintracht frankfurt|frankfurt)\b/i, 'frankfurt'],
+  [/\b(vfb stuttgart|stuttgart)\b/i, 'stuttgart'],
+  [/\b(vfl wolfsburg|wolfsburg)\b/i, 'wolfsburg'],
+  [/\b(1\.? fsv mainz 05|mainz 05|mainz)\b/i, 'mainz'],
+  [/\b(1\.? fc koln|1\.? fc köln|fc koln|fc köln|cologne)\b/i, 'koln'],
+  [/\b(1\.? fc union berlin|union berlin)\b/i, 'union berlin'],
+  [/\b(sv werder bremen|werder bremen|bremen)\b/i, 'bremen'],
+
+  // French Ligue 1
+  [/\b(paris saint-germain|paris sg|paris saint germain|psg)\b/i, 'psg'],
+  [/\b(olympique de marseille|olympique marseille|marseille)\b/i, 'marseille'],
+  [/\b(olympique lyonnais|olympique lyon|lyon)\b/i, 'lyon'],
+  [/\b(as monaco|monaco)\b/i, 'monaco'],
+  [/\b(losc lille|lille)\b/i, 'lille'],
+  [/\b(stade rennais|rennes)\b/i, 'rennes'],
+  [/\b(ogc nice|nice)\b/i, 'nice'],
+  [/\b(as saint-etienne|as saint-étienne|saint-etienne|saint-étienne)\b/i, 'saint-etienne'],
+
+  // Portuguese & Dutch & Scottish
+  [/\b(sporting cp|sporting lisbon|sporting clube de portugal)\b/i, 'sporting'],
+  [/\b(sl benfica|benfica)\b/i, 'benfica'],
+  [/\b(fc porto|porto)\b/i, 'porto'],
+  [/\b(sc braga|braga)\b/i, 'braga'],
+  [/\b(psv eindhoven|psv)\b/i, 'psv'],
+  [/\b(az alkmaar|az)\b/i, 'az alkmaar'],
+  [/\b(afc ajax|ajax amsterdam|ajax)\b/i, 'ajax'],
+  [/\b(celtic fc|celtic)\b/i, 'celtic'],
+  [/\b(rangers fc|glasgow rangers|rangers)\b/i, 'rangers'],
+
+  // North American Sports (MLS, NBA, NHL)
+  [/\b(new york red bulls|ny red bulls|red bulls)\b/i, 'ny red bulls'],
+  [/\b(new york city fc|nycfc|ny city)\b/i, 'nycfc'],
+  [/\b(los angeles fc|lafc)\b/i, 'lafc'],
+  [/\b(los angeles galaxy|la galaxy)\b/i, 'la galaxy'],
+  [/\b(inter miami cf|inter miami)\b/i, 'inter miami'],
+  [/\b(philadelphia 76ers|sixers|76ers)\b/i, '76ers'],
+  [/\b(portland trail blazers|trail blazers|blazers)\b/i, 'trail blazers'],
 ];
 
 export function canonicalTeam(name: string): string {
@@ -240,6 +300,13 @@ export function canonicalTeam(name: string): string {
 }
 
 export function teamSimilarity(teamA: string, teamB: string): number {
+  // Prevent City vs United false positives
+  const aLower = teamA.toLowerCase();
+  const bLower = teamB.toLowerCase();
+  if ((aLower.includes('city') && bLower.includes('united')) || (aLower.includes('united') && bLower.includes('city'))) {
+    return 0;
+  }
+
   const aNorm = normalizeTeamName(teamA);
   const bNorm = normalizeTeamName(teamB);
   
@@ -264,7 +331,7 @@ export function teamSimilarity(teamA: string, teamB: string): number {
     }
   }
 
-  // Canonical alias synonyms check (e.g. Internazionale -> Inter Milan, Man Utd -> Manchester United)
+  // Canonical alias synonyms check (e.g. Internazionale -> Inter Milan, Man Utd -> Manchester United, Wolves -> Wolverhampton)
   const cA = canonicalTeam(teamA);
   const cB = canonicalTeam(teamB);
   if (cA && cB && cA === cB) return 1.8;
