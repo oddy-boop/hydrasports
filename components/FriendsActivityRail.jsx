@@ -63,7 +63,8 @@ export default function HydraSportsActivityRail() {
         if (!res.ok) throw new Error('Standings failed');
         const data = await res.json();
         if (!cancelled && Array.isArray(data.entries)) {
-          setStandings(data.entries);
+          const sorted = [...data.entries].sort((a, b) => (a.rank || 0) - (b.rank || 0) || (b.points || 0) - (a.points || 0));
+          setStandings(sorted);
         }
       } catch {
         if (!cancelled) setStandings([]);
@@ -87,7 +88,8 @@ export default function HydraSportsActivityRail() {
         if (!res.ok) throw new Error('Modal Standings failed');
         const data = await res.json();
         if (!cancelled && Array.isArray(data.entries)) {
-          setModalStandings(data.entries);
+          const sorted = [...data.entries].sort((a, b) => (a.rank || 0) - (b.rank || 0) || (b.points || 0) - (a.points || 0));
+          setModalStandings(sorted);
         }
       } catch {
         if (!cancelled) setModalStandings([]);
@@ -575,7 +577,7 @@ export default function HydraSportsActivityRail() {
                 </div>
               ) : modalStandings.length > 0 ? (
                 <div className="w-full min-w-[460px] sm:min-w-[560px]">
-                  {/* Table Header */}
+                  {/* Table Header (12 Columns: 1 + 4 + 1 + 1 + 1 + 1 + 1 + 2 = 12) */}
                   <div className="grid grid-cols-12 text-xs font-black uppercase tracking-wider text-slate-400 border-b border-white/10 pb-2.5 px-3">
                     <div className="col-span-1">Pos</div>
                     <div className="col-span-4">Club</div>
@@ -583,11 +585,11 @@ export default function HydraSportsActivityRail() {
                     <div className="col-span-1 text-center">W</div>
                     <div className="col-span-1 text-center">D</div>
                     <div className="col-span-1 text-center">L</div>
-                    <div className="col-span-2 text-center">GD</div>
+                    <div className="col-span-1 text-center">GD</div>
                     <div className="col-span-2 text-right">Pts</div>
                   </div>
 
-                  {/* Rows */}
+                  {/* Rows (12 Columns: 1 + 4 + 1 + 1 + 1 + 1 + 1 + 2 = 12) */}
                   <div className="divide-y divide-white/[0.04]">
                     {modalStandings.map((row) => (
                       <div
@@ -622,7 +624,7 @@ export default function HydraSportsActivityRail() {
                         <div className="col-span-1 text-center text-slate-200 font-bold">{row.wins}</div>
                         <div className="col-span-1 text-center text-slate-400">{row.ties}</div>
                         <div className="col-span-1 text-center text-slate-400">{row.losses}</div>
-                        <div className="col-span-2 text-center text-slate-300 font-mono">{row.goalDiff}</div>
+                        <div className="col-span-1 text-center text-slate-300 font-mono">{row.goalDiff}</div>
                         <div className="col-span-2 text-right font-black text-white text-sm tabular-nums text-purple-300">
                           {row.points}
                         </div>

@@ -132,14 +132,24 @@ export async function getStandingsForLeague(leagueQuery = 'serie a'): Promise<Le
   const fallback = FALLBACK_LEAGUE_TABLES[slug] || FALLBACK_LEAGUE_TABLES['ita.1'];
 
   const cache = getCacheManager();
-  return cache.swr(`standings_v2_${slug}`, async () => {
+  return cache.swr(`standings_v3_${slug}`, async () => {
     try {
       const url = `https://site.api.espn.com/apis/v2/sports/soccer/${slug}/standings`;
       // Fast 2.5s timeout prevents hanging requests
       const data = await fetchWithTimeout(url, 2500);
       if (!data) throw new Error('No standings response from ESPN');
 
-      const entriesRaw = data.children?.[0]?.standings?.entries || data.standings?.entries || [];
+      let entriesRaw: any[] = [];
+      if (Array.isArray(data.children) && data.children.length > 0) {
+        for (const child of data.children) {
+          if (Array.isArray(child.standings?.entries)) {
+            entriesRaw.push(...child.standings.entries);
+          }
+        }
+      }
+      if (entriesRaw.length === 0) {
+        entriesRaw = data.standings?.entries || [];
+      }
       const leagueName = data.name || fallback.leagueName;
       const season = String(data.season?.year || new Date().getFullYear());
 
@@ -186,6 +196,20 @@ export async function getStandingsForLeague(leagueQuery = 'serie a'): Promise<Le
           goalDiff: goalDiff.startsWith('+') || goalDiff.startsWith('-') ? goalDiff : `+${goalDiff}`,
           points,
         };
+      });
+
+      // Sort teams by points descending, then goal difference, then wins
+      entries.sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        const gdA = parseInt(a.goalDiff, 10) || 0;
+        const gdB = parseInt(b.goalDiff, 10) || 0;
+        if (gdB !== gdA) return gdB - gdA;
+        return b.wins - a.wins;
+      });
+
+      // Re-index ranks sequentially: 1, 2, 3, 4...
+      entries.forEach((team, index) => {
+        team.rank = index + 1;
       });
 
       return {
