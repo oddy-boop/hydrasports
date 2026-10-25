@@ -26,6 +26,7 @@ describe('adsConfig', () => {
     expect(adsConfig.directLink).toBeDefined();
     expect(adsConfig.directLink.enabled).toBe(true);
     expect(adsConfig.directLink.url).toContain('dozenfourteen.com');
+    expect(adsConfig.directLink.monetagUrl).toContain('uplcm.com');
   });
 
   it('should define monetag configuration', () => {

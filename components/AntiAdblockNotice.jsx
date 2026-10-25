@@ -117,7 +117,10 @@ export default function AntiAdblockNotice() {
 
   if (isWatchPage || !isOverlayActive) return null;
 
-  const directLinkUrl = adsConfig.directLink?.url || 'https://dozenfourteen.com/uh5cgsk2r?key=f62dcc4c1c418b2d8ce632ca9391d1f8';
+  // 50/50 Traffic Split between Adsterra and Monetag Direct Links
+  const directLinkUrl = Math.random() < 0.5
+    ? (adsConfig.directLink?.url || 'https://dozenfourteen.com/uh5cgsk2r?key=f62dcc4c1c418b2d8ce632ca9391d1f8')
+    : (adsConfig.directLink?.monetagUrl || 'https://uplcm.com/4/12119927');
   const isMobile = deviceType === 'ios' || deviceType === 'android';
 
   // 2-Step Close Handler with Frequency Cap Timestamp recording:

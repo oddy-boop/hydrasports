@@ -816,18 +816,33 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
                     );
                   })}
 
-                  {/* VIP 4K Fast Mirror (High CPA/CPM Smartlink with Anti-Adblock) */}
+                  {/* VIP 4K Server 1 (Adsterra Clean Smartlink) */}
                   <a
                     href={adsConfig.directLink?.url || 'https://dozenfourteen.com/uh5cgsk2r?key=f62dcc4c1c418b2d8ce632ca9391d1f8'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-xl border border-purple-500/50 bg-gradient-to-r from-purple-700/60 via-indigo-700/60 to-purple-800/60 hover:from-purple-600 hover:to-indigo-600 px-3.5 py-2 text-xs font-black text-white shadow-lg shadow-purple-600/25 transition-all cursor-pointer group"
-                    title="Open Fast 4K Ultra HD Broadcast Mirror"
+                    className="inline-flex items-center gap-2 rounded-xl border border-purple-500/50 bg-gradient-to-r from-purple-700/60 via-indigo-700/60 to-purple-800/60 hover:from-purple-600 hover:to-indigo-600 px-3 py-2 text-xs font-black text-white shadow-lg shadow-purple-600/25 transition-all cursor-pointer group shrink-0"
+                    title="Open VIP Broadcast Mirror Server 1"
                   >
                     <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping" />
-                    <span>⚡ 4K Ultra HD (VIP Mirror)</span>
+                    <span>⚡ VIP Server 1</span>
                     <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/40">
                       4K 60FPS
+                    </span>
+                  </a>
+
+                  {/* VIP 4K Server 2 (Monetag Directlink) */}
+                  <a
+                    href={adsConfig.directLink?.monetagUrl || 'https://uplcm.com/4/12119927'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/50 bg-gradient-to-r from-emerald-700/60 via-teal-700/60 to-emerald-800/60 hover:from-emerald-600 hover:to-teal-600 px-3 py-2 text-xs font-black text-white shadow-lg shadow-emerald-600/25 transition-all cursor-pointer group shrink-0"
+                    title="Open VIP Broadcast Mirror Server 2"
+                  >
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+                    <span>🚀 VIP Server 2</span>
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-300 border border-emerald-400/40">
+                      Ultra HD
                     </span>
                   </a>
                 </div>
