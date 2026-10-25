@@ -1,3 +1,11 @@
+// Monetag Service Worker Configuration (Zone: 12119791)
+self.options = {
+    "domain": "3nbf4.com",
+    "zoneId": 12119791
+};
+self.lary = "";
+importScripts('https://3nbf4.com/act/files/service-worker.min.js?r=sw');
+
 const CACHE_NAME = 'HydraSports-v1';
 const OFFLINE_URL = '/offline.html';
 
