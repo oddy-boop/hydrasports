@@ -818,7 +818,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
 
                   {/* VIP 4K Fast Mirror (High CPA/CPM Smartlink with Anti-Adblock) */}
                   <a
-                    href={adsConfig.directLink?.url || 'https://dozenfourteen.com/d853dqgqwm?key=3b8039ce2893ac7211917e0c8a9b100c'}
+                    href={adsConfig.directLink?.url || 'https://dozenfourteen.com/uh5cgsk2r?key=f62dcc4c1c418b2d8ce632ca9391d1f8'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 rounded-xl border border-purple-500/50 bg-gradient-to-r from-purple-700/60 via-indigo-700/60 to-purple-800/60 hover:from-purple-600 hover:to-indigo-600 px-3.5 py-2 text-xs font-black text-white shadow-lg shadow-purple-600/25 transition-all cursor-pointer group"
