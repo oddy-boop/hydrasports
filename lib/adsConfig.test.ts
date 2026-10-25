@@ -28,6 +28,11 @@ describe('adsConfig', () => {
     expect(adsConfig.directLink.url).toContain('dozenfourteen.com');
   });
 
+  it('should define overlayGateway configuration', () => {
+    expect(adsConfig.overlayGateway).toBeDefined();
+    expect(adsConfig.overlayGateway.enabled).toBe(true);
+  });
+
   it('should have enabled slots with required configuration keys', () => {
     const slots = ['header', 'matchHub', 'sidebar', 'inContent', 'stickyFooter'] as const;
     for (const slotKey of slots) {
