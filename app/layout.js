@@ -4,6 +4,7 @@ import { MiniPlayerProvider } from '@/components/MiniPlayerProvider';
 import { AuthProvider } from '@/components/AuthContext';
 import FootyLayoutShell from '@/components/FootyLayoutShell';
 import SocialBarAd from '@/components/SocialBarAd';
+import MonetagAd from '@/components/MonetagAd';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hydrasports.selamate.com';
 
@@ -90,6 +91,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className="app-shell bg-[#12111c] text-white" suppressHydrationWarning>
         <SocialBarAd />
+        <MonetagAd />
         <AuthProvider>
           <HydraProvider>
             <MiniPlayerProvider>

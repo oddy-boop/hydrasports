@@ -28,6 +28,13 @@ describe('adsConfig', () => {
     expect(adsConfig.directLink.url).toContain('dozenfourteen.com');
   });
 
+  it('should define monetag configuration', () => {
+    expect(adsConfig.monetag).toBeDefined();
+    expect(adsConfig.monetag.enabled).toBe(true);
+    expect(adsConfig.monetag.scriptSrc).toContain('quge5.com');
+    expect(adsConfig.monetag.zone).toBe('301930');
+  });
+
   it('should define overlayGateway configuration', () => {
     expect(adsConfig.overlayGateway).toBeDefined();
     expect(typeof adsConfig.overlayGateway.enabled).toBe('boolean');
