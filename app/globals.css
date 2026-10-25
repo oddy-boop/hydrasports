@@ -951,12 +951,16 @@ body {
 }
 
 /* Premium utility to completely hide scrollbars but keep scrolling active */
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
+.scrollbar-none::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
-.scrollbar-none {
-  -ms-overflow-style: none;  /* IE/Edge */
-  scrollbar-width: none;  /* Firefox */
+.scrollbar-none,
+.no-scrollbar {
+  -ms-overflow-style: none !important;  /* IE/Edge */
+  scrollbar-width: none !important;  /* Firefox */
 }
 
 /* === Immersive Premium Micro-Animations & Core Keyframes === */

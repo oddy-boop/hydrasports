@@ -243,7 +243,7 @@ export default function LiveMatchChat({
   };
 
   return (
-    <div className="w-full flex flex-col h-[520px] rounded-3xl bg-[#0d0c18] border border-white/10 shadow-2xl overflow-hidden min-w-0">
+    <div className="w-full flex flex-col h-[540px] rounded-3xl bg-[#0d0c18] border border-white/10 shadow-2xl overflow-hidden min-w-0 no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       
       {/* ── TOP HEADER ── */}
       <div className="px-3.5 py-2.5 bg-[#141224] border-b border-white/10 flex items-center justify-between gap-2 shrink-0">
@@ -354,7 +354,7 @@ export default function LiveMatchChat({
           {/* ── MESSAGE FEED ── */}
           <div
             ref={chatContainerRef}
-            className="flex-1 p-3 overflow-y-auto space-y-2 custom-vertical-scrollbar min-w-0"
+            className="flex-1 p-3 overflow-y-auto space-y-2 min-w-0 no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           >
             {isClosed ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2.5">
@@ -437,7 +437,7 @@ export default function LiveMatchChat({
 
           {/* ── QUICK CHEERS ── */}
           {!isClosed && (
-            <div className="px-3 py-1.5 bg-[#121020] border-t border-white/5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+            <div className="px-3 py-1.5 bg-[#121020] border-t border-white/5 flex items-center gap-1.5 overflow-x-auto min-w-0 no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden shrink-0">
               {QUICK_CHEERS.map((cheer, idx) => (
                 <button
                   key={idx}

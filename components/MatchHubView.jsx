@@ -57,7 +57,7 @@ export default function MatchHubView({
   const [isRetryingStream, setIsRetryingStream] = useState(false);
   const [activeTab, setActiveTab] = useState('lobby');
   const [tacticalTab, setTacticalTab] = useState('lineups'); // 'lineups' | 'subs' | 'discipline' | 'stats' | 'zones' | 'chat'
-  const [sidebarTab, setSidebarTab] = useState('chat'); // 'chat' | 'stats'
+  const [sidebarTab, setSidebarTab] = useState('stats'); // 'stats' (first) | 'chat' (second)
   const [selectedTeamTab, setSelectedTeamTab] = useState('home'); // 'home' | 'away'
   const [activeChannelIdx, setActiveChannelIdx] = useState(0);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
@@ -1914,8 +1914,21 @@ export default function MatchHubView({
         {/* ── 4. RIGHT TACTICAL MATCH RAIL (INDEPENDENTLY SCROLLABLE ON DESKTOP) ── */}
         <aside className="w-full xl:w-[380px] 2xl:w-[400px] flex flex-col gap-4 shrink-0 xl:sticky xl:top-[80px] xl:max-h-[calc(100vh-96px)] xl:overflow-y-auto xl:pr-1.5 custom-vertical-scrollbar min-w-0">
           
-          {/* Top Rail Tab Switcher: Live Stadium Chat vs Match Hub */}
+          {/* Top Rail Tab Switcher: Match Hub first, Live Chat second */}
           <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-[#141224] border border-white/10 shrink-0">
+            <button
+              type="button"
+              onClick={() => setSidebarTab('stats')}
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                sidebarTab === 'stats'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-900/40'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Activity className="h-3.5 w-3.5 text-purple-300" />
+              <span>Match Hub</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setSidebarTab('chat')}
@@ -1929,41 +1942,25 @@ export default function MatchHubView({
               <span>Live Chat</span>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
             </button>
-
-            <button
-              type="button"
-              onClick={() => setSidebarTab('stats')}
-              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                sidebarTab === 'stats'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-900/40'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Activity className="h-3.5 w-3.5 text-purple-300" />
-              <span>Match Hub</span>
-            </button>
           </div>
 
-          {sidebarTab === 'chat' ? (
-            <div className="flex flex-col gap-4 w-full min-w-0">
-              {/* Scoreboard is displayed ON TOP of the chat container */}
-              <div className="w-full">
-                {renderMatchScoreboardCard()}
-              </div>
-              <LiveMatchChat
-                matchId={match.id}
-                homeTeam={hubData.homeName}
-                awayTeam={hubData.awayName}
-                matchStatus={match.status}
-                currentMinute={match.currentMinute}
-              />
+          {/* TAB 1: Live Match Chat (Always mounted in DOM so switching tabs NEVER erases chat messages or input) */}
+          <div className={sidebarTab === 'chat' ? 'w-full min-w-0' : 'hidden'}>
+            <LiveMatchChat
+              matchId={match.id}
+              homeTeam={hubData.homeName}
+              awayTeam={hubData.awayName}
+              matchStatus={match.status}
+              currentMinute={match.currentMinute}
+            />
+          </div>
+
+          {/* TAB 2: Match Hub (Scoreboard, Man of the Match, Events Feed, AI Insight) */}
+          <div className={sidebarTab === 'stats' ? 'flex flex-col gap-4 w-full min-w-0' : 'hidden'}>
+            {/* CARD 1: Match Scoreboard & Scorers (Visible on desktop xl:) */}
+            <div className="hidden xl:block w-full">
+              {renderMatchScoreboardCard()}
             </div>
-          ) : (
-            <>
-              {/* CARD 1: Match Scoreboard & Scorers (Visible on desktop xl:) */}
-              <div className="hidden xl:block w-full">
-                {renderMatchScoreboardCard()}
-              </div>
 
           {/* CARD 2: Star Player / Man of the Match (Strictly from this fixture!) */}
           <div 
@@ -2159,8 +2156,7 @@ export default function MatchHubView({
               </button>
             </div>
           )}
-            </>
-          )}
+          </div>
 
         </aside>
       </main>
