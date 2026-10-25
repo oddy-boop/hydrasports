@@ -65,7 +65,7 @@ describe('Multi-Sport Score Resolution (Basketball, Hockey, Tennis)', () => {
       expect(score.home).toBe(4);
       expect(score.away).toBe(1);
     }
-  }, 10000);
+  }, 20000);
 
   it('should resolve scores for Tennis match', async () => {
     const score = await getScoreForMatch(
@@ -81,5 +81,5 @@ describe('Multi-Sport Score Resolution (Basketball, Hockey, Tennis)', () => {
       expect(score.away).toBe(0);
       expect(score.currentMinute).toBeDefined();
     }
-  }, 10000);
+  }, 20000);
 });

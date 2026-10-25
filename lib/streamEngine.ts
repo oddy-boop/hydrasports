@@ -47,16 +47,30 @@ export async function getMatchStatsForMatch(match: Match) {
 
 export async function getLiveMatchDetails(matchId: string): Promise<Match | null> {
   const match = await getMatchDetails(matchId);
-  if (!match || match.status !== 'live') return match;
+  if (!match) return null;
 
-  const eventId = match.id.match(/(\d+)$/)?.[1];
-  const score = await getScoreForMatch(match.title, match.timestamp, match.tournament, eventId, match.sport);
-  return score ? {
-    ...match,
-    homeScore: score.home,
-    awayScore: score.away,
-    currentMinute: score.currentMinute || match.currentMinute,
-  } : match;
+  // Extract ESPN event ID directly if present in matchId or mergedIds for instantaneous O(1) score resolution
+  const espnMerged = match.mergedIds?.find(id => id.startsWith('espn_') || id.includes('espn'));
+  const espnId = espnMerged?.match(/(\d+)$/)?.[1] || match.id.match(/^espn.*?(\d+)$/)?.[1] || match.id.match(/(\d+)$/)?.[1];
+
+  const score = await getScoreForMatch(match.title, match.timestamp, match.tournament, espnId, match.sport);
+  if (score && (score.home !== null || score.away !== null)) {
+    let resolvedStatus = match.status;
+    if (score.currentMinute?.toLowerCase().includes('final') || score.currentMinute?.toLowerCase() === 'ft') {
+      resolvedStatus = 'finished';
+    } else if (score.currentMinute && (score.currentMinute.includes("'") || score.currentMinute.includes('Q') || score.currentMinute.includes('P') || score.currentMinute.toLowerCase().includes('halftime') || score.currentMinute.toLowerCase().includes('ht'))) {
+      resolvedStatus = 'live';
+    }
+
+    return {
+      ...match,
+      homeScore: score.home ?? match.homeScore,
+      awayScore: score.away ?? match.awayScore,
+      currentMinute: score.currentMinute || match.currentMinute,
+      status: resolvedStatus,
+    };
+  }
+  return match;
 }
 
 const providers = [
@@ -288,13 +302,14 @@ export async function getMatches(): Promise<Match[]> {
           };
         }
 
-        // If score is already populated, no need to re-fetch
-        if (match.homeScore !== null && match.awayScore !== null) return match;
+        // Only skip re-fetching if match is already marked finished with scores
+        if (match.status === 'finished' && match.homeScore !== null && match.awayScore !== null) {
+          return match;
+        }
 
-        // Only query external score provider for live or finished matches without score
-        if (match.status !== 'live' && match.status !== 'finished') return match;
+        const espnMerged = match.mergedIds?.find(id => id.startsWith('espn_') || id.includes('espn'));
+        const eventId = espnMerged?.match(/(\d+)$/)?.[1] || match.id.match(/^espn.*?(\d+)$/)?.[1] || match.id.match(/(\d+)$/)?.[1];
 
-        const eventId = match.id.match(/(\d+)$/)?.[1];
         const score = await getScoreForMatch(
           match.title,
           match.timestamp,

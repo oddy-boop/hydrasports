@@ -19,6 +19,14 @@ const SUPPORTED_LEAGUES_TABLE = [
   { id: 'SAF Primera', name: 'SAF Primera (ARG)' },
 ];
 
+export const AVAILABLE_SEASONS = [
+  { id: '2024', label: '2024/25' },
+  { id: '2023', label: '2023/24' },
+  { id: '2022', label: '2022/23' },
+  { id: '2021', label: '2021/22' },
+  { id: '2020', label: '2020/21' },
+];
+
 const QUICK_LEAGUES = [
   { id: 'Premier League', label: 'EPL' },
   { id: 'La Liga', label: 'La Liga' },
@@ -33,6 +41,7 @@ export default function HydraSportsActivityRail() {
     selectedLeague && selectedLeague !== 'All' ? selectedLeague : 'Premier League'
   );
   const [mobileTab, setMobileTab] = useState('standings');
+  const [selectedSeason, setSelectedSeason] = useState('2024');
   const [standings, setStandings] = useState([]);
   const [news, setNews] = useState([]);
   const [loadingStandings, setLoadingStandings] = useState(true);
@@ -59,7 +68,7 @@ export default function HydraSportsActivityRail() {
       setLoadingStandings(true);
       try {
         const query = cardLeague || 'Premier League';
-        const res = await fetch(`/api/standings?league=${encodeURIComponent(query)}`);
+        const res = await fetch(`/api/standings?league=${encodeURIComponent(query)}&season=${encodeURIComponent(selectedSeason)}`);
         if (!res.ok) throw new Error('Standings failed');
         const data = await res.json();
         if (!cancelled && Array.isArray(data.entries)) {
@@ -75,16 +84,16 @@ export default function HydraSportsActivityRail() {
 
     fetchStandings();
     return () => { cancelled = true; };
-  }, [cardLeague]);
+  }, [cardLeague, selectedSeason]);
 
-  // Fetch standings for modal when modal is open or modalLeague changes
+  // Fetch standings for modal when modal is open or modalLeague/selectedSeason changes
   useEffect(() => {
     if (!fullTableOpen) return;
     let cancelled = false;
     const fetchModalStandings = async () => {
       setLoadingModalStandings(true);
       try {
-        const res = await fetch(`/api/standings?league=${encodeURIComponent(modalLeague)}`);
+        const res = await fetch(`/api/standings?league=${encodeURIComponent(modalLeague)}&season=${encodeURIComponent(selectedSeason)}`);
         if (!res.ok) throw new Error('Modal Standings failed');
         const data = await res.json();
         if (!cancelled && Array.isArray(data.entries)) {
@@ -100,7 +109,7 @@ export default function HydraSportsActivityRail() {
 
     fetchModalStandings();
     return () => { cancelled = true; };
-  }, [fullTableOpen, modalLeague]);
+  }, [fullTableOpen, modalLeague, selectedSeason]);
 
   // Fetch real sports news from ESPN
   useEffect(() => {
@@ -160,15 +169,15 @@ export default function HydraSportsActivityRail() {
             </button>
           </div>
 
-          {/* League Dropdown Selector (Replaces horizontal scroll) */}
-          <div className="mb-3 w-full relative">
-            <label htmlFor="rail-league-select" className="sr-only">Select Standings League</label>
-            <div className="relative">
+          {/* League & Season Selectors */}
+          <div className="mb-3 grid grid-cols-12 gap-1.5 w-full">
+            <div className="col-span-7 relative">
+              <label htmlFor="rail-league-select" className="sr-only">Select Standings League</label>
               <select
                 id="rail-league-select"
                 value={cardLeague}
                 onChange={(e) => setCardLeague(e.target.value)}
-                className="w-full h-8 px-2.5 pr-8 rounded-lg bg-[#1c1a2d] border border-white/15 text-xs font-bold text-purple-300 outline-none focus:border-purple-500 cursor-pointer appearance-none shadow-sm"
+                className="w-full h-8 px-2 pr-6 rounded-lg bg-[#1c1a2d] border border-white/15 text-[11px] font-bold text-purple-300 outline-none focus:border-purple-500 cursor-pointer appearance-none shadow-sm truncate"
               >
                 {SUPPORTED_LEAGUES_TABLE.map((lg) => (
                   <option key={lg.id} value={lg.id} className="bg-[#1c1a2d] text-white font-medium">
@@ -176,7 +185,24 @@ export default function HydraSportsActivityRail() {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="w-3.5 h-3.5 text-purple-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <ChevronDown className="w-3 h-3 text-purple-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+
+            <div className="col-span-5 relative">
+              <label htmlFor="rail-season-select" className="sr-only">Select Season</label>
+              <select
+                id="rail-season-select"
+                value={selectedSeason}
+                onChange={(e) => setSelectedSeason(e.target.value)}
+                className="w-full h-8 px-2 pr-6 rounded-lg bg-[#1c1a2d] border border-white/15 text-[11px] font-bold text-white outline-none focus:border-purple-500 cursor-pointer appearance-none shadow-sm"
+              >
+                {AVAILABLE_SEASONS.map((s) => (
+                  <option key={s.id} value={s.id} className="bg-[#1c1a2d] text-white font-medium">
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3 h-3 text-purple-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
 
@@ -368,15 +394,15 @@ export default function HydraSportsActivityRail() {
               </button>
             </div>
 
-            {/* League Dropdown on mobile (Replaces horizontal scroll) */}
-            <div className="mb-3 w-full relative">
-              <label htmlFor="mobile-rail-league-select" className="sr-only">Select Standings League</label>
-              <div className="relative">
+            {/* League & Season Selectors on mobile */}
+            <div className="mb-3 grid grid-cols-12 gap-1.5 w-full">
+              <div className="col-span-7 relative">
+                <label htmlFor="mobile-rail-league-select" className="sr-only">Select Standings League</label>
                 <select
                   id="mobile-rail-league-select"
                   value={cardLeague}
                   onChange={(e) => setCardLeague(e.target.value)}
-                  className="w-full h-8 px-2.5 pr-8 rounded-lg bg-[#1c1a2d] border border-white/15 text-xs font-bold text-purple-300 outline-none focus:border-purple-500 cursor-pointer appearance-none shadow-sm"
+                  className="w-full h-8 px-2 pr-6 rounded-lg bg-[#1c1a2d] border border-white/15 text-[11px] font-bold text-purple-300 outline-none focus:border-purple-500 cursor-pointer appearance-none shadow-sm truncate"
                   title="Switch League"
                 >
                   {SUPPORTED_LEAGUES_TABLE.map((lg) => (
@@ -385,7 +411,25 @@ export default function HydraSportsActivityRail() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-purple-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3 h-3 text-purple-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+
+              <div className="col-span-5 relative">
+                <label htmlFor="mobile-rail-season-select" className="sr-only">Select Season</label>
+                <select
+                  id="mobile-rail-season-select"
+                  value={selectedSeason}
+                  onChange={(e) => setSelectedSeason(e.target.value)}
+                  className="w-full h-8 px-2 pr-6 rounded-lg bg-[#1c1a2d] border border-white/15 text-[11px] font-bold text-white outline-none focus:border-purple-500 cursor-pointer appearance-none shadow-sm"
+                  title="Switch Season"
+                >
+                  {AVAILABLE_SEASONS.map((s) => (
+                    <option key={s.id} value={s.id} className="bg-[#1c1a2d] text-white">
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3 h-3 text-purple-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
@@ -540,7 +584,7 @@ export default function HydraSportsActivityRail() {
                 </div>
               </div>
 
-              {/* League Selector inside Modal */}
+              {/* League & Season Selectors inside Modal */}
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <select
@@ -555,6 +599,21 @@ export default function HydraSportsActivityRail() {
                     ))}
                   </select>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+
+                <div className="relative">
+                  <select
+                    value={selectedSeason}
+                    onChange={(e) => setSelectedSeason(e.target.value)}
+                    className="h-9 px-3 pr-8 rounded-xl bg-[#1c1a2d] border border-white/15 text-xs font-bold text-purple-300 outline-none cursor-pointer appearance-none"
+                  >
+                    {AVAILABLE_SEASONS.map((s) => (
+                      <option key={s.id} value={s.id} className="bg-[#1c1a2d] text-white font-medium">
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-purple-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
 
                 <button

@@ -6,9 +6,10 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const league = searchParams.get('league') || 'serie a';
+  const season = searchParams.get('season') || '2024';
 
   try {
-    const data = await getStandingsForLeague(league);
+    const data = await getStandingsForLeague(league, season);
     return NextResponse.json(data, {
       headers: {
         'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=86400',

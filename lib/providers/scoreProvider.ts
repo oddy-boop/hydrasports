@@ -9,7 +9,7 @@ const EVENT_LOOKUP_API = 'https://www.thesportsdb.com/api/v1/json/123/lookupeven
 const ESPN_API = 'https://site.api.espn.com/apis/site/v2/sports';
 const STREAMED_MATCHES_API = 'https://streamed.pk/api/matches';
 const TIMEOUT_MS = 4000;
-const EVENTS_CACHE_TTL = 15_000;
+const EVENTS_CACHE_TTL = 4_000; // Ultra-fast 4s cache for immediate goal updates
 const SEARCH_CACHE_TTL = 5 * 60_000;
 
 interface ScoreEvent {

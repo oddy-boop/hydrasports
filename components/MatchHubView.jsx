@@ -121,9 +121,11 @@ export default function MatchHubView({
   // Parse all HUD and tactical telemetry dynamically (ZERO MOCK DATA)
   const hubData = parseMatchHubData(match, stats);
 
-  // Poll for live match score, minute, and stats updates every 15s if live
+  // Poll for live match score, minute, and stats updates every 4s for rapid goal detection
+  const isMatchFinished = match?.status === 'finished' || match?.currentMinute === 'FT' || match?.currentMinute?.toLowerCase().includes('final');
+
   const refreshMatchData = useCallback(async () => {
-    if (!match?.id || match.status !== 'live') return;
+    if (!match?.id || isMatchFinished) return;
     try {
       const res = await fetch(`/api/match/${match.id}`, { cache: 'no-store' });
       if (!res.ok) return;
@@ -131,11 +133,11 @@ export default function MatchHubView({
       if (data.match) {
         setMatch(prev => ({
           ...prev,
-          homeScore: data.match.homeScore,
-          awayScore: data.match.awayScore,
-          currentMinute: data.match.currentMinute,
-          currentMinuteNumber: data.match.currentMinuteNumber,
-          status: data.match.status,
+          homeScore: data.match.homeScore ?? prev?.homeScore,
+          awayScore: data.match.awayScore ?? prev?.awayScore,
+          currentMinute: data.match.currentMinute || prev?.currentMinute,
+          currentMinuteNumber: data.match.currentMinuteNumber ?? prev?.currentMinuteNumber,
+          status: data.match.status || prev?.status,
         }));
       }
       if (data.stats) {
@@ -144,13 +146,14 @@ export default function MatchHubView({
     } catch {
       // Ignore background refresh errors
     }
-  }, [match?.id, match?.status]);
+  }, [match?.id, isMatchFinished]);
 
   useEffect(() => {
-    if (match?.status !== 'live') return;
-    const interval = setInterval(refreshMatchData, 15000);
+    if (isMatchFinished) return;
+    refreshMatchData();
+    const interval = setInterval(refreshMatchData, 4000);
     return () => clearInterval(interval);
-  }, [match?.status, refreshMatchData]);
+  }, [isMatchFinished, refreshMatchData]);
 
   const tournamentName = (match.tournament || hubData.tournament || 'Match Broadcast').toUpperCase();
   const currentChannels = resolvedChannels.length > 0

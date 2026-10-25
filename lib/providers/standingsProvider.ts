@@ -126,17 +126,20 @@ const FALLBACK_LEAGUE_TABLES: Record<string, { leagueName: string; entries: Stan
   },
 };
 
-export async function getStandingsForLeague(leagueQuery = 'serie a'): Promise<LeagueStandings> {
+export async function getStandingsForLeague(leagueQuery = 'serie a', seasonYear = '2024'): Promise<LeagueStandings> {
   const normalized = leagueQuery.toLowerCase().trim();
   const slug = LEAGUE_SLUG_MAP[normalized] || 'ita.1';
   const fallback = FALLBACK_LEAGUE_TABLES[slug] || FALLBACK_LEAGUE_TABLES['ita.1'];
 
+  // Clean season parameter (e.g. "2024", "2023", etc.)
+  const cleanSeason = seasonYear ? String(seasonYear).trim().slice(0, 4) : '2024';
+
   const cache = getCacheManager();
-  return cache.swr(`standings_v3_${slug}`, async () => {
+  return cache.swr(`standings_v4_${slug}_${cleanSeason}`, async () => {
     try {
-      const url = `https://site.api.espn.com/apis/v2/sports/soccer/${slug}/standings`;
-      // Fast 2.5s timeout prevents hanging requests
-      const data = await fetchWithTimeout(url, 2500);
+      const url = `https://site.api.espn.com/apis/v2/sports/soccer/${slug}/standings?season=${cleanSeason}`;
+      // Fast 3s timeout prevents hanging requests
+      const data = await fetchWithTimeout(url, 3000);
       if (!data) throw new Error('No standings response from ESPN');
 
       let entriesRaw: any[] = [];
@@ -151,7 +154,8 @@ export async function getStandingsForLeague(leagueQuery = 'serie a'): Promise<Le
         entriesRaw = data.standings?.entries || [];
       }
       const leagueName = data.name || fallback.leagueName;
-      const season = String(data.season?.year || new Date().getFullYear());
+      const nextYr = parseInt(cleanSeason, 10) + 1;
+      const season = `${cleanSeason}/${nextYr}`;
 
       if (!Array.isArray(entriesRaw) || entriesRaw.length === 0) {
         throw new Error('Empty entries in ESPN standings');

@@ -243,7 +243,7 @@ export default function LiveMatchChat({
   };
 
   return (
-    <div className="w-full flex flex-col h-[380px] sm:h-[460px] xl:h-[520px] rounded-2xl sm:rounded-3xl bg-[#0d0c18] border border-white/10 shadow-2xl overflow-hidden min-w-0 no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+    <div className="w-full flex flex-col h-[380px] sm:h-[430px] xl:h-[430px] rounded-2xl sm:rounded-3xl bg-[#0d0c18] border border-white/10 shadow-2xl overflow-hidden min-w-0 no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       
       {/* ── TOP HEADER ── */}
       <div className="px-3.5 py-2.5 bg-[#141224] border-b border-white/10 flex items-center justify-between gap-2 shrink-0">
