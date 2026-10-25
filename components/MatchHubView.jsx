@@ -50,6 +50,9 @@ export default function MatchHubView({
 
   const [match, setMatch] = useState(initialMatch);
   const [stats, setStats] = useState(initialStats);
+  const [resolvedStreamUrl, setResolvedStreamUrl] = useState(streamUrl);
+  const [resolvedChannels, setResolvedChannels] = useState(channels);
+  const [isRetryingStream, setIsRetryingStream] = useState(false);
   const [activeTab, setActiveTab] = useState('lobby');
   const [tacticalTab, setTacticalTab] = useState('lineups'); // 'lineups' | 'subs' | 'discipline' | 'stats' | 'zones'
   const [selectedTeamTab, setSelectedTeamTab] = useState('home'); // 'home' | 'away'
@@ -58,6 +61,59 @@ export default function MatchHubView({
   const [selectedLanguage, setSelectedLanguage] = useState('English');
   const [showAiInsight, setShowAiInsight] = useState(true);
   const containerRef = useRef(null);
+
+  useEffect(() => {
+    setMatch(initialMatch);
+  }, [initialMatch]);
+
+  useEffect(() => {
+    setStats(initialStats);
+  }, [initialStats]);
+
+  useEffect(() => {
+    if (streamUrl) setResolvedStreamUrl(streamUrl);
+  }, [streamUrl]);
+
+  useEffect(() => {
+    if (channels && channels.length > 0) setResolvedChannels(channels);
+  }, [channels]);
+
+  // Client-side auto-retry to poll streams if not available yet on initial load
+  const fetchStreamsClient = useCallback(async () => {
+    if (!match?.id) return;
+    setIsRetryingStream(true);
+    try {
+      const res = await fetch(`/api/streams/${match.id}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.streams && data.streams.length > 0) {
+        setResolvedChannels(data.streams);
+        setResolvedStreamUrl(data.defaultUrl || data.streams[0]?.proxiedUrl || data.streams[0]?.url);
+      }
+    } catch {
+      // Background retry
+    } finally {
+      setIsRetryingStream(false);
+    }
+  }, [match?.id]);
+
+  useEffect(() => {
+    if (resolvedStreamUrl || !match?.id) return;
+    let isCancelled = false;
+
+    fetchStreamsClient();
+
+    const interval = setInterval(() => {
+      if (!isCancelled && !resolvedStreamUrl) {
+        fetchStreamsClient();
+      }
+    }, 8000);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [resolvedStreamUrl, match?.id, fetchStreamsClient]);
 
   // Parse all HUD and tactical telemetry dynamically (ZERO MOCK DATA)
   const hubData = parseMatchHubData(match, stats);
@@ -94,8 +150,10 @@ export default function MatchHubView({
   }, [match?.status, refreshMatchData]);
 
   const tournamentName = (match.tournament || hubData.tournament || 'Match Broadcast').toUpperCase();
-  const currentChannels = channels.length > 0 ? channels : [{ name: 'Server 1', url: streamUrl, proxiedUrl: streamUrl }];
-  const currentStreamUrl = currentChannels[activeChannelIdx]?.proxiedUrl || currentChannels[activeChannelIdx]?.url || streamUrl;
+  const currentChannels = resolvedChannels.length > 0
+    ? resolvedChannels
+    : (resolvedStreamUrl ? [{ name: 'Server 1', url: resolvedStreamUrl, proxiedUrl: resolvedStreamUrl }] : []);
+  const currentStreamUrl = currentChannels[activeChannelIdx]?.proxiedUrl || currentChannels[activeChannelIdx]?.url || resolvedStreamUrl;
 
   const [isCssFullscreen, setIsCssFullscreen] = useState(false);
 
@@ -684,12 +742,32 @@ export default function MatchHubView({
                     backgroundImage: `linear-gradient(to bottom, rgba(13,12,21,0.7), rgba(13,12,21,0.9)), url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1600')`
                   }}
                 >
-                  <div className="text-center p-6 space-y-2 z-10 max-w-md bg-black/60 backdrop-blur-md rounded-2xl border border-white/10">
-                    <RefreshCw className="h-6 w-6 text-purple-400 animate-spin mx-auto mb-2" />
-                    <h3 className="text-sm font-black text-white">Connecting to Stadium Broadcast</h3>
-                    <p className="text-xs text-slate-300">
-                      Syncing streaming servers for {hubData.homeName} vs {hubData.awayName}...
-                    </p>
+                  <div className="text-center p-6 space-y-3 z-10 max-w-md bg-black/75 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl">
+                    <RefreshCw className={`h-7 w-7 text-purple-400 mx-auto ${isRetryingStream ? 'animate-spin' : ''}`} />
+                    <div>
+                      <h3 className="text-base font-black text-white">Connecting to Stadium Broadcast</h3>
+                      <p className="text-xs text-slate-300 mt-1">
+                        Syncing live feeds for {hubData.homeName} vs {hubData.awayName}...
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-500/20 text-[11px] text-purple-200/90 leading-relaxed text-left space-y-1">
+                      <p className="font-semibold text-purple-300 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
+                        Broadcast Information
+                      </p>
+                      <p>
+                        Live satellite feeds are typically published by stadium broadcasters <strong>15–30 minutes before kickoff</strong>. Auto-polling feeds every few seconds.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={fetchStreamsClient}
+                      disabled={isRetryingStream}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-xs font-bold text-white shadow-lg shadow-purple-900/30 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 ${isRetryingStream ? 'animate-spin' : ''}`} />
+                      {isRetryingStream ? 'Scanning Feed Mirrors...' : 'Check For Live Stream'}
+                    </button>
                   </div>
                 </div>
               )}
