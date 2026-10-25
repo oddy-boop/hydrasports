@@ -100,7 +100,7 @@ export default function AntiAdblockNotice() {
 
   if (!isOverlayActive) return null;
 
-  const directLinkUrl = adsConfig.directLink?.url || 'https://dozenfourteen.com/aby98ndqzq?key=02565c0cafd70a97facb82fba589b976';
+  const directLinkUrl = adsConfig.directLink?.url || 'https://dozenfourteen.com/d853dqgqwm?key=3b8039ce2893ac7211917e0c8a9b100c';
   const isMobile = deviceType === 'ios' || deviceType === 'android';
 
   // 2-Step Close Handler: Click 1 redirects to SmartLink in new tab; Click 2 closes the overlay

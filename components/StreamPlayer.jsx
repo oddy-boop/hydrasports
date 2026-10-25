@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Maximize, Minimize2, RefreshCw, AlertCircle, ShieldAlert, Cpu, Play, Pause, Volume2, Volume1, VolumeX, Sliders, ChevronDown, Check } from 'lucide-react';
 import Hls from 'hls.js';
+import { adsConfig } from '@/lib/adsConfig';
 
 export default function StreamPlayer({ streamUrl, channels, matchTitle, matchStatus, videoOnly = false }) {
   const isUpcoming = matchStatus === 'upcoming';
@@ -817,7 +818,7 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
 
                   {/* VIP 4K Fast Mirror (High CPA/CPM Smartlink with Anti-Adblock) */}
                   <a
-                    href="https://dozenfourteen.com/aby98ndqzq?key=02565c0cafd70a97facb82fba589b976"
+                    href={adsConfig.directLink?.url || 'https://dozenfourteen.com/d853dqgqwm?key=3b8039ce2893ac7211917e0c8a9b100c'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 rounded-xl border border-purple-500/50 bg-gradient-to-r from-purple-700/60 via-indigo-700/60 to-purple-800/60 hover:from-purple-600 hover:to-indigo-600 px-3.5 py-2 text-xs font-black text-white shadow-lg shadow-purple-600/25 transition-all cursor-pointer group"
