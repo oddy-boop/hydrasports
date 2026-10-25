@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useHydraSports } from './HydraContext';
-import { Trophy, Newspaper, ExternalLink, Loader2, X, ChevronRight, ChevronDown } from 'lucide-react';
+import { Trophy, Newspaper, ExternalLink, Loader2, X, ChevronRight, ChevronDown, AlertCircle } from 'lucide-react';
 import AdBanner from './AdBanner';
 
 const SUPPORTED_LEAGUES_TABLE = [
@@ -280,8 +280,14 @@ export default function HydraSportsActivityRail() {
               </button>
             </div>
           ) : (
-            <div className="py-6 text-center text-[11px] text-slate-400">
-              Standings resolving for current fixtures...
+            <div className="py-8 px-2 text-center text-slate-400 space-y-2 flex flex-col items-center">
+              <div className="w-8 h-8 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-slate-400">
+                <AlertCircle className="w-4 h-4 text-purple-400" />
+              </div>
+              <p className="text-xs font-bold text-slate-200">Standings Not Available</p>
+              <p className="text-[11px] text-slate-400 leading-relaxed max-w-[220px]">
+                No official standings published yet for {cardLeague} ({selectedSeason}/{String(parseInt(selectedSeason, 10) + 1).slice(-2)}).
+              </p>
             </div>
           )}
         </div>
@@ -506,8 +512,14 @@ export default function HydraSportsActivityRail() {
                 </button>
               </div>
             ) : (
-              <div className="py-6 text-center text-xs text-slate-400">
-                Standings resolving for current fixtures...
+              <div className="py-8 px-2 text-center text-slate-400 space-y-2 flex flex-col items-center">
+                <div className="w-8 h-8 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-slate-400">
+                  <AlertCircle className="w-4 h-4 text-purple-400" />
+                </div>
+                <p className="text-xs font-bold text-slate-200">Standings Not Available</p>
+                <p className="text-[11px] text-slate-400 leading-relaxed max-w-[260px]">
+                  No official standings published yet for {cardLeague} ({selectedSeason}/{String(parseInt(selectedSeason, 10) + 1).slice(-2)}).
+                </p>
               </div>
             )}
           </div>
@@ -707,8 +719,14 @@ export default function HydraSportsActivityRail() {
                   </div>
                 </div>
               ) : (
-                <div className="py-16 text-center text-sm text-slate-400">
-                  No table data currently available for {modalLeague}.
+                <div className="py-20 px-4 text-center flex flex-col items-center justify-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400">
+                    <AlertCircle className="w-6 h-6 text-purple-400" />
+                  </div>
+                  <h4 className="text-base font-black text-white">Standings Not Available</h4>
+                  <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
+                    Official table data for {modalLeague} for the {selectedSeason}/{String(parseInt(selectedSeason, 10) + 1).slice(-2)} season is not yet available or has not started. Please select another season above.
+                  </p>
                 </div>
               )}
             </div>
