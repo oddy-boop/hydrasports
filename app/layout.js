@@ -87,13 +87,6 @@ export default function RootLayout({ children }) {
             }
           } catch (_) {}
         ` }} />
-        {/* Monetag MultiTag (Zone 301930) */}
-        <script
-          src="https://quge5.com/88/tag.min.js"
-          data-zone="301930"
-          async
-          data-cfasync="false"
-        />
       </head>
       <body className="app-shell bg-[#12111c] text-white" suppressHydrationWarning>
         <SocialBarAd />
