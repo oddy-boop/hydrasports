@@ -178,8 +178,14 @@ export class StreamedPkProvider implements StreamProvider {
       const channels: Channel[] = [];
       const streamTasks: Promise<{ urls: { url: string; quality: string }[]; source: any }>[] = [];
       
+      const targetTitle = matchTitle || (homeTeam && awayTeam ? `${homeTeam} vs ${awayTeam}` : '');
+      const teamPairTitle = homeTeam && awayTeam ? `${homeTeam} vs ${awayTeam}` : '';
+
       for (const m of matches) {
-        if (teamsMatch(matchTitle, m.title)) {
+        if (
+          (targetTitle && teamsMatch(targetTitle, m.title)) ||
+          (teamPairTitle && teamsMatch(teamPairTitle, m.title))
+        ) {
           const sources = m.sources || [];
           for (const src of sources) {
             streamTasks.push(

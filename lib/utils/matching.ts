@@ -208,6 +208,37 @@ export function getSignificantWords(name: string): string[] {
   return sig;
 }
 
+export const TEAM_SYNONYMS: [RegExp, string][] = [
+  [/\b(internazionale|inter milan|inter milano|inter m)\b/i, 'inter milan'],
+  [/\b(paris saint-germain|paris sg|paris saint germain|psg)\b/i, 'psg'],
+  [/\b(manchester united|man utd|man united)\b/i, 'manchester united'],
+  [/\b(manchester city|man city)\b/i, 'manchester city'],
+  [/\b(tottenham hotspur|tottenham|spurs)\b/i, 'tottenham'],
+  [/\b(wolverhampton wanderers|wolverhampton|wolves)\b/i, 'wolves'],
+  [/\b(atletico madrid|atlético madrid|atletico de madrid|atleti)\b/i, 'atletico madrid'],
+  [/\b(athletic bilbao|athletic club)\b/i, 'athletic bilbao'],
+  [/\b(bayern munchen|bayern munich|fc bayern)\b/i, 'bayern'],
+  [/\b(borussia dortmund|bvb dortmund|bvb)\b/i, 'dortmund'],
+  [/\b(bayer 04 leverkusen|bayer leverkusen|leverkusen)\b/i, 'leverkusen'],
+  [/\b(sporting cp|sporting lisbon|sporting clube)\b/i, 'sporting'],
+  [/\b(ac milan|milan)\b/i, 'milan'],
+  [/\b(as roma|roma)\b/i, 'roma'],
+  [/\b(juventus|juve)\b/i, 'juventus'],
+  [/\b(sl benfica|benfica)\b/i, 'benfica'],
+  [/\b(newcastle united|newcastle)\b/i, 'newcastle'],
+  [/\b(west ham united|west ham)\b/i, 'west ham'],
+  [/\b(brighton and hove albion|brighton)\b/i, 'brighton'],
+];
+
+export function canonicalTeam(name: string): string {
+  if (!name) return '';
+  const lower = name.toLowerCase().trim();
+  for (const [regex, canonical] of TEAM_SYNONYMS) {
+    if (regex.test(lower)) return canonical;
+  }
+  return lower;
+}
+
 export function teamSimilarity(teamA: string, teamB: string): number {
   const aNorm = normalizeTeamName(teamA);
   const bNorm = normalizeTeamName(teamB);
@@ -222,6 +253,21 @@ export function teamSimilarity(teamA: string, teamB: string): number {
   const bClean = teamB.toLowerCase().replace(/[^a-z0-9]/g, '');
   
   if (aClean.includes(bClean) || bClean.includes(aClean)) return 1.5;
+
+  // Inter / Internazionale safeguard (ensuring Inter Miami is not confused with Inter Milan)
+  if ((aClean.startsWith('inter') || aClean.startsWith('internaz')) &&
+      (bClean.startsWith('inter') || bClean.startsWith('internaz'))) {
+    const aMiami = aClean.includes('miami');
+    const bMiami = bClean.includes('miami');
+    if (aMiami === bMiami) {
+      return 1.8;
+    }
+  }
+
+  // Canonical alias synonyms check (e.g. Internazionale -> Inter Milan, Man Utd -> Manchester United)
+  const cA = canonicalTeam(teamA);
+  const cB = canonicalTeam(teamB);
+  if (cA && cB && cA === cB) return 1.8;
 
   const aSig = getSignificantWords(teamA);
   const bSig = getSignificantWords(teamB);

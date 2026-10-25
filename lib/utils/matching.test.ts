@@ -39,8 +39,10 @@ describe('Teams Matching Algorithm', () => {
     expect(teamsMatch('Real Madrid v Barcelona', 'Barcelona vs Real Madrid')).toBe(true);
   });
 
-  it('should match with minor name variations', () => {
+  it('should match with minor name variations and major team aliases', () => {
     expect(teamsMatch('Real Madrid CF vs Barcelona', 'Barcelona vs Madrid')).toBe(true);
+    expect(teamsMatch('Internazionale vs Fiorentina', 'Inter Milan vs Fiorentina')).toBe(true);
+    expect(teamsMatch('PSG vs Marseille', 'Paris Saint-Germain vs Marseille')).toBe(true);
   });
 
   it('should reject different games', () => {
