@@ -22,6 +22,12 @@ describe('adsConfig', () => {
     expect(adsConfig.socialBar.scriptSrc).toContain('czernik.org');
   });
 
+  it('should define directLink configuration with anti-adblock mirror', () => {
+    expect(adsConfig.directLink).toBeDefined();
+    expect(adsConfig.directLink.enabled).toBe(true);
+    expect(adsConfig.directLink.url).toContain('dozenfourteen.com');
+  });
+
   it('should have enabled slots with required configuration keys', () => {
     const slots = ['header', 'matchHub', 'sidebar', 'inContent', 'stickyFooter'] as const;
     for (const slotKey of slots) {

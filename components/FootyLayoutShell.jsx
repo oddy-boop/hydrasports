@@ -7,6 +7,7 @@ import FootyTopbar from './HydraTopbar';
 import HydraSportsActivityRail from './FriendsActivityRail';
 import AdBanner from './AdBanner';
 import StickyAdFooter from './StickyAdFooter';
+import AntiAdblockNotice from './AntiAdblockNotice';
 
 export default function FootyLayoutShell({ children }) {
   const pathname = usePathname() || '/';
@@ -18,6 +19,7 @@ export default function FootyLayoutShell({ children }) {
   if (isFullScreenView) {
     return (
       <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[#0d0c15] text-white flex flex-col pb-32">
+        <AntiAdblockNotice />
         {children}
         <StickyAdFooter />
       </div>
@@ -27,6 +29,7 @@ export default function FootyLayoutShell({ children }) {
   // Dashboard pages (home `/`, `/schedule`, `/multistream`, etc.) get the 3-column platform layout
   return (
     <>
+      <AntiAdblockNotice />
       <FootyTopbar />
       <div className="reference-canvas pb-32">
         {/* Left Football Sidebar */}

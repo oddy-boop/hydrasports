@@ -814,6 +814,21 @@ export default function StreamPlayer({ streamUrl, channels, matchTitle, matchSta
                       </button>
                     );
                   })}
+
+                  {/* VIP 4K Fast Mirror (High CPA/CPM Smartlink with Anti-Adblock) */}
+                  <a
+                    href="https://dozenfourteen.com/aby98ndqzq?key=02565c0cafd70a97facb82fba589b976"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-xl border border-purple-500/50 bg-gradient-to-r from-purple-700/60 via-indigo-700/60 to-purple-800/60 hover:from-purple-600 hover:to-indigo-600 px-3.5 py-2 text-xs font-black text-white shadow-lg shadow-purple-600/25 transition-all cursor-pointer group"
+                    title="Open Fast 4K Ultra HD Broadcast Mirror"
+                  >
+                    <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping" />
+                    <span>⚡ 4K Ultra HD (VIP Mirror)</span>
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/40">
+                      4K 60FPS
+                    </span>
+                  </a>
                 </div>
               </div>
             ) : (
