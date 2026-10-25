@@ -7,6 +7,7 @@ import { Bell, Menu, Search, User, Layers, Radio, X, ChevronDown } from 'lucide-
 import { useHydraSports } from './HydraContext';
 import { useAuth } from './AuthContext';
 import { normalizeSport } from './leagueMatcher';
+import { adsConfig } from '@/lib/adsConfig';
 
 export default function FootyTopbar() {
   const router = useRouter();
@@ -135,6 +136,19 @@ export default function FootyTopbar() {
             </button>
           )}
         </div>
+
+        {/* VIP 4K Streams (High-Converting Monetag Direct Link) */}
+        <a
+          href={adsConfig.directLink?.monetagUrl || 'https://uplcm.com/4/12119927'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-md shadow-emerald-600/30 transition-all hover:scale-105 shrink-0 cursor-pointer"
+          title="Open VIP 4K Live Broadcast Streams"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
+          <span className="hidden md:inline">VIP 4K Streams</span>
+          <span className="md:hidden">4K VIP</span>
+        </a>
 
         {/* Multi-Stream Button (Prominently unhidden!) */}
         <Link
