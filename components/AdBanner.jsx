@@ -16,34 +16,91 @@ export default function AdBanner({
     setMounted(true);
   }, []);
 
-  if (!adsConfig.enabled) {
-    return null;
-  }
-
   const slotConfig = customConfig || adsConfig.slots[slot];
-  if (!slotConfig || slotConfig.enabled === false) {
-    return null;
-  }
 
   // Dimension presets by slot
   const isSidebar = slot === 'sidebar';
   const isSticky = slot === 'stickyFooter';
 
   // Has custom ad snippet or image banner?
-  const hasHtml = Boolean(slotConfig.html && slotConfig.html.trim().length > 0);
-  const hasImage = Boolean(slotConfig.imageBanner?.imageUrl && slotConfig.imageBanner.imageUrl.trim().length > 0);
+  const hasHtml = Boolean(slotConfig?.html && slotConfig.html.trim().length > 0);
+  const hasImage = Boolean(slotConfig?.imageBanner?.imageUrl && slotConfig.imageBanner.imageUrl.trim().length > 0);
+  const rawHtml = slotConfig?.html || '';
+
+  // Dynamically inject ad iframe with proper page origin/referer for Adsterra/Monetag
+  useEffect(() => {
+    if (!mounted || !containerRef.current || !hasHtml) return;
+
+    const container = containerRef.current;
+    container.innerHTML = '';
+
+    const iframe = document.createElement('iframe');
+    iframe.title = `HydraSports Ad - ${slot}`;
+    iframe.width = isSidebar ? '300' : '728';
+    iframe.height = isSidebar ? '250' : '90';
+    iframe.style.width = isSidebar ? '300px' : '728px';
+    iframe.style.height = isSidebar ? '250px' : '90px';
+    iframe.style.maxWidth = '100%';
+    iframe.style.border = 'none';
+    iframe.style.overflow = 'hidden';
+    iframe.setAttribute('scrolling', 'no');
+
+    container.appendChild(iframe);
+
+    try {
+      const doc = iframe.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="referrer" content="no-referrer-when-downgrade">
+              <base href="${typeof window !== 'undefined' ? window.location.href : 'https://hydrasports.selamate.com'}" target="_blank">
+              <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { 
+                  background: transparent; 
+                  display: flex; 
+                  align-items: center; 
+                  justify-content: center; 
+                  min-height: 100vh;
+                  overflow: hidden; 
+                }
+              </style>
+            </head>
+            <body>
+              ${rawHtml}
+            </body>
+          </html>
+        `);
+        doc.close();
+      }
+    } catch (err) {
+      console.error('Failed to inject ad banner iframe:', err);
+    }
+  }, [mounted, hasHtml, rawHtml, isSidebar, slot]);
+
+  if (!adsConfig.enabled) {
+    return null;
+  }
+
+  if (!slotConfig || slotConfig.enabled === false) {
+    return null;
+  }
 
   // If HTML snippet provided (e.g. Adsterra, Monetag, Google AdSense)
   if (hasHtml) {
-    const rawHtml = slotConfig.html;
-
     return (
-      <div className={`ad-slot-wrapper flex flex-col items-center justify-center my-3 w-full ${className}`}>
-        <div className="flex items-center gap-1.5 mb-1 opacity-60">
-          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-            Advertisement
-          </span>
-        </div>
+      <div className={`ad-slot-wrapper flex flex-col items-center justify-center ${isSticky ? 'my-0' : 'my-2 sm:my-3'} w-full ${className}`}>
+        {!isSticky && (
+          <div className="flex items-center gap-1.5 mb-1 opacity-60">
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+              Advertisement
+            </span>
+          </div>
+        )}
         <div
           ref={containerRef}
           className="relative overflow-hidden rounded-xl border border-white/10 bg-[#12111f] flex items-center justify-center"
@@ -51,42 +108,9 @@ export default function AdBanner({
             width: isSidebar ? '300px' : '100%',
             maxWidth: isSidebar ? '300px' : '728px',
             minHeight: isSidebar ? '250px' : '90px',
+            height: isSidebar ? '250px' : '90px',
           }}
-        >
-          {mounted && (
-            <iframe
-              title={`HydraSports Ad - ${slot}`}
-              srcDoc={`
-                <!DOCTYPE html>
-                <html>
-                  <head>
-                    <meta charset="utf-8">
-                    <base target="_blank">
-                    <style>
-                      * { margin: 0; padding: 0; box-sizing: border-box; }
-                      body { 
-                        background: transparent; 
-                        display: flex; 
-                        align-items: center; 
-                        justify-content: center; 
-                        min-height: 100vh;
-                        overflow: hidden;
-                      }
-                    </style>
-                  </head>
-                  <body>
-                    ${rawHtml}
-                  </body>
-                </html>
-              `}
-              className="w-full h-full border-0 overflow-hidden"
-              style={{
-                width: isSidebar ? '300px' : '100%',
-                height: isSidebar ? '250px' : '90px',
-              }}
-            />
-          )}
-        </div>
+        />
       </div>
     );
   }
@@ -95,12 +119,14 @@ export default function AdBanner({
   if (hasImage) {
     const { imageUrl, linkUrl, alt } = slotConfig.imageBanner;
     return (
-      <div className={`ad-slot-wrapper flex flex-col items-center justify-center my-3 w-full ${className}`}>
-        <div className="flex items-center gap-1.5 mb-1 opacity-60">
-          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-            Sponsored
-          </span>
-        </div>
+      <div className={`ad-slot-wrapper flex flex-col items-center justify-center ${isSticky ? 'my-0' : 'my-2 sm:my-3'} w-full ${className}`}>
+        {!isSticky && (
+          <div className="flex items-center gap-1.5 mb-1 opacity-60">
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+              Sponsored
+            </span>
+          </div>
+        )}
         <a
           href={linkUrl || '#'}
           target="_blank"
@@ -126,11 +152,10 @@ export default function AdBanner({
   }
 
   // Default Placeholder / Monetization Ready Slot
-  // Gives user clean visuals and clear instructions on how to monetize
   const dimensions = isSidebar ? '300 × 250' : '728 × 90';
 
   return (
-    <div className={`ad-slot-wrapper flex flex-col items-center justify-center my-3 w-full ${className}`}>
+    <div className={`ad-slot-wrapper flex flex-col items-center justify-center ${isSticky ? 'my-0' : 'my-2 sm:my-3'} w-full ${className}`}>
       <div className="flex items-center justify-between w-full max-w-[728px] px-1 mb-1 opacity-60">
         <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
           <DollarSign className="w-2.5 h-2.5 text-emerald-400" />

@@ -17,7 +17,7 @@ export default function FootyLayoutShell({ children }) {
 
   if (isFullScreenView) {
     return (
-      <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[#0d0c15] text-white flex flex-col pb-20">
+      <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[#0d0c15] text-white flex flex-col pb-32">
         {children}
         <StickyAdFooter />
       </div>
@@ -28,7 +28,7 @@ export default function FootyLayoutShell({ children }) {
   return (
     <>
       <FootyTopbar />
-      <div className="reference-canvas pb-20">
+      <div className="reference-canvas pb-32">
         {/* Left Football Sidebar */}
         <FootySidebar />
 

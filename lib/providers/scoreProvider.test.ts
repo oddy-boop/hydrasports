@@ -35,10 +35,12 @@ describe('Champions League Score Provider', () => {
 });
 
 describe('Multi-Sport Score Resolution (Basketball, Hockey, Tennis)', () => {
+  const matchDate = new Date('2026-10-24T20:00:00Z').getTime();
+
   it('should resolve scores for NBA Basketball match', async () => {
     const score = await getScoreForMatch(
       'Chicago Bulls vs Milwaukee Bucks',
-      Date.now(),
+      matchDate,
       'NBA',
       undefined,
       'basketball'
@@ -53,7 +55,7 @@ describe('Multi-Sport Score Resolution (Basketball, Hockey, Tennis)', () => {
   it('should resolve scores for NHL Hockey match', async () => {
     const score = await getScoreForMatch(
       'Montreal Canadiens vs Chicago Blackhawks',
-      Date.now(),
+      matchDate,
       'NHL',
       undefined,
       'hockey'
@@ -68,7 +70,7 @@ describe('Multi-Sport Score Resolution (Basketball, Hockey, Tennis)', () => {
   it('should resolve scores for Tennis match', async () => {
     const score = await getScoreForMatch(
       'Arthur Fils vs Alex Michelsen',
-      Date.now(),
+      matchDate,
       'ATP Tennis',
       undefined,
       'tennis'
