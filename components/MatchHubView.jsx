@@ -30,9 +30,11 @@ import {
   ArrowRightLeft,
   AlertTriangle,
   Flame,
+  MessageSquare,
 } from 'lucide-react';
 import StreamPlayer from './StreamPlayer';
 import PlayerDetailsModal from './PlayerDetailsModal';
+import LiveMatchChat from './LiveMatchChat';
 import AdBanner from './AdBanner';
 import { useAuth } from './AuthContext';
 import { parseMatchHubData } from '@/lib/utils/matchHubData';
@@ -54,7 +56,8 @@ export default function MatchHubView({
   const [resolvedChannels, setResolvedChannels] = useState(channels);
   const [isRetryingStream, setIsRetryingStream] = useState(false);
   const [activeTab, setActiveTab] = useState('lobby');
-  const [tacticalTab, setTacticalTab] = useState('lineups'); // 'lineups' | 'subs' | 'discipline' | 'stats' | 'zones'
+  const [tacticalTab, setTacticalTab] = useState('lineups'); // 'lineups' | 'subs' | 'discipline' | 'stats' | 'zones' | 'chat'
+  const [sidebarTab, setSidebarTab] = useState('chat'); // 'chat' | 'stats'
   const [selectedTeamTab, setSelectedTeamTab] = useState('home'); // 'home' | 'away'
   const [activeChannelIdx, setActiveChannelIdx] = useState(0);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
@@ -824,6 +827,9 @@ export default function MatchHubView({
                           hubData.sport === 'tennis' ? 'Court Placement' :
                           'Attack Zones & Keys'}
                     </option>
+                    <option value="chat" className="bg-[#1b1930] text-purple-300 font-bold">
+                      💬 Live Stadium Chat
+                    </option>
                   </select>
                   <ChevronDown className="w-4 h-4 text-purple-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
@@ -914,6 +920,22 @@ export default function MatchHubView({
                      hubData.sport === 'tennis' ? 'Court Placement' :
                      'Attack Zones & Keys'}
                   </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setTacticalTab('chat');
+                    setSidebarTab('chat');
+                  }}
+                  className={`flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                    tacticalTab === 'chat'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/30'
+                      : 'text-purple-300 hover:text-white hover:bg-purple-600/20 border border-purple-500/20'
+                  }`}
+                >
+                  <MessageSquare className="h-3.5 w-3.5 text-purple-400" />
+                  <span>Live Chat</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 </button>
               </div>
 
@@ -1873,16 +1895,74 @@ export default function MatchHubView({
               </div>
             )}
 
+            {/* Live Stadium Group Chat (Active on Mobile / When Selected) */}
+            {tacticalTab === 'chat' && (
+              <div className="w-full">
+                <LiveMatchChat
+                  matchId={match.id}
+                  homeTeam={hubData.homeName}
+                  awayTeam={hubData.awayName}
+                  matchStatus={match.status}
+                  currentMinute={match.currentMinute}
+                />
+              </div>
+            )}
+
           </div>
         </div>
 
         {/* ── 4. RIGHT TACTICAL MATCH RAIL (INDEPENDENTLY SCROLLABLE ON DESKTOP) ── */}
         <aside className="w-full xl:w-[380px] 2xl:w-[400px] flex flex-col gap-4 shrink-0 xl:sticky xl:top-[80px] xl:max-h-[calc(100vh-96px)] xl:overflow-y-auto xl:pr-1.5 custom-vertical-scrollbar min-w-0">
           
-          {/* CARD 1: Match Scoreboard & Scorers (Visible on desktop xl:) */}
-          <div className="hidden xl:block w-full">
-            {renderMatchScoreboardCard()}
+          {/* Top Rail Tab Switcher: Live Stadium Chat vs Match Hub */}
+          <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-[#141224] border border-white/10 shrink-0">
+            <button
+              type="button"
+              onClick={() => setSidebarTab('chat')}
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                sidebarTab === 'chat'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-900/40'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <MessageSquare className="h-3.5 w-3.5 text-purple-300" />
+              <span>Live Chat</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSidebarTab('stats')}
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                sidebarTab === 'stats'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-900/40'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Activity className="h-3.5 w-3.5 text-purple-300" />
+              <span>Match Hub</span>
+            </button>
           </div>
+
+          {sidebarTab === 'chat' ? (
+            <div className="flex flex-col gap-4 w-full min-w-0">
+              <LiveMatchChat
+                matchId={match.id}
+                homeTeam={hubData.homeName}
+                awayTeam={hubData.awayName}
+                matchStatus={match.status}
+                currentMinute={match.currentMinute}
+              />
+              <div className="hidden xl:block w-full">
+                {renderMatchScoreboardCard()}
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* CARD 1: Match Scoreboard & Scorers (Visible on desktop xl:) */}
+              <div className="hidden xl:block w-full">
+                {renderMatchScoreboardCard()}
+              </div>
 
           {/* CARD 2: Star Player / Man of the Match (Strictly from this fixture!) */}
           <div 
@@ -2077,6 +2157,8 @@ export default function MatchHubView({
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
+          )}
+            </>
           )}
 
         </aside>
