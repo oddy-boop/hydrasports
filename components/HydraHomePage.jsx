@@ -8,27 +8,22 @@ import { useHydraSports } from './HydraContext';
 import { ChevronDown, ExternalLink, Radio } from 'lucide-react';
 import { matchBelongsToLeague, normalizeSport } from './leagueMatcher';
 
-const wrestlingWatchOptions = [
-  {
-    name: 'MLW FUSION',
-    provider: 'Tubi',
-    detail: 'Free weekly episodes, with new episodes scheduled Thursdays at 8 p.m. ET.',
-    href: 'https://www.tubitv.com/search/mlw',
-    action: 'Find MLW on Tubi',
-  },
-  {
-    name: 'NWA POWERRR',
-    provider: 'National Wrestling Alliance',
-    detail: 'Free on-demand episodes; the official page lists current broadcast options.',
-    href: 'https://www.nationalwrestlingalliance.com/watch',
-    action: 'Official watch options',
-  },
+const wrestlingChannels = [
   {
     name: 'WWE',
-    provider: 'YouTube',
-    detail: 'Selected free videos and occasional live streams; availability varies by event and region.',
+    channelId: 'UCJ5v_MCY6GNUBTO8-D3XoAg',
     href: 'https://www.youtube.com/@WWE/streams',
-    action: 'Open official streams',
+  },
+  {
+    name: 'NWA',
+    channelId: 'UCSHCTJS2P4Hvu_reLKtiT6g',
+    href: 'https://www.youtube.com/@NWA/streams',
+  },
+  {
+    name: 'MLW',
+    channelId: 'UCNL6kCWxguQeQ8zQlV1E_kA',
+    href: 'https://www.youtube.com/@MLW/streams',
+    archiveHref: 'https://www.tubitv.com/search/mlw',
   },
 ];
 
@@ -40,6 +35,7 @@ export default function FootyHomePage({ initialMatches = [] }) {
   } = useHydraSports();
   const [filterMode, setFilterMode] = useState('featured'); // 'featured' | 'live' | 'all'
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+  const [wrestlingChannel, setWrestlingChannel] = useState(wrestlingChannels[0]);
   const isWrestling = normalizeSport(activeSport) === 'wrestling';
 
   // Filter matches based on activeSport, searchQuery, selectedLeague, and filterMode
@@ -190,29 +186,66 @@ export default function FootyHomePage({ initialMatches = [] }) {
                 <Radio className="h-4 w-4" />
               </span>
               <div>
-                <h4 className="text-sm font-extrabold text-white">Watch from official sources</h4>
+                <h4 className="text-sm font-extrabold text-white">Official live wrestling</h4>
                 <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                  These free options open the provider’s own player. Live events and availability depend on the promotion and your region; HydraSports does not currently have a wrestling event schedule or an embedded wrestling feed.
+                  Watch public live broadcasts from official YouTube channels here. A stream appears only while the promotion is live and has enabled embedding; availability varies by event and region.
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {wrestlingWatchOptions.map((option) => (
-                <article key={option.name} className="flex flex-col rounded-xl border border-white/10 bg-[#211f35] p-4">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300">{option.provider}</span>
-                  <h5 className="mt-1 text-sm font-extrabold text-white">{option.name}</h5>
-                  <p className="mt-2 flex-1 text-xs leading-relaxed text-slate-400">{option.detail}</p>
+            <div className="mb-3 flex flex-wrap gap-2">
+              {wrestlingChannels.map((channel) => (
+                <button
+                  key={channel.name}
+                  type="button"
+                  onClick={() => setWrestlingChannel(channel)}
+                  aria-pressed={wrestlingChannel.name === channel.name}
+                  className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
+                    wrestlingChannel.name === channel.name
+                      ? 'border-purple-400/60 bg-purple-500/20 text-white'
+                      : 'border-white/10 bg-[#211f35] text-slate-300 hover:text-white'
+                  }`}
+                >
+                  {channel.name}
+                </button>
+              ))}
+            </div>
+            <div className="overflow-hidden rounded-xl border border-white/10 bg-black">
+              <iframe
+                key={wrestlingChannel.channelId}
+                title={`${wrestlingChannel.name} official live stream`}
+                src={`https://www.youtube.com/embed/live_stream?channel=${wrestlingChannel.channelId}`}
+                className="aspect-video w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-slate-400">
+                If no broadcast is live or embedding is unavailable, check the promotion’s official channel.
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <a
+                  href={wrestlingChannel.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-300 transition-colors hover:text-white"
+                >
+                  Official {wrestlingChannel.name} streams
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+                {wrestlingChannel.archiveHref && (
                   <a
-                    href={option.href}
+                    href={wrestlingChannel.archiveHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-4 inline-flex items-center gap-1.5 self-start text-xs font-bold text-purple-300 transition-colors hover:text-white"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-300 transition-colors hover:text-white"
                   >
-                    {option.action}
+                    Free MLW episodes on Tubi
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
-                </article>
-              ))}
+                )}
+              </div>
             </div>
           </div>
         ) : (
