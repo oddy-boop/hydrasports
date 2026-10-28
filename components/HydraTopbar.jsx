@@ -24,7 +24,7 @@ export default function FootyTopbar() {
   const [liveMatches, setLiveMatches] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  const sports = ['Football', 'Tennis', 'Basket Ball', 'Hockey'];
+  const sports = ['Football', 'Tennis', 'Basket Ball', 'Hockey', 'Wrestling'];
 
   // Fetch real live matches for notifications
   useEffect(() => {

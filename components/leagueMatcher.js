@@ -127,6 +127,7 @@ export function normalizeSport(sport) {
   if (s === 'basketball' || s === 'nba') return 'basketball';
   if (s === 'hockey' || s === 'icehockey' || s === 'nhl') return 'hockey';
   if (s === 'tennis' || s === 'atp' || s === 'wta') return 'tennis';
+  if (s === 'wrestling' || s === 'prowrestling') return 'wrestling';
   if (s === 'football' || s === 'soccer') return 'football';
   return s;
 }
